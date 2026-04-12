@@ -3,7 +3,7 @@
 import React from 'react';
 import { ShipmentStatus } from '@/lib/types';
 import { Button } from '@/components/shared/Button';
-import { X, CheckCircle2, Navigation, Truck, AlertCircle, BoxIcon } from 'lucide-react';
+import { X, CheckCircle2, Navigation, Truck, AlertCircle, BoxIcon, XCircle, ArrowUpLeftIcon } from 'lucide-react';
 
 interface StatusUpdateModalProps {
   isOpen: boolean;
@@ -50,6 +50,20 @@ const statusOptions = [
     icon: AlertCircle,
     color: 'text-red-600',
   },
+  {
+    status: 'CANCELED' as ShipmentStatus,
+    label: 'Canceled',
+    description: 'Delivery canceled by seller',
+    icon: XCircle,
+    color: 'text-red-600',
+  },
+  {
+    status: 'RETURNED' as ShipmentStatus,
+    label: 'Returned',
+    description: 'Delivery returned by customer',
+    icon: ArrowUpLeftIcon,
+    color: 'text-yellow-600',
+  },
 ];
 
 export function StatusUpdateModal({
@@ -62,10 +76,10 @@ export function StatusUpdateModal({
   if (!isOpen) return null;
 
   const nextStatusOptions = statusOptions.filter((option) => {
-    if (currentStatus === 'ASSIGNED') return option.status === 'PICKED_UP';
-    if (currentStatus === 'PENDING') return option.status === 'ASSIGNED';
-    if (currentStatus === 'PICKED_UP') return option.status === 'IN_TRANSIT';
-    if (currentStatus === 'IN_TRANSIT') return option.status === 'DELIVERED' || option.status === 'FAILED';
+    if (currentStatus === 'ASSIGNED') return option.status === 'PICKED_UP' || option.status==="CANCELED"||option.status==="FAILED";
+    if (currentStatus === 'PENDING') return option.status === 'ASSIGNED' || option.status==="CANCELED"||option.status==="FAILED";
+    if (currentStatus === 'PICKED_UP') return option.status === 'IN_TRANSIT' || option.status==="CANCELED"||option.status==="FAILED";
+    if (currentStatus === 'IN_TRANSIT') return option.status === 'DELIVERED' || option.status === 'FAILED' || option.status==="RETURNED";
     return false;
   });
 

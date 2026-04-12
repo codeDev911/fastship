@@ -25,7 +25,7 @@ const AssignmentDetailsModal = ({ isOpen, onClose, data }:any) => {
   };
 
   return (
-    <div className="fixed w-screen h-screen overflow-auto inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed w-screen h-screen overflow-auto inset-0 z-50 flex items-center justify-center md:p-4">
       {/* Backdrop */}
       <div 
         className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" 
@@ -33,7 +33,7 @@ const AssignmentDetailsModal = ({ isOpen, onClose, data }:any) => {
       />
 
       {/* Main Modal Container - White & 2xl Rounded */}
-      <div className="h-full  bg-white w-full max-w-2xl rounded-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
+      <div className="h-full  bg-white w-full max-w-2xl md:rounded-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
         
         {/* Header Section */}
         <div className="p-8 pb-4 flex items-start justify-between">
@@ -159,10 +159,7 @@ const AssignmentDetailsModal = ({ isOpen, onClose, data }:any) => {
               </div>
             </div>
           </section>
-        </div>
-
-        {/* Footer Actions */}
-        <div className="p-8 bg-slate-50/50 flex gap-4">
+        <div className="p-4 flex gap-4">
           <button 
             onClick={onClose}
             className="flex-1 px-6 py-4 rounded-full text-sm font-semibold text-slate-500 hover:bg-white transition-all active:bg-red-500 active:text-white"
@@ -175,6 +172,9 @@ const AssignmentDetailsModal = ({ isOpen, onClose, data }:any) => {
             Track Real-time
           </button>
         </div>
+        </div>
+
+        {/* Footer Actions */}
       </div>
     </div>
   );

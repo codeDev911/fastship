@@ -101,7 +101,7 @@ export default function OrderDetailPage() {
   const handleStatusChange = async (newStatus: any) => {
     setIsUpdating(true);
    try {
-     await fetch(`/api/driver/delivery?shipmentId=${shipmentId}&status=${newStatus}`, {
+     await fetch(`/api/driver/delivery?shipmentId=${shipmentId}&status=${newStatus}&canceledBy=driver`, {
        method: 'PATCH',
        headers: { 'Content-Type': 'application/json' },
      });

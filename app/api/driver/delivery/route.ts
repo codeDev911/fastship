@@ -6,6 +6,7 @@ export async function PATCH(request: NextRequest) {
   try {
     const shipmentId = request.nextUrl.searchParams.get("shipmentId");
     const newStatus = request.nextUrl.searchParams.get("status");
+    const canceledBy = request.nextUrl.searchParams.get("canceledBy") || 'business'
     if (!shipmentId) {
       return NextResponse.json(
         { error: "Shipment ID is required" },
@@ -14,12 +15,12 @@ export async function PATCH(request: NextRequest) {
     }
 
     if (newStatus === "PICKED_UP") {
+      console.log("yes");
       await shipmentService.processPickup(shipmentId);
-    } else if (newStatus === "DELIVERED") {
-      await shipmentService.processDelivery(shipmentId, newStatus);
-    } else if (newStatus === "FAILED") {
-      await shipmentService.failDelivery(shipmentId, newStatus);
-    } else if (newStatus === "IN_TRANSIT") {
+      
+      console.log("yes");
+    } 
+    else if (newStatus === "IN_TRANSIT") {
       await prisma.shipment.update({
         where: { id: shipmentId },
         data: {
@@ -35,6 +36,15 @@ export async function PATCH(request: NextRequest) {
         },
       });
     }
+    else if (newStatus === "DELIVERED") {
+      await shipmentService.processDelivery(shipmentId, newStatus);
+    } else if (newStatus === "CANCELED") {
+      await shipmentService.cancelShipment(shipmentId, "Delivery canceled",canceledBy?.toLocaleLowerCase());
+    } else if (newStatus === "RETURNED") {
+      await shipmentService.returnShipment(shipmentId, "Delivery returned");
+    } else if (newStatus === "FAILED") {
+      await shipmentService.failDelivery(shipmentId, newStatus);
+    } 
 
     return NextResponse.json({ message: "Shipment updated successfully" });
   } catch (error) {

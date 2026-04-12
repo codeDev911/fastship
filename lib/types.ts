@@ -49,7 +49,7 @@ export interface Driver {
 }
 
 // Shipment Types
-export type ShipmentStatus = 'PENDING' | 'PICKED_UP' | 'ASSIGNED' | 'IN_TRANSIT' | 'DELIVERED' | 'FAILED';
+export type ShipmentStatus = 'PENDING' | 'PICKED_UP' | 'ASSIGNED' | 'IN_TRANSIT' | 'DELIVERED' | 'FAILED'|"RETURNED"|"CANCELED";
 
 export interface Product {
   id: string;

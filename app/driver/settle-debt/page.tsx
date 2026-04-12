@@ -6,6 +6,7 @@ import { Card } from '@/components/shared/Card';
 import { Button } from '@/components/shared/Button';
 import { AlertCircle, QrCode, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
+import DeptFundReleaseModal from '@/components/driver/DeptFundReleaseModal';
 
 export default function SettleDebtPage() {
   const [debt, setDebt] = useState({
@@ -16,7 +17,7 @@ export default function SettleDebtPage() {
     debtPercentage: 0,
   });
   const [isLoading, setIsLoading] = useState(true);
-
+  const [debtFundReleaseModal,setDebtFundReleaseModal] = useState(false)
   useEffect(() => {
     const user = JSON.parse(localStorage.getItem('user') || '{}');
     const driverId = user?.jobId;
@@ -26,8 +27,6 @@ export default function SettleDebtPage() {
         const response = await fetch(`/api/drivers/debt?driverId=${driverId}`);
         if (!response.ok) throw new Error('Failed to fetch debt');
         const data = await response.json();
-          console.log(data);
-          
         setDebt(data);
       } catch (error) {
         console.error('Error fetching debt:', error);
@@ -39,39 +38,18 @@ export default function SettleDebtPage() {
     fetchDebt();
   }, []);
 
+  const inputStyle = "w-full bg-white rounded-full border border-slate-300 px-6 py-3 text-base text-slate-700 outline-none focus:border-red-500 active:bg-red-500 active:text-white transition-all placeholder:text-slate-500";
+
+
   const debtPercentage = debt.debtPercentage;
   return (
     <DriverLayout currentPage="overview">
-      <div className="space-y-6">
-        {/* Back Button */}
-        <Link href="/driver/overview" className="inline-flex">
-          <Button variant="secondary" size="sm" icon={<ArrowLeft className="h-4 w-4" />}>
-            Back to Overview
-          </Button>
-        </Link>
-
+      <div className="space-y-6"> 
         {/* Header */}
         <div>
           <h1 className="text-3xl font-bold text-foreground">Settle COD Debt</h1>
-          <p className="mt-2 text-muted-foreground">Show your QR code to the Hub Admin to hand over collected cash</p>
+          <p className="mt-2 text-muted-foreground">Show your account the Hub Admin to hand over collected cash</p>
         </div>
-
-        {/* QR Code Section */}
-        <Card className="flex flex-col items-center justify-center p-8">
-          <div className="mb-6">
-            <p className="text-sm font-medium text-muted-foreground mb-4">Your Driver Profile QR Code</p>
-            <div className="bg-white p-4 rounded-2xl border border-border">
-              <img 
-                src={debt?.qrCodeUrl || '/placeholder-qr.png'} 
-                alt="Driver QR Code" 
-                className="w-64 h-64 object-contain"
-              />
-            </div>
-          </div>
-          <p className="text-center text-sm text-muted-foreground mt-6 max-w-md">
-            Show this QR code to the Hub Admin to hand over collected cash and clear your digital debt.
-          </p>
-        </Card>
 
         {/* Debt Progress Section */}
         <Card className="space-y-6">
@@ -85,13 +63,13 @@ export default function SettleDebtPage() {
             <div className="rounded-2xl bg-red-50 p-4 border border-red-200">
               <p className="text-xs text-muted-foreground font-medium">Current Debt</p>
               <p className="text-3xl font-bold text-red-600 mt-2">
-                {debt.currentDebt?.toLocaleString() ||"0"} PKR
+                {debt.currentDebt?.toLocaleString() || "0"} PKR
               </p>
             </div>
             <div className="rounded-2xl bg-secondary p-4 border border-border">
               <p className="text-xs text-muted-foreground font-medium">Max Limit</p>
               <p className="text-3xl font-bold text-accent mt-2">
-                {debt.maxDebtLimit?.toLocaleString() ||"0"} PKR
+                {debt.maxDebtLimit?.toLocaleString() || "0"} PKR
               </p>
             </div>
           </div>
@@ -104,9 +82,8 @@ export default function SettleDebtPage() {
             </div>
             <div className="w-full h-3 bg-secondary rounded-full overflow-hidden">
               <div
-                className={`h-full rounded-full transition-all ${
-                  debtPercentage > 85 ? 'bg-red-600' : debtPercentage > 50 ? 'bg-orange-500' : 'bg-green-500'
-                }`}
+                className={`h-full rounded-full transition-all ${debtPercentage > 85 ? 'bg-red-600' : debtPercentage > 50 ? 'bg-orange-500' : 'bg-green-500'
+                  }`}
                 style={{ width: `${Math.min(debtPercentage, 100)}%` }}
               />
             </div>
@@ -137,15 +114,20 @@ export default function SettleDebtPage() {
             <p className="text-xs text-green-600 mt-1">Ready for settlement with hub</p>
           </div>
 
-          {/* Last Settlement */}
-          {/* {debt?.lastSettlementDate && (
-            <div className="pt-4 border-t border-border">
-              <p className="text-xs text-muted-foreground">
-                Last Settlement: {new Date(codDebt?.lastSettlementDate || new Date())?.toLocaleDateString()}
-              </p>
-            </div>
-          )} */}
+        <div className="my-4">
+          <h3 className="text-base font-bold">Release from Funds</h3>
+            <p className="text-sm text-muted-foreground mt-1">
+            You can transfer the active debts from your wallet to business. (This action no need to visit business hub)
+          </p>
+          <br />
+          <div className="grid md:grid-cols-2 gap-2">
+            <Button onClick={()=>setDebtFundReleaseModal(true)} className='cursor-pointer'>Release Debt</Button>
+          </div>
+        </div>
+
         </Card>
+
+        <DeptFundReleaseModal isOpen={debtFundReleaseModal} currentDebt={debt.currentDebt} onClose={()=>setDebtFundReleaseModal(false)}/>
 
         {/* Instructions Card */}
         <Card className="space-y-4">

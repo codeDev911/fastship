@@ -46,7 +46,7 @@ export async function GET(
         tracking: true,
         activities: {
           orderBy: {
-            createdAt: "desc",
+            createdAt: "asc",
           },
         },
       },
@@ -93,6 +93,8 @@ export async function PATCH(
           }
         },
       }
+
+      
     }else {
       amount ? data = {
           ...rest,
@@ -109,6 +111,7 @@ export async function PATCH(
        ...data,
        updatedAt: new Date(),
       },
+
       include: {
         seller:{
           select:{
@@ -153,9 +156,21 @@ export async function PATCH(
         },
       });
 
-      // lockEscrow if  payment method is not COD
-        if(lockEscrow && shipment.paymentMethod !== "COD" ){
+      let businessWallet = await prisma.wallet.findUnique({
+        where:{
+          businessId:shipment?.businessId||"",
+        },
+        select:{
+          id:true
+        }
+      })
+
+      // lockEscrow of the seller and the business
+      // the seller escrow will be distributed amoung driver and business 
+      // and the business escrow will be cuts due to 10% platform fee
+        if(lockEscrow){
           await financialService.lockEscrow(shipment?.seller?.wallet?.id, amount || 0, "Shipping fee locked")
+          await financialService.lockEscrow(businessWallet?.id, Number(amount) * 0.1 || 10, "Platform fee locked 10%")
         }
 
       // Create activity log

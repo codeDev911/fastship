@@ -17,6 +17,7 @@ import {
   DollarSign,
   Gavel,
   CreditCard,
+  Banknote,
 } from 'lucide-react';
 import { useAuth } from '@/lib/context/AuthContext';
 
@@ -75,9 +76,9 @@ export function BusinessLayout({
       icon: <Tag className="h-5 w-5" />,
     },
     {
-      label: 'Cash Settlement',
-      href: '/business/cash-settlement',
-      icon: <DollarSign className="h-5 w-5" />,
+      label: 'Payments & Settlement',
+      href: '/business/payments-settlement',
+      icon: <Banknote className="h-5 w-5" />,
     },
     {
       label: 'Notifications',

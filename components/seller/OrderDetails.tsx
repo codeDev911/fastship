@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { 
   X, Package, MapPin, Truck, Building2, 
   CreditCard, Clock, ShieldCheck, Scale, Hash, Plus, 
@@ -6,8 +6,12 @@ import {
   Banknote
 } from 'lucide-react';
 import AssignmentDetailsModal from './AssignmentDetailsModal';
+import { Button } from '../shared/Button';
+import PaymentReceivedModal from './PaymentRecievedModal';
 
 const FullScreenOrderModal = ({ isOpen, onClose, data }:any) => {
+
+  const [paymentRecievedModal,setPaymentRecievedModal] = useState({isOpen:false,data:{}})
 
   const [assignmentModal,setAssignmentModal] = React.useState({isOpen:false,data:{}})
   // Prevent scrolling when modal is open
@@ -24,7 +28,7 @@ const FullScreenOrderModal = ({ isOpen, onClose, data }:any) => {
   return (
     <>
       <div className="fixed inset-0 h-screen w-screen z-50 flex items-center justify-center bg-black/50"></div>
-     <div className="fixed md:w-[95%] rounded-2xl md:h-[95vh] mx-auto my-auto overflow-y-auto inset-0 z-50 flex flex-col bg-slate-50 overflow-hidden animate-in fade-in duration-200">
+     <div className="fixed md:w-[95%] md:rounded-2xl md:h-[95vh] mx-auto my-auto overflow-y-auto inset-0 z-50 flex flex-col bg-slate-50 overflow-hidden animate-in fade-in duration-200">
       
       {/* Header Bar (Matching your Wallet Page) */}
       <div className="bg-white px-8 py-6 flex items-center justify-between border-b border-slate-100">
@@ -149,7 +153,6 @@ const FullScreenOrderModal = ({ isOpen, onClose, data }:any) => {
           </div>
 
 
-    <AssignmentDetailsModal isOpen={assignmentModal.isOpen} onClose={() => setAssignmentModal({isOpen:false,data:{}})} data={assignmentModal.data}/>
 
           {/* Grid for Pickup & Delivery */}
           <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
@@ -249,8 +252,20 @@ const FullScreenOrderModal = ({ isOpen, onClose, data }:any) => {
                     {data.payment?.paymentStatus || "-"}
                   </span>
                 </div>
+                {data.payment.paymentMethod === "COD" && data.payment.paymentStatus === "PENDING"? <div className='col-span-2 md:col-span-6'>
+                  <p className="text-xs text-slate-400 mb-1 font-medium">Payment Recieved?</p>
+                  <p className="text-slate-700 text-sm ">If you have recieved COD payments, please update the status to avoid conflicts</p>
+                  <br />
+                  <Button onClick={()=>setPaymentRecievedModal({isOpen:true,data:data.payment})} className='cursor-pointer'>Confirm Payment Recieved</Button>
+                </div>
+                  : data.payment.paymentMethod === "COD" && data.payment.paymentStatus === "COMPLETED" &&
+                  <div className='col-span-2 md:col-span-6'>
+                    <p className="text-xs text-slate-400 mb-1 font-medium">Payment Recieved</p>
+                    <p className="text-slate-700 text-sm ">The Payment Rs {data?.payment?.amount} has been recieved</p></div>
+                  }
               </div>
           </div>
+
           <div className="bg-white rounded-2xl p-8 border border-slate-100">
              <div className="flex items-center gap-3 mb-6">
                 <div className="bg-red-50 p-2 rounded-lg">
@@ -290,6 +305,9 @@ const FullScreenOrderModal = ({ isOpen, onClose, data }:any) => {
         </button> 
       </div>
     </div>
+          <PaymentReceivedModal onClose={()=>setPaymentRecievedModal({isOpen:false,data:{}})} isOpen={paymentRecievedModal.isOpen} data={paymentRecievedModal.data} />
+    <AssignmentDetailsModal isOpen={assignmentModal.isOpen} onClose={() => setAssignmentModal({isOpen:false,data:{}})} data={assignmentModal.data}/>
+
     </>
    
   );

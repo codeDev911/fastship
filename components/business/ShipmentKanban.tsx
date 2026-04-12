@@ -21,9 +21,12 @@ interface ShipmentKanbanProps {
 const columns: KanbanColumn[] = [
   { status: 'PENDING', title: 'Pending', description: 'Awaiting assignment' },
   { status: 'ASSIGNED', title: 'Assigned', description: 'Driver assigned' },
+  { status: 'PICKED_UP', title: 'Picked up', description: 'In driver hands' },
   { status: 'IN_TRANSIT', title: 'In Transit', description: 'On the way' },
   { status: 'DELIVERED', title: 'Delivered', description: 'Successfully delivered' },
   { status: 'FAILED', title: 'Failed', description: 'Delivery failed' },
+  { status: 'CANCELED', title: 'Canceled', description: 'Delivery canceled' },
+  { status: 'RETURNED', title: 'Returned', description: 'Delivery returned' },
 ];
 
 interface ShipmentCardProps {

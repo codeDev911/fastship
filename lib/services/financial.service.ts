@@ -60,6 +60,22 @@ export const financialService = {
 
   async lockEscrow(walletId: string, amount: number, reason: string) {
     
+
+    let wallet = await prisma.wallet.findUnique({
+      where:{
+        id:walletId
+      },
+      select:{
+        balance:true,
+        escrowBalance:true
+      }
+    })
+
+    // if escrow is grater then the wallet balance will rise error
+    if(Number(amount) > Number( wallet?.balance)){
+      throw new Error("Insufficient balance")
+    }
+
     await prisma.wallet.update({
       where: { id: walletId },
       data: {
@@ -358,7 +374,7 @@ export const financialService = {
     return { settledAmount: Number(amount), remainingDebt: driver.currentDebt - Number(amount) };
   },
 
-  async transferFunds(from:"driver"|"business"|"seller", to : "driver"|"business"|"seller", fromId:any,toId:any,amount:any){
+  async transferFunds(from:"driver"|"business"|"seller", to : "driver"|"business"|"seller", fromId:any,toId:any,amount:any,description?:"Funds transfer"){
 
     const getIdSender = getById(from,fromId) || {id:{sellerId:"s"}}
     const getIdReciever = getById(to,toId) || {id:{sellerId:"s"}}
@@ -404,10 +420,9 @@ export const financialService = {
         data:{
           referenceId:senderWallet.id,
           amount:Number(amount),
-          description:"Funds transfer",
+          description:description||"Funds Transfer",
           type:"DEBIT",
           completedAt:new Date(),
-          
           status:"COMPLETED",
           walletId:senderWallet.id
         }
@@ -427,7 +442,7 @@ export const financialService = {
         data:{
           referenceId:recievedWallet.id,
           amount:Number(amount),
-          description:"Funds recieved ",
+          description:description||"Funds Transfer",
           type:"CREDIT",
           completedAt:new Date(),
           status:"COMPLETED",
@@ -440,5 +455,95 @@ export const financialService = {
       return error
     }
 
+  },
+
+  async processShipmentTransactions(shipment:any){
+      await prisma.$transaction(async (tx) => {
+        // cut escrow from sellet wallet
+        await tx.wallet.update({
+          where: { id: shipment.seller.wallet?.id },
+          data: {
+            balance: {
+              decrement: shipment.actualRate || shipment.expectedRate || 0,
+            },
+            escrowBalance: {
+              decrement: shipment.actualRate || shipment.expectedRate || 0,
+            },
+          },
+        });
+        await tx.transaction.create({
+          data: {
+            walletId: shipment.seller.wallet?.id || "",
+            amount: shipment.actualRate || shipment.expectedRate || 0,
+            type: "DEBIT",
+            description: `${shipment.actualRate || shipment.expectedRate || 0} Escrow cut for shipment ${shipment.id}`,
+          },
+        });
+
+        // release fund to business wallet
+        let businessWallet = await tx.wallet.update({
+          where: { businessId: shipment.businessId || "" },
+          select: {
+            id: true,
+          },
+          data: {
+            escrowBalance:{
+              decrement:  (shipment.actualRate || shipment.expectedRate || 0) * 0.1, // release escrow 10% 
+            },
+            balance: {
+              increment:
+                (shipment.actualRate || shipment.expectedRate || 0) * 0.1, // 10% to business
+            },
+          },
+        });
+
+        await tx.transaction.create({
+          data: {
+            walletId: businessWallet.id,
+            amount: (shipment.actualRate || shipment.expectedRate || 0) * 0.1, // 10% to business
+            type: "CREDIT",
+            description: `10% Credit  shipment ${shipment.id}`,
+          },
+        });
+      });
+      await financialService.settleDriverPayment(
+        shipment.assignment?.driverId,
+        (shipment.actualRate || shipment.expectedRate || 0) * 0.8,
+      );
+  },
+
+  async cutEscrow(walletId:string,amount:number,reason:string){
+     const wallet = await prisma.wallet.findUnique({
+      where: { id: walletId },
+    });
+
+    if (!wallet || wallet.escrowBalance < Number(amount)) {
+      throw new Error("Insufficient escrow balance");
+    }
+
+    const transaction = await prisma.transaction.create({
+      data: {
+        walletId,
+        type: "COMMISSION",
+        amount:Number(amount), 
+        description: `Escrow cuts: ${reason}`,
+        status: "COMPLETED",
+        completedAt: new Date(),
+      },
+    });
+
+    await prisma.wallet.update({
+      where: { id: walletId },
+      data: {
+        balance:{
+          decrement:Number(amount)
+        },
+        escrowBalance: {
+          decrement: Number(amount),
+        }, 
+      },
+    });
+
+    return transaction;
   }
 };

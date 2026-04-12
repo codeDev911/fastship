@@ -41,18 +41,18 @@ export default function BusinessShipmentsPage() {
         </div>
 
         {/* Content */}
-        {viewMode === 'kanban' ? (
+        {/* {viewMode === 'kanban' ? (
           <ShipmentKanban
             shipments={shipments}
             onUpdateStatus={updateShipmentStatus}
             isLoading={isLoading}
           />
-        ) : (
+        ) : ( */}
           <ShipmentListView
             shipments={shipments}
             isLoading={isLoading}
           />
-        )}
+        {/* )} */}
       </div>
     </BusinessLayout>
   );

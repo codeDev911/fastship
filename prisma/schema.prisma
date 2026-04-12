@@ -27,6 +27,7 @@ enum ShipmentStatus {
   DELIVERED
   FAILED
   CANCELLED
+  RETURNED
 }
 
 enum OrderStatus {

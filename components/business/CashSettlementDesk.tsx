@@ -40,7 +40,6 @@ export function CashSettlementDesk() {
     try {
       const response = await fetch(`/api/business/driver-depts?businessId=${businessId}`);
       const data = await response.json();
-      console.log(data);
       
       setDriverDepts(data.data);
 
@@ -59,14 +58,7 @@ export function CashSettlementDesk() {
     setShowCameraPlaceholder(true);
   };
 
-  const handleSimulateQRScan = () => {
-    // Simulate scanning a QR code
-    setFormState(prev => ({
-      ...prev,
-      scannedQR: 'DRIVER_PROFILE_ID_FLEET_1_FASTSHIP',
-    }));
-    setShowCameraPlaceholder(false);
-  };
+  
 
   const handleDriverSelect = (id: string) => {
     const driver = driverDepts.find(d => d.id === id);
@@ -127,62 +119,10 @@ export function CashSettlementDesk() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-foreground">Cash Settlement Desk</h1>
-        <p className="mt-2 text-muted-foreground">Process driver cash settlements and clear COD debts</p>
-      </div>
+   
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left: QR Scanner */}
-        <div className="lg:col-span-1">
-          <Card className="h-full">
-            <CardHeader title="QR Code Scanner" />
-            <CardContent className="space-y-4 p-6">
-              <div className="space-y-3">
-                <Button
-                  onClick={handleQRScan}
-                  variant="primary"
-                  className="w-full"
-                  icon={<Camera className="h-5 w-5" />}
-                >
-                  Scan Driver QR
-                </Button>
-
-                {showCameraPlaceholder && (
-                  <div className="rounded-2xl border-2 border-dashed border-border bg-secondary p-8 flex flex-col items-center justify-center">
-                    <div className="text-center">
-                      <QrCode className="h-16 w-16 text-muted-foreground mx-auto mb-3 opacity-50" />
-                      <p className="text-sm font-medium text-foreground mb-4">Camera Placeholder</p>
-                      <p className="text-xs text-muted-foreground mb-4">
-                        In production, camera would scan QR codes here
-                      </p>
-                      <Button
-                        onClick={handleSimulateQRScan}
-                        variant="secondary"
-                        size="sm"
-                      >
-                        Simulate Scan
-                      </Button>
-                    </div>
-                  </div>
-                )}
-
-                {formState.scannedQR && (
-                  <div className="rounded-2xl bg-green-50 border border-green-200 p-4">
-                    <div className="flex gap-2 items-start">
-                      <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
-                      <div>
-                        <p className="text-sm font-semibold text-green-700">QR Code Scanned</p>
-                        <p className="text-xs text-green-600 mt-1 break-all">{formState.scannedQR}</p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+       
 
         {/* Right: Manual Entry Form */}
         <div className="lg:col-span-2">
