@@ -1,0 +1,515 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ============ ENUMS ============
+enum UserRole {
+  SELLER
+  DRIVER
+  BUSINESS
+  ADMIN
+}
+
+enum ShipmentStatus {
+  PENDING
+  ASSIGNED
+  PICKUP
+  PICKED_UP
+  IN_TRANSIT
+  DELIVERED
+  FAILED
+  CANCELLED
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  IN_TRANSIT
+  DELIVERED
+  CANCELLED
+}
+
+enum PaymentMethod {
+  PREPAID
+  COD
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+enum TransactionType {
+  CREDIT
+  DEBIT
+  COMMISSION
+  SETTLEMENT
+  TOPUP
+  ESCROW_LOCK
+  ESCROW_RELEASE
+}
+
+enum SettlementStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  FAILED
+}
+
+enum NotificationType {
+  ORDER_CREATED
+  ORDER_ASSIGNED
+  PICKUP_READY
+  IN_TRANSIT
+  DELIVERED
+  PAYMENT_RECEIVED
+  SETTLEMENT_READY
+  SYSTEM_ALERT
+}
+
+
+enum DriverStatus {
+  ACTIVE
+  INACTIVE
+  ON_DELIVERY
+}
+
+// ============ MODELS ============
+
+model User {
+  id                String     @id @default(cuid())
+  email             String     @unique
+  phone             String     @unique
+  name              String
+  password          String
+  role              UserRole
+  profileImage      String?
+  isVerified        Boolean    @default(false)
+  isActive          Boolean    @default(true)
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+
+  // Relations
+  seller            Seller?
+  driver            Driver?
+  business          Business?
+  notifications     Notification[]
+  auditLogs         AuditLog[]
+
+  @@index([email])
+  @@index([role])
+}
+
+model Seller {
+  id                String     @id @default(cuid())
+  userId            String     @unique
+  companyName       String
+  businessType      String
+  taxId             String     @unique
+  address           String
+  city              String
+  state             String
+  zipCode           String
+  bankAccount       String?
+  bankName          String?
+  accountHolder     String?
+  rating            Float      @default(5.0)
+  totalOrders       Int        @default(0)
+  cancelledOrders   Int        @default(0)
+  isVerified        Boolean    @default(false)
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+
+  user              User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  shipments         Shipment[]
+  wallet            Wallet?
+  bids              Bid[]
+  integrations      Integration[]
+
+  @@index([userId])
+  @@index([companyName])
+}
+
+model Driver {
+  id                String     @id @default(cuid())
+  userId            String     @unique
+  licenseNumber     String     @unique
+  licenseExpiry     DateTime
+  licenseImage      String?
+  vehicleType       String
+  vehicleNumber     String     @unique
+  vehicleImage      String?
+  insuranceProvider String?
+  insuranceNumber   String?
+  status            DriverStatus @default(ACTIVE) 
+  isVerified        Boolean    @default(false)
+  isActive          Boolean    @default(true)
+  rating            Float      @default(5.0)
+  totalDeliveries   Int        @default(0)
+  cancelledDeliveries Int      @default(0)
+  totalEarnings     Float      @default(0)
+  currentDebt       Float      @default(0)
+  currentLocation   String?
+  latitude          Float?
+  longitude         Float?
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+
+  user              User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  assignments       DriverAssignment[]
+  wallet            Wallet?
+  earnings          Earning[]
+  debts             DriverDebt[]
+
+  @@index([userId])
+  @@index([licenseNumber])
+  @@index([isActive])
+}
+
+model Business {
+  id                String     @id @default(cuid())
+  userId            String     @unique
+  companyName       String
+  businessType      String
+  operatingRegion   String
+  commissionRate    Float      @default(10.0)
+  insuranceProvider String?
+  insuranceNumber   String?
+  bankAccount       String?
+  bankName          String?
+  accountHolder     String?
+  rating            Float      @default(5.0)
+  isActive          Boolean    @default(true)
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+
+  user              User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  rateCards         RateCard[]
+  drivers           DriverAssignment[]
+  wallet            Wallet?
+  settlements       Settlement[]
+  bids              Bid[]
+  @@index([userId])
+  @@index([companyName])
+}
+
+model Shipment {
+  id                String     @id @default(cuid())
+  sellerId          String
+  businessId        String?
+  pickupName        String
+  pickupPhone       String
+  pickupAddress     String
+  pickupCity        String
+  pickupState       String
+  pickupZipCode     String
+  deliveryName      String
+  deliveryPhone     String
+  deliveryAddress   String
+  deliveryCity      String
+  deliveryState     String
+  deliveryZipCode   String
+  weight            Float
+  dimensions        String?
+  packageType       String
+  description       String
+  paymentMethod     PaymentMethod @default(PREPAID)
+  codAmount         Float?
+  expectedRate      Float?
+  actualRate        Float?
+  status            ShipmentStatus @default(PENDING)
+  priority          String      @default("STANDARD")
+  notes             String?
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+  pickedUpAt        DateTime?
+  deliveredAt       DateTime?
+
+  seller            Seller     @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  assignment        DriverAssignment?
+  payment           Payment?
+  tracking          Tracking?
+  activities        ShipmentActivity[]
+  bids              Bid[]
+
+  @@index([sellerId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([paymentMethod])
+}
+
+model DriverAssignment {
+  id                String     @id @default(cuid())
+  shipmentId        String     @unique
+  driverId          String
+  businessId        String
+  assignedAt        DateTime   @default(now())
+  pickupCompletedAt DateTime?
+  deliveryCompletedAt DateTime?
+  assignmentStatus  String     @default("ASSIGNED")
+  notes             String?
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+
+  shipment          Shipment   @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  driver            Driver     @relation(fields: [driverId], references: [id], onDelete: Cascade)
+  business          Business   @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@index([driverId])
+  @@index([businessId])
+  @@index([shipmentId])
+}
+ 
+model RateCard {
+  id                String     @id @default(cuid())
+  businessId        String
+  name              String
+  description       String?
+  baseRate          Float
+  perKmRate         Float
+  minimumDistance   Float      @default(0)
+  maximumDistance   Float      @default(999999)
+  minWeight         Float      @default(0)
+  maxWeight         Float      @default(100)
+  isActive          Boolean    @default(true)
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+
+  business          Business   @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@index([businessId])
+  @@index([isActive])
+}
+
+model Wallet {
+  id                String     @id @default(cuid())
+  balance           Float      @default(0)
+  escrowBalance     Float      @default(0)
+  lastUpdated       DateTime   @updatedAt
+  createdAt         DateTime   @default(now())
+
+  sellerId          String?    @unique
+  driverId          String?    @unique
+  businessId        String?    @unique
+
+  seller            Seller?    @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  driver            Driver?    @relation(fields: [driverId], references: [id], onDelete: Cascade)
+  business          Business?  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  transactions      Transaction[]
+
+  @@index([sellerId])
+  @@index([driverId])
+  @@index([businessId])
+}
+
+model Transaction {
+  id                String     @id @default(cuid())
+  walletId          String
+  type              TransactionType
+  amount            Float
+  description       String
+  referenceId       String?
+  status            PaymentStatus @default(PENDING)
+  createdAt         DateTime   @default(now())
+  completedAt       DateTime?
+
+  wallet            Wallet     @relation(fields: [walletId], references: [id], onDelete: Cascade)
+
+  @@index([walletId])
+  @@index([createdAt])
+  @@index([type])
+}
+
+model Payment {
+  id                String     @id @default(cuid())
+  shipmentId        String     @unique
+  amount            Float
+  tax               Float      @default(0)
+  commission        Float      @default(0)
+  driverPayable     Float
+  paymentMethod     PaymentMethod
+  paymentStatus     PaymentStatus @default(PENDING)
+  transactionId     String?
+  notes             String?
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+  paidAt            DateTime?
+
+  shipment          Shipment   @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+
+  @@index([shipmentId])
+  @@index([paymentStatus])
+}
+
+model Tracking {
+  id                String     @id @default(cuid())
+  shipmentId        String     @unique
+  currentStatus     ShipmentStatus
+  currentLocation   String?
+  latitude          Float?
+  longitude         Float?
+  estimatedDelivery DateTime?
+  actualDelivery    DateTime?
+  updatedAt         DateTime   @updatedAt
+
+  shipment          Shipment   @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+
+  @@index([shipmentId])
+}
+
+model ShipmentActivity {
+  id                String     @id @default(cuid())
+  shipmentId        String
+  status            ShipmentStatus
+  description       String
+  location          String?
+  latitude          Float?
+  longitude         Float?
+  createdAt         DateTime   @default(now())
+
+  shipment          Shipment   @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+
+  @@index([shipmentId])
+  @@index([createdAt])
+}
+
+model Earning {
+  id                String     @id @default(cuid())
+  driverId          String
+  shipmentId        String?
+  amount            Float
+  earnedAt          DateTime   @default(now())
+  settlementId      String?
+  isSettled         Boolean    @default(false)
+  settledAt         DateTime?
+  createdAt         DateTime   @default(now())
+
+  driver            Driver     @relation(fields: [driverId], references: [id], onDelete: Cascade)
+
+  @@index([driverId])
+  @@index([isSettled])
+  @@index([createdAt])
+}
+
+model DriverDebt {
+  id                String     @id @default(cuid())
+  driverId          String
+  shipmentId        String?
+  amount            Float
+  debtReason        String
+  incurredAt        DateTime   @default(now())
+  settledAt         DateTime?
+  isSettled         Boolean    @default(false)
+  settlementId      String?
+  createdAt         DateTime   @default(now())
+
+  driver            Driver     @relation(fields: [driverId], references: [id], onDelete: Cascade)
+
+  @@index([driverId])
+  @@index([isSettled])
+  @@index([createdAt])
+}
+
+model Settlement {
+  id                String     @id @default(cuid())
+  businessId        String
+  driverId          String?
+  periodStart       DateTime
+  periodEnd         DateTime
+  totalAmount       Float
+  commission        Float      @default(0)
+  netAmount         Float
+  status            SettlementStatus @default(PENDING)
+  notes             String?
+  settledAt         DateTime?
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+
+  business          Business   @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@index([businessId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model Bid {
+  id                String     @id @default(cuid())
+  sellerId          String
+  amount            Float
+  description       String?
+  isAccepted        Boolean    @default(false)
+  acceptedAt        DateTime?
+  expiresAt         DateTime
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+  shipmentId        String?
+  shipment          Shipment?  @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  seller            Seller     @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  business          Business?  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  businessId        String?
+  @@index([sellerId])
+  @@index([isAccepted])
+}
+
+model Integration {
+  id                String     @id @default(cuid())
+  sellerId          String
+  integrationType   String
+  apiKey            String?
+  apiSecret         String?
+  webhookUrl        String?
+  isActive          Boolean    @default(true)
+  metadata          String?
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+
+  seller            Seller     @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+
+  @@index([sellerId])
+  @@index([integrationType])
+}
+
+model Notification {
+  id                String     @id @default(cuid())
+  userId            String
+  type              NotificationType
+  title             String
+  message           String
+  relatedId         String?
+  isRead            Boolean    @default(false)
+  readAt            DateTime?
+  createdAt         DateTime   @default(now())
+
+  user              User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([isRead])
+  @@index([createdAt])
+}
+
+model AuditLog {
+  id                String     @id @default(cuid())
+  userId            String
+  action            String
+  resource          String
+  resourceId        String
+  changes           String?
+  ipAddress         String?
+  userAgent         String?
+  createdAt         DateTime   @default(now())
+
+  user              User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt])
+}
