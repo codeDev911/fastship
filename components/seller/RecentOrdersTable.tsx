@@ -18,6 +18,8 @@ const statusConfig = {
   FAILED: { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200' },
   IN_TRANSIT: { bg: 'bg-cyan-50', text: 'text-cyan-700', border: 'border-cyan-200' },
   DELIVERED: { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200' },
+  RETURNED: { bg: 'bg-yellow-50', text: 'text-yellow-700', border: 'border-yellow-200' },
+  CANCELLED: { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200' },
 };
 
 const statusLabel = {
@@ -28,6 +30,8 @@ const statusLabel = {
   IN_TRANSIT: 'IN_TRANSIT',
   FAILED: 'FAILED',
   DELIVERED: 'DELIVERED',
+  CANCELLED: 'CANCELLED',
+  RETURNED: 'RETURNED',
 };
 
 export function RecentOrdersTable({

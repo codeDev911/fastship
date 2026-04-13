@@ -223,7 +223,7 @@ export default function ShipmentDetailPage() {
                   </div>
                 </div>
 
-                {shipment?.payment?.paymentMethod === "COD" && shipment?.payment.paymentStatus === "PENDING" && (
+                {shipment?.payment?.paymentMethod === "COD" && shipment?.payment?.paymentStatus === "PENDING" && (
                   <div className='rounded-2xl border border-yellow-500 p-3 mt-2 bg-yellow-100'>
                     <h3 className="text-base font-bold text-yellow-600">Attention</h3>
                     <p className="text-xs text-muted-foreground">The payment of this shipment in up-paid, the payments recieved by your driver from customer, you need to collect the COD payments from driver and hand over to the seller. The pending COD payments reduce your visibility and trust on our platform</p>
@@ -376,19 +376,19 @@ export default function ShipmentDetailPage() {
                     <h3 className="text-sm font-medium">
                       Method
                     </h3>
-                    <p className="text-sm ">Rs. {shipment?.payment.paymentMethod}</p>
+                    <p className="text-sm ">Rs. {shipment?.payment?.paymentMethod}</p>
                   </div>
                   <div className="flex flex-col ">
                     <h3 className="text-sm font-medium">
                       Paid At
                     </h3>
-                    <p className="text-sm ">{shipment?.payment.paidAt ? new Date(shipment?.payment.paidAt).toLocaleDateString() : "Not paid"}</p>
+                    <p className="text-sm ">{shipment?.payment?.paidAt ? new Date(shipment?.payment?.paidAt).toLocaleDateString() : "Not paid"}</p>
                   </div>
                   <div className="flex flex-col ">
                     <h3 className="text-sm font-medium">
                       Created At
                     </h3>
-                    <p className="text-sm ">{new Date(shipment?.payment.createdAt).toLocaleDateString() || "-"}</p>
+                    <p className="text-sm ">{new Date(shipment?.payment?.createdAt).toLocaleDateString() || "-"}</p>
                   </div>
                   <div className="flex flex-col ">
                     <h3 className="text-sm font-medium">
@@ -486,25 +486,9 @@ export default function ShipmentDetailPage() {
               </CardContent>
             </Card>
 
-            {/* Driver Assignment */}
-            {!shipment?.assignment?.driverId ? (
-              <Card>
-                <CardHeader title="Assign Driver" />
-                <CardContent className="space-y-4">
-                  <p className="text-sm text-muted-foreground">
-                    Select an available driver from our network to assign this shipment.
-                  </p>
-                  <Button
-                    onClick={() => setIsAssignmentModalOpen(true)}
-                    isLoading={isUpdating}
-                    fullWidth
-                  >
-                    Browse & Assign Driver
-                  </Button>
-                </CardContent>
-              </Card>
-            ) : assignedDriver ? (
-              <Card>
+           
+            {
+             assignedDriver &&  <Card>
                 <CardHeader title="Assigned Driver" />
                 <CardContent className="space-y-4">
                   <div className="flex gap-3">
@@ -532,7 +516,25 @@ export default function ShipmentDetailPage() {
                   </div>
                 </CardContent>
               </Card>
-            ) : null}
+            }
+             {/* Driver Assignment */}
+            {!shipment?.assignment?.driverId  && (
+              <Card>
+                <CardHeader title="Assign Driver" />
+                <CardContent className="space-y-4">
+                  <p className="text-sm text-muted-foreground">
+                    Select an available driver from our network to assign this shipment.
+                  </p>
+                  <Button
+                    onClick={() => setIsAssignmentModalOpen(true)}
+                    isLoading={isUpdating}
+                    fullWidth
+                  >
+                    Browse & Assign Driver
+                  </Button>
+                </CardContent>
+              </Card>
+            ) }
 
             {/* Timeline */}
             <Card>
@@ -560,7 +562,7 @@ export default function ShipmentDetailPage() {
                     case "DELIVERED":
                       icon = <CheckCircle className='h-4 w-4' />
                       break;
-                    case "CANCELED":
+                    case "CANCELLED":
                       icon = <XCircle className='h-4 w-4' />
                       break;
                     case "FAILED":
@@ -586,7 +588,7 @@ export default function ShipmentDetailPage() {
                         >
                           {getIcon(step.status)}
                         </div>
-                        {idx < shipment?.activities?.length-1 && <div className="w-0.5 h-8 bg-border my-1" />}
+                        {idx < shipment?.activities?.length && <div className="w-0.5 h-8 bg-border my-1" />}
                       </div>
                       <div className="pt-1 pb-2">
                         <p className="font-medium text-foreground">{step?.status}</p>
@@ -600,6 +602,7 @@ export default function ShipmentDetailPage() {
                             hour12: true
                           })}
                         </p>
+                          <p className="text-sm text-foreground">{step?.description}</p>
                       </div>
                     </div>
                   );

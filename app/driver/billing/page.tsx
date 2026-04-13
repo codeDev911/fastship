@@ -140,56 +140,49 @@ export default function BillingPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {transactions?.length > 0 && transactions?.map((txn: any, idx: React.Key) => {
-                    const isAddition = txn.type === 'TOPUP' || txn.type === 'REFUND' || txn.type === 'CREDIT' ? true : false;
-                    const typeLabel =
-                      txn.type === 'TOPUP'
-                        ? 'Top-up'
-                        : txn.type === 'CREDIT'
-                          ? 'Credit'
-                          : txn.type === 'ESCROW_LOCK'
-                            ? 'Escrow Lock'
-                          : txn.type === 'DEBIT'
-                            ? 'Debit'
-                            : 'Refund';
-
-                    return (
-                      <tr
-                        key={txn.id}
-                        className={idx !== wallet?.recentTransactions?.length - 1 ? 'border-b border-border/50' : ''}
-                      >
-                        <td className="px-4 py-4 text-sm text-foreground">
-                          {new Date(txn.date)?.toLocaleDateString()}
-                        </td>
-                        <td className="px-4 py-4 text-sm font-medium text-muted-foreground font-mono">
-                          {txn?.id}
-                        </td>
-                        <td className="px-4 py-4 text-sm">
-                          <span className={`inline-block rounded-full px-3 py-1 text-xs font-medium ${txn.type === 'TOPUP'
-                            ? 'bg-green-50 text-green-700'
-                            : txn.type === 'ESCROW_LOCK'
-                              ? 'bg-yellow-50 text-yellow-700'
-                              : txn.type === 'DEBIT'
-                                ? 'bg-red-50 text-red-700'
-                                : 'bg-blue-50 text-blue-700'
-                            }`}>
-                            {typeLabel}
-                          </span>
-                        </td>
-                        <td className="px-4 py-4 text-sm">
-                          {txn.orderReference ? (
-                            <span className="font-medium text-foreground">{txn.orderReference}</span>
-                          ) : (
-                            <span className="text-muted-foreground">{txn.description}</span>
-                          )}
-                        </td>
-                        <td className={`px-4 py-4 text-right text-sm font-semibold ${isAddition ? 'text-green-600' : 'text-red-600'
-                          }`}>
-                          Rs.{isAddition ? '+' : '-'}{txn?.amount?.toLocaleString()} {wallet?.currency}
-                        </td>
-                      </tr>
-                    );
-                  })}
+                 {transactions?.length > 0 && transactions?.map((txn: any, idx: React.Key) => {
+                                   const isAddition = txn.type === 'TOPUP' || txn.type === 'REFUND' || txn.type === 'CREDIT' ? true : false;
+                                   const isEscrow = txn.type === "ESCROW_LOCK" ||txn.type=== "ESCROW_RELEASE"
+                                   const typeLabel = txn.type
+               
+                                   return (
+                                     <tr
+                                       key={txn.id}
+                                       className={idx !== wallet?.recentTransactions?.length - 1 ? 'border-b border-border/50' : ''}
+                                     >
+                                       <td className="px-4 py-4 text-sm text-foreground">
+                                         {new Date(txn.date)?.toLocaleDateString()}
+                                       </td>
+                                       <td className="px-4 py-4 text-sm font-medium text-muted-foreground font-mono">
+                                         {txn?.id}
+                                       </td>
+                                       <td className="px-4 py-4 text-sm">
+                                         <span className={`inline-block rounded-full px-3 py-1 text-xs font-medium ${
+                                           txn.type === 'TOPUP' || txn.type ==="CREDIT"
+                                           ? 'bg-green-50 text-green-700'
+                                           : txn.type === 'ESCROW_LOCK'
+                                             ? 'bg-yellow-50 text-yellow-700'
+                                             : txn.type === 'DEBIT' || txn.type === 'COMMISSION'
+                                               ? 'bg-red-50 text-red-700'
+                                               : 'bg-blue-50 text-blue-700'
+                                           }`}>
+                                           {typeLabel}
+                                         </span>
+                                       </td>
+                                       <td className="px-4 py-4 text-sm">
+                                         {txn.orderReference ? (
+                                           <span className="font-medium text-foreground">{txn.orderReference}</span>
+                                         ) : (
+                                           <span className="text-muted-foreground">{txn.description}</span>
+                                         )}
+                                       </td>
+                                       <td className={`px-4 py-4 text-right text-sm font-semibold ${isAddition ? 'text-green-600' : isEscrow ? "text-yellow-500" : 'text-red-600'
+                                         }`}>
+                                         {isAddition ? '+' : isEscrow ? "" : '-'} Rs.{txn?.amount?.toLocaleString()} {wallet?.currency}
+                                       </td>
+                                     </tr>
+                                   );
+                                 })}
                 </tbody>
               </table>
             </div>

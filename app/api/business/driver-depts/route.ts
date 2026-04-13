@@ -90,8 +90,8 @@ export async function GET(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   try {
-    const { driverId, amount } = await request.json();
-    if (!driverId || !amount) {
+    const { driverId, amount ,uniqueId} = await request.json();
+    if (!driverId || !amount || uniqueId) {
       return NextResponse.json(
         { error: "driverId and amount are required" },
         { status: 400 },
@@ -99,8 +99,10 @@ export async function PATCH(request: NextRequest) {
     }
 
     // Update shipment as settled
-    await financialService.settleCODDebt(driverId, amount);
-    return NextResponse.json({"success":true,message:"Driver dept settled success!"})
+    return await prisma.$transaction(async(tx)=>{
+      await financialService.settleCODDebt(tx,driverId, Number(amount),uniqueId);
+      return NextResponse.json({"success":true,message:"Driver dept settled success!"})
+    })
   } catch (error) {
     console.error("Error processing driver debt settlement:", error);
     return NextResponse.json(

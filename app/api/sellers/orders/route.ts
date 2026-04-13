@@ -54,6 +54,7 @@ export async function GET(request: NextRequest) {
                 isActive:true
               }
             },
+            
             driver:{
               select:{
                 id:true,
@@ -75,6 +76,8 @@ export async function GET(request: NextRequest) {
       take: limit,
       skip: offset,
     });
+
+   
 
 
     return NextResponse.json({

@@ -56,7 +56,7 @@ const PaymentReceivedModal = ({ isOpen, onClose, data }: PaymentReceivedModalPro
       />
 
       {/* Modal - White 2xl Rounded */}
-      <div className="relative bg-white max-sm:h-screen max-sm:w-screen w-full max-w-md rounded-2xl md:p-10 p-4 shadow-none overflow-hidden animate-in zoom-in-95 duration-300">
+      <div className="relative  items-center bg-white max-sm:h-screen max-sm:w-screen w-full md:max-w-md md:rounded-2xl md:p-10 p-4 shadow-none overflow-hidden animate-in zoom-in-95 duration-300">
         
         {/* Close Button */}
         <button 

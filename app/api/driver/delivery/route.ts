@@ -14,11 +14,10 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    if (newStatus === "PICKED_UP") {
-      console.log("yes");
-      await shipmentService.processPickup(shipmentId);
-      
-      console.log("yes");
+    if (newStatus === "PICKED_UP") { 
+      await shipmentService.processPickup(shipmentId); 
+      return NextResponse.json({ message: "Shipment updated successfully" });
+
     } 
     else if (newStatus === "IN_TRANSIT") {
       await prisma.shipment.update({
@@ -35,18 +34,24 @@ export async function PATCH(request: NextRequest) {
           createdAt: new Date(),
         },
       });
+      return NextResponse.json({ message: "Shipment updated successfully" });
     }
     else if (newStatus === "DELIVERED") {
       await shipmentService.processDelivery(shipmentId, newStatus);
+      return NextResponse.json({ message: "Shipment updated successfully" });
     } else if (newStatus === "CANCELED") {
-      await shipmentService.cancelShipment(shipmentId, "Delivery canceled",canceledBy?.toLocaleLowerCase());
+      await shipmentService.cancelShipment(shipmentId, "By "+canceledBy,canceledBy?.toLocaleLowerCase());
+      return NextResponse.json({ message: "Shipment updated successfully" });
     } else if (newStatus === "RETURNED") {
       await shipmentService.returnShipment(shipmentId, "Delivery returned");
+      return NextResponse.json({ message: "Shipment updated successfully" });
     } else if (newStatus === "FAILED") {
-      await shipmentService.failDelivery(shipmentId, newStatus);
-    } 
+      await shipmentService.failDelivery(shipmentId, "Field to process delivery");
+      return NextResponse.json({ message: "Shipment updated successfully" });
+    } else{
+      return NextResponse.json({ message: "Flaged error!" },{status:400});
+    }
 
-    return NextResponse.json({ message: "Shipment updated successfully" });
   } catch (error) {
     console.error("Update shipment error:", error);
     return NextResponse.json(

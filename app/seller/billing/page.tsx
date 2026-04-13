@@ -14,9 +14,9 @@ export default function BillingPage() {
   const [transactions, setTransactions] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [autoTopUpEnabled, setAutoTopUpEnabled] = useState(false);
-  const [wallet, setWallet]: any = useState({}) 
-   const [isTopupModalOpen,setIsTopupModalOpen] = useState(false)
-   const [isTransferFundsModalOpen,setIsTransferFundsModalOpen] = useState(false)
+  const [wallet, setWallet]: any = useState({})
+  const [isTopupModalOpen, setIsTopupModalOpen] = useState(false)
+  const [isTransferFundsModalOpen, setIsTransferFundsModalOpen] = useState(false)
 
   useEffect(() => {
     const user = JSON.parse(localStorage.getItem('user') || '{}');
@@ -62,26 +62,26 @@ export default function BillingPage() {
             <h1 className="text-3xl font-bold text-foreground">Wallet & Billing</h1>
             <p className="mt-2 text-muted-foreground">Manage your escrow balance and payments</p>
           </div>
-         <div className="flex space-x-1">
-           <Button
-            icon={<Plus className="h-4 w-4" />}
-            variant="primary"
-                onClick={()=>setIsTopupModalOpen(true)}
+          <div className="flex space-x-1">
+            <Button
+              icon={<Plus className="h-4 w-4" />}
+              variant="primary"
+              onClick={() => setIsTopupModalOpen(true)}
 
-          >
-            Top Up Wallet
-          </Button>
-          <Button
-            icon={<Send className="h-4 w-4" />}
-            variant="outline"
-                onClick={()=>setIsTransferFundsModalOpen(true)}
-          >
-            Tarnsfer funds
-          </Button>
-         </div> 
+            >
+              Top Up Wallet
+            </Button>
+            <Button
+              icon={<Send className="h-4 w-4" />}
+              variant="outline"
+              onClick={() => setIsTransferFundsModalOpen(true)}
+            >
+              Tarnsfer funds
+            </Button>
+          </div>
         </div>
-        <TopUpModal isOpen = {isTopupModalOpen} onClose={()=>setIsTopupModalOpen(false)} />
-          <TransferFundsModal isOpen = {isTransferFundsModalOpen} onClose={()=>setIsTransferFundsModalOpen(false)}/>
+        <TopUpModal isOpen={isTopupModalOpen} onClose={() => setIsTopupModalOpen(false)} />
+        <TransferFundsModal isOpen={isTransferFundsModalOpen} onClose={() => setIsTransferFundsModalOpen(false)} />
 
         {/* Escrow Visual - Three Prominent Metric Cards */}
         <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
@@ -155,41 +155,27 @@ export default function BillingPage() {
                 <tbody>
                   {transactions?.length > 0 && transactions?.map((txn: any, idx: React.Key) => {
                     const isAddition = txn.type === 'TOPUP' || txn.type === 'REFUND' || txn.type === 'CREDIT' ? true : false;
-                    const typeLabel =
-                      txn.type === 'TOPUP'
-                        ? 'Top-up'
-                        : txn.type === 'CREDIT'
-                          ? 'Credit'
-                          : txn.type === 'ESCROW_LOCK'
-                            ? 'Escrow Lock'
-                          : txn.type === 'DEBIT'
-                            ? 'Debit'
-                            : 'Refund';
+                    const isEscrow = txn.type === "ESCROW_LOCK" ||txn.type=== "ESCROW_RELEASE"
+                    const typeLabel = txn.type
 
                     return (
                       <tr
-                        key={txn?.id}
+                        key={txn.id}
                         className={idx !== wallet?.recentTransactions?.length - 1 ? 'border-b border-border/50' : ''}
                       >
                         <td className="px-4 py-4 text-sm text-foreground">
-                          {new Date(txn.date)?.toLocaleString("en-US",{
-                            day:"2-digit",
-                            month:"2-digit",
-                            year:"2-digit",
-                            minute:"2-digit",
-                            hour:"numeric",
-                            hour12:true
-                          })}
+                          {new Date(txn.date)?.toLocaleDateString()}
                         </td>
                         <td className="px-4 py-4 text-sm font-medium text-muted-foreground font-mono">
                           {txn?.id}
                         </td>
                         <td className="px-4 py-4 text-sm">
-                          <span className={`inline-block rounded-full px-3 py-1 text-xs font-medium ${txn.type === 'TOPUP'
+                          <span className={`inline-block rounded-full px-3 py-1 text-xs font-medium ${
+                            txn.type === 'TOPUP' || txn.type ==="CREDIT"
                             ? 'bg-green-50 text-green-700'
                             : txn.type === 'ESCROW_LOCK'
                               ? 'bg-yellow-50 text-yellow-700'
-                              : txn.type === 'DEBIT'
+                              : txn.type === 'DEBIT' || txn.type === 'COMMISSION'
                                 ? 'bg-red-50 text-red-700'
                                 : 'bg-blue-50 text-blue-700'
                             }`}>
@@ -197,11 +183,15 @@ export default function BillingPage() {
                           </span>
                         </td>
                         <td className="px-4 py-4 text-sm">
-                         {txn.description}
+                          {txn.orderReference ? (
+                            <span className="font-medium text-foreground">{txn.orderReference}</span>
+                          ) : (
+                            <span className="text-muted-foreground">{txn.description}</span>
+                          )}
                         </td>
-                        <td className={`px-4 py-4 text-right text-sm font-semibold ${isAddition ? 'text-green-600' : 'text-red-600'
+                        <td className={`px-4 py-4 text-right text-sm font-semibold ${isAddition ? 'text-green-600' : isEscrow ? "text-yellow-500" : 'text-red-600'
                           }`}>
-                          {isAddition ? '+' : '-'}{txn?.amount?.toLocaleString()} {wallet?.currency}
+                          {isAddition ? '+' : isEscrow ? "" : '-'} Rs.{txn?.amount?.toLocaleString()} {wallet?.currency}
                         </td>
                       </tr>
                     );

@@ -19,6 +19,7 @@ export default function SellerOrdersPage() {
   const [isBiddingModalOpen, setIsBiddingModalOpen] = useState(false);
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [showOrderDetails, setShowOrderDetails] = useState({isActive:false,order:{}});
+  
   useEffect(() => {
     const fetchOrders = async () => {
       try {

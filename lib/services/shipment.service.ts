@@ -2,21 +2,20 @@ import { prisma } from "@/lib/prisma";
 import { ShipmentStatus, PaymentMethod } from "@prisma/client";
 import { financialService } from "./financial.service";
 
+const safeNumber = (v: any) => Number(v || 0);
+
 export const shipmentService = {
+  // =========================
+  // READ ONLY
+  // =========================
   async getShipmentsByStatus(status: ShipmentStatus, limit = 50, skip = 0) {
     return prisma.shipment.findMany({
       where: { status },
       include: {
         seller: true,
-        assignment: {
-          include: {
-            driver: true,
-          },
-        },
+        assignment: { include: { driver: true } },
       },
-      orderBy: {
-        createdAt: "desc",
-      },
+      orderBy: { createdAt: "desc" },
       take: limit,
       skip,
     });
@@ -27,16 +26,10 @@ export const shipmentService = {
       where: { businessId },
       include: {
         seller: true,
-        assignment: {
-          include: {
-            driver: true,
-          },
-        },
+        assignment: { include: { driver: true } },
         payment: true,
       },
-      orderBy: {
-        createdAt: "desc",
-      },
+      orderBy: { createdAt: "desc" },
       take: limit,
       skip,
     });
@@ -46,452 +39,394 @@ export const shipmentService = {
     return prisma.shipment.findMany({
       where: { sellerId },
       include: {
-        assignment: {
-          include: {
-            driver: true,
-          },
-        },
+        assignment: { include: { driver: true } },
         payment: true,
         tracking: true,
       },
-      orderBy: {
-        createdAt: "desc",
-      },
+      orderBy: { createdAt: "desc" },
       take: limit,
       skip,
     });
   },
 
+  // =========================
+  // RATE CALCULATION
+  // =========================
   async calculateShipmentRate(weight: number, distance: number = 10) {
-    // Base calculation: 2 per kg + 0.5 per km
     const baseRate = weight * 2;
     const distanceCharge = distance * 0.5;
-    const tax = (baseRate + distanceCharge) * 0.1; // 10% tax
-    const total = baseRate + distanceCharge + tax;
+    const tax = (baseRate + distanceCharge) * 0.1;
 
     return {
       baseRate: Math.round(baseRate),
       distanceCharge: Math.round(distanceCharge),
       tax: Math.round(tax),
-      total: Math.round(total),
+      total: Math.round(baseRate + distanceCharge + tax),
     };
   },
 
+  // =========================
+  // PICKUP FLOW
+  // =========================
   async processPickup(shipmentId: string) {
-    const shipment = await prisma.shipment.findUnique({
-      where: { id: shipmentId },
-      include: {
-        assignment: {
-          include: {
-            driver: true,
-          },
+    return prisma.$transaction(async (tx) => {
+      const shipment = await tx.shipment.findUnique({
+        where: { id: shipmentId },
+        include: { assignment: { include: { driver: true } } },
+      });
+
+      if (!shipment) throw new Error("Shipment not found");
+      if (shipment.status !== "ASSIGNED") {
+        throw new Error("Shipment must be assigned before pickup");
+      }
+
+      const updated = await tx.shipment.update({
+        where: { id: shipmentId },
+        data: {
+          status: "PICKED_UP",
+          pickedUpAt: new Date(),
         },
-      },
-    });
+      });
 
-    if (!shipment) {
-      throw new Error("Shipment not found");
-    }
+      await tx.shipmentActivity.create({
+        data: {
+          shipmentId,
+          status: "PICKED_UP",
+          description: "Package picked up by driver",
+        },
+      });
 
-    if (shipment.status !== "ASSIGNED") {
-      throw new Error("Shipment must be assigned before pickup");
-    }
-
-    const updated = await prisma.shipment.update({
-      where: { id: shipmentId },
-      data: {
-        status: "PICKED_UP",
-        pickedUpAt: new Date(),
-      },
-    });
-
-    await prisma.shipmentActivity.create({
-      data: {
+      await financialService.processPayment(
+        tx,
         shipmentId,
-        status: "PICKED_UP",
-        description: "Package picked up by driver",
-      },
-    });
+        safeNumber(
+          shipment.codAmount || shipment.actualRate || shipment.expectedRate,
+        ),
+        shipment.paymentMethod as PaymentMethod,
+      );
 
-    await financialService.processPayment(
-      shipmentId,
-      shipment.codAmount || shipment.actualRate || shipment.expectedRate || 0,
-      shipment.paymentMethod as PaymentMethod,
-    );
-
-    return updated;
+      return updated;
+    },{timeout:100000});
   },
 
+  // =========================
+  // DELIVERY FLOW
+  // =========================
   async processDelivery(
     shipmentId: string,
     location?: string,
     latitude?: number,
     longitude?: number,
   ) {
-    const shipment = await prisma.shipment.findUnique({
-      where: { id: shipmentId },
-
-      include: {
-        seller: {
-          select: {
-            wallet: {
-              select: {
-                id: true,
-                balance: true,
-                escrowBalance: true,
-              },
-            },
-          },
-        },
-        assignment: {
+    return prisma.$transaction(
+      async (tx) => {
+        const shipment = await tx.shipment.findUnique({
+          where: { id: shipmentId },
           include: {
-            driver: {
-              include: {
-                wallet: true,
-              },
-            },
+            seller: { select: { wallet: { select: { id: true } } } },
+            assignment: { include: { driver: { include: { wallet: true } } } },
+            payment: true,
           },
-        },
-        payment: true,
+        });
+
+        if (!shipment) throw new Error("Shipment not found");
+        if (shipment.status !== "IN_TRANSIT") {
+          throw new Error("Shipment must be in transit before delivery");
+        }
+
+        const amount = safeNumber(shipment.actualRate);
+
+        const updated = await tx.shipment.update({
+          where: { id: shipmentId },
+          data: {
+            status: "DELIVERED",
+            deliveredAt: new Date(),
+          },
+        });
+
+        await tx.shipmentActivity.create({
+          data: {
+            shipmentId,
+            status: "DELIVERED",
+            description: "Package delivered successfully",
+            location,
+            latitude,
+            longitude,
+          },
+        });
+
+        // ================= COD FLOW =================
+        if (shipment.paymentMethod === "COD") {
+          const businessCommission = amount * 0.2;
+          const debtAmount =
+            safeNumber(shipment.codAmount) + businessCommission;
+
+          await financialService.addCODDebt(
+            tx,
+            shipment.assignment?.driver?.id || "",
+            debtAmount,
+            shipment.id,
+          );
+
+          const businessWallet = await tx.wallet.findUnique({
+            where: { businessId: shipment.businessId || "" },
+            select: { id: true },
+          });
+
+          await financialService.cutEscrow(
+            tx,
+            businessWallet?.id!,
+            amount * 0.1,
+            "Platform fee 10%",
+          );
+
+          await financialService.releaseEscrow(
+            tx,
+            shipment.seller.wallet?.id!,
+            amount,
+            "Escrow released",
+          );
+        }
+
+        // ================= PREPAID FLOW =================
+        if (shipment.paymentMethod === "PREPAID") {
+          await financialService.processShipmentTransactions(tx, shipment);
+        }
+
+        return updated;
       },
-    });
-
-    if (!shipment) {
-      throw new Error("Shipment not found");
-    }
-
-    if (shipment.status !== "IN_TRANSIT") {
-      throw new Error("Shipment must be in transit before delivery");
-    }
-
-    const updated = await prisma.shipment.update({
-      where: { id: shipmentId },
-      data: {
-        status: "DELIVERED",
-        deliveredAt: new Date(),
-      },
-    });
-
-    // Update tracking
-    await prisma.tracking.update({
-      where: { shipmentId },
-      data: {
-        currentStatus: "DELIVERED",
-        currentLocation: location,
-        latitude,
-        longitude,
-        actualDelivery: new Date(),
-      },
-    });
-
-    // Create activity
-    await prisma.shipmentActivity.create({
-      data: {
-        shipmentId,
-        status: "DELIVERED",
-        description: "Package delivered successfully",
-        location,
-        latitude,
-        longitude,
-      },
-    });
-
-    // Process payment based on payment method
-    if (shipment.paymentMethod === "COD") {
-      const businessCommission = Number(shipment?.actualRate) * 0.2; // cuts 20% , 10% get business and 10% our platform
-      const debtAmount =
-        Number(shipment.codAmount) + Number(businessCommission);
-      // create codDebt for driver
-      await financialService.addCODDebt(
-        shipment.assignment?.driver?.id || "",
-        debtAmount || 0,
-        shipment.id,
-      );
-
-      // release escrow of seller
-      await financialService.releaseEscrow(
-        shipment?.seller?.wallet?.id,
-        Number(shipment.actualRate),
-        "Escrow locked released",
-      );
-    }
-
-    // cut the escrow if payment method is not COD, and release the fund to the business and driver
-    if (shipment.paymentMethod === "PREPAID") {
-      await financialService.processShipmentTransactions(shipment);
-    }
-
-    return updated;
+      { timeout: 100000 },
+    );
   },
 
+  // =========================
+  // FAIL DELIVERY
+  // =========================
   async failDelivery(shipmentId: string, reason: string) {
-    const updated = await prisma.shipment.update({
-      where: { id: shipmentId },
-      data: {
-        status: "FAILED",
-      },
-      select: {
-        paymentMethod: true,
-        payment: {
-          select: {
-            id: true,
-          },
-        },
-        actualRate: true,
-        businessId: true,
-        seller: {
-          select: {
-            wallet: {
-              select: {
-                id: true,
-              },
-            },
-          },
-        },
-      },
-    });
-
-    // unload escrow for seller
-    await financialService.releaseEscrow(
-      updated?.seller?.wallet?.id,
-      updated.actualRate || 0,
-      "Shipping fee released due to failed delivery",
-    );
-
-    const businessWallet = await prisma.wallet.findUnique({
-      where: {
-        id: updated.businessId || "",
-      },
-      select: {
-        id: true,
-      },
-    });
-
-    // cut 10% from locked escrow (business)
-    await financialService.cutEscrow(
-      businessWallet?.id,
-      Number(updated.actualRate) * 0.1,
-      "Escrow Cut 10% platform fee",
-    );
-
-    await prisma.shipmentActivity.create({
-      data: {
-        shipmentId,
-        status: "FAILED",
-        description: `Delivery failed: ${reason}`,
-      },
-    });
-
-    if (updated.paymentMethod === "COD") {
-      // update payment
-      await prisma.payment.update({
-        where: {
-          id: updated.payment?.id,
-        },
-        data: {
-          paymentStatus: "FAILED",
+    return prisma.$transaction(async (tx) => {
+      const updated = await tx.shipment.update({
+        where: { id: shipmentId },
+        data: { status: "FAILED" },
+        select: {
+          payment: { select: { id: true, paymentMethod: true } },
+          actualRate: true,
+          businessId: true,
+          seller: { select: { wallet: { select: { id: true } } } },
         },
       });
-    }
 
-    await prisma.transaction.create({
-      data: {
-        walletId: updated.seller.wallet?.id || "",
-        amount: updated.actualRate || updated.actualRate || 0,
-        type: "CREDIT",
-        description: `Refund for failed delivery of shipment ${shipmentId}`,
-      },
-    });
+      if (updated.payment?.paymentMethod === "COD") {
+        await tx.payment.update({
+          where: { id: updated.payment.id },
+          data: {
+            notes: "Delivery failed: " + reason,
+            paymentStatus: "FAILED",
+          },
+        });
+      }
 
-    return updated;
+      await financialService.releaseEscrow(
+        tx,
+        updated.seller.wallet?.id!,
+        safeNumber(updated.actualRate),
+        "Failed delivery release",
+      );
+
+      const businessWallet = await tx.wallet.findUnique({
+        where: { businessId: updated.businessId || "" },
+        select: { id: true },
+      });
+
+      await financialService.cutEscrow(
+        tx,
+        businessWallet?.id!,
+        safeNumber(updated.actualRate) * 0.1,
+        "Platform cut",
+      );
+
+      await tx.shipmentActivity.create({
+        data: {
+          shipmentId,
+          status: "FAILED",
+          description: `Delivery failed: ${reason}`,
+        },
+      });
+
+      await tx.transaction.create({
+        data: {
+          walletId: updated.seller.wallet?.id || "",
+          amount: safeNumber(updated.actualRate),
+          type: "CREDIT",
+          description: `Refund shipment ${shipmentId}`,
+        },
+      });
+
+      return updated;
+    },{timeout:100000});
   },
 
+  // =========================
+  // CANCEL SHIPMENT
+  // =========================
   async cancelShipment(
     shipmentId: string,
     reason: string,
     canceledBy?: "driver" | "business" | "seller",
   ) {
-    const shipment = await prisma.shipment.findUnique({
-      where: { id: shipmentId },
-      include: {
-        payment:{
-          select:{
-            id:true
-          }
-        },
-        seller: {
-          select: {
-            wallet: {
-              select: {
-                id: true,
+    return prisma.$transaction(
+      async (tx) => {
+        const shipment = await tx.shipment.findUnique({
+          where: { id: shipmentId },
+          include: {
+            payment: { select: { id: true } },
+            assignment: {
+              include: {
+                
+                driver: { select: { wallet: { select: { id: true } } } },
               },
             },
+            seller: { select: { wallet: { select: { id: true } } } },
           },
-        },
+        });
+
+        if (!shipment) throw new Error("Shipment not found");
+        if (["DELIVERED", "FAILED", "CANCELLED"].includes(shipment.status)) {
+          throw new Error("Cannot cancel shipment");
+        }
+
+        const updated = await tx.shipment.update({
+          where: { id: shipmentId },
+          data: { status: "CANCELLED" },
+        });
+
+        await tx.shipmentActivity.create({
+          data: {
+            shipmentId,
+            status: "CANCELLED",
+            description: `Cancelled: ${reason}`,
+          },
+        });
+
+        const businessWallet = await tx.wallet.findUnique({
+          where: { businessId: shipment.businessId || "" },
+          select: { id: true },
+        });
+
+        const amount = safeNumber(shipment.actualRate);
+
+        if (
+          canceledBy === "seller" &&
+          ["PENDING", "ASSIGNED"].includes(shipment.status)
+        ) {
+          await financialService.releaseEscrow(
+            tx,
+            shipment.seller.wallet?.id!,
+            amount,
+            "Seller cancel",
+          );
+          await financialService.releaseEscrow(
+            tx,
+            businessWallet?.id!,
+            amount * 0.1,
+            "Platform refund",
+          );
+        } else if (canceledBy === "seller") {
+          await financialService.processShipmentTransactions(tx, shipment);
+        } else {
+          await financialService.releaseEscrow(
+            tx,
+            shipment.seller.wallet?.id!,
+            amount,
+            "Business cancel",
+          );
+
+          await financialService.cutEscrow(
+            tx,
+            businessWallet?.id!,
+            amount * 0.1,
+            "Platform fee",
+          );
+        }
+
+        if (shipment.paymentMethod === "COD") {
+          await tx.payment.update({
+            where: { id: shipment.payment?.id },
+            data: {
+              notes: "Cancelled: " + reason,
+              paymentStatus: "FAILED",
+            },
+          });
+        }
+
+        return updated;
       },
-    });
-
-    if (!shipment) {
-      throw new Error("Shipment not found");
-    }
-
-    if (["DELIVERED", "FAILED", "CANCELLED"].includes(shipment.status)) {
-      throw new Error("Cannot cancel shipment in current status");
-    }
-
-    const updated = await prisma.shipment.update({
-      where: { id: shipmentId },
-      data: {
-        status: "CANCELLED",
-      },
-    });
-
-    await prisma.shipmentActivity.create({
-      data: {
-        shipmentId,
-        status: "CANCELLED",
-        description: `Cancelled: ${reason}`,
-      },
-    });
-
-    const businessWallet = await prisma.wallet.findUnique({
-      where: {
-        businessId: shipment?.businessId || "",
-      },
-      select: {
-        id: true,
-      },
-    });
-    // release the escrow of seller if they canceled in Pending or Assigned phase
-    if (
-      canceledBy == "seller" &&
-      ["PENDING", "ASSIGNED"].includes(shipment.status)
-    ) {
-      await financialService.releaseEscrow(
-        shipment.seller.wallet?.id,
-        shipment.actualRate,
-        "Shipment canceled by Seller",
-      ); // release full escrow of the seller
-      await financialService.releaseEscrow(
-        businessWallet?.id,
-        Number(shipment.actualRate) * 0.1,
-        "Shipment canceled by Seller",
-      ); // release that 10% escrow of the business
-    } else if (
-      canceledBy == "seller" &&
-      !["PENDING", "ASSIGNED"].includes(shipment.status)
-    ) {
-      await financialService.processShipmentTransactions(shipment);
-    } else {
-      await financialService.releaseEscrow(
-        shipment.seller.wallet?.id,
-        shipment.actualRate,
-        "Shipment canceled by Seller",
-      ); // release full escrow of the seller
-      await financialService.cutEscrow(
-        businessWallet?.id,
-        Number(shipment.actualRate) * 0.1,
-        "10% platform commission ",
-      ); // cut escrow from business
-    }
-
-    if(shipment.paymentMethod==="COD"){
-      // update payment
-    await prisma.payment.update({
-      where:{
-        id:shipment.payment?.id
-      },
-      data:{
-        paymentStatus:"FAILED"
-      }
-    })
-
-    }
-
-    return updated;
+      { timeout: 100000 },
+    );
   },
 
+  // =========================
+  // RETURN SHIPMENT
+  // =========================
   async returnShipment(shipmentId: string, reason: string) {
-    const shipment = await prisma.shipment.findUnique({
-      where: { id: shipmentId },
-      include: {
-        payment: true,
-        seller: {
-          include: {
-            wallet: {
-              select: {
-                id: true,
-              },
-            },
-          },
+    return prisma.$transaction(async (tx) => {
+      const shipment = await tx.shipment.findUnique({
+        where: { id: shipmentId },
+        include: {
+          payment: true,
+          seller: { include: { wallet: true } },
+          assignment: { include: { driver: true } },
         },
-        assignment: {
-          include: {
-            driver: true,
-          },
+      });
+
+      if (!shipment) throw new Error("Shipment not found");
+      if (["DELIVERED", "FAILED", "CANCELLED"].includes(shipment.status)) {
+        throw new Error("Invalid state");
+      }
+
+      const updated = await tx.shipment.update({
+        where: { id: shipmentId },
+        data: { status: "RETURNED" },
+        include: { payment: { select: { id: true } } },
+      });
+
+      await tx.shipmentActivity.create({
+        data: {
+          shipmentId,
+          status: "RETURNED",
+          description: `Returned: ${reason}`,
         },
-      },
-    });
+      });
 
-    if (!shipment) {
-      throw new Error("Shipment not found");
-    }
+      if (shipment.paymentMethod === "COD") {
+        const businessCommission = safeNumber(shipment.actualRate) * 0.2;
+        const debtAmount = safeNumber(shipment.codAmount) + businessCommission;
 
-    if (["DELIVERED", "FAILED", "CANCELLED"].includes(shipment.status)) {
-      throw new Error("Cannot cancel shipment in current status");
-    }
+        await financialService.addCODDebt(
+          tx,
+          shipment.assignment?.driver?.id || "",
+          debtAmount,
+          shipment.id,
+        );
 
-    const updated = await prisma.shipment.update({
-      where: { id: shipmentId },
-      data: {
-        status: "RETURNED",
-      },
-      include:{
-        payment:{
-          select:{
-            id:true
-          }
-        }
+        await financialService.cutEscrow(
+          tx,
+          shipment.seller.wallet?.id!,
+          safeNumber(shipment.actualRate),
+          "Escrow deducted of return delivery",
+        );
+
+        await tx.payment.update({
+          where: { id: updated.payment?.id },
+          data: {
+            notes: "Returned: " + reason,
+            paymentStatus: "FAILED",
+          },
+        });
+      } else {
+        await financialService.processShipmentTransactions(tx, shipment);
       }
-    });
 
-    await prisma.shipmentActivity.create({
-      data: {
-        shipmentId,
-        status: "RETURNED",
-        description: `Returned: ${reason}`,
-      },
-    });
-
-    if (shipment.paymentMethod === "COD") {
-      const businessCommission = Number(shipment?.actualRate) * 0.2; // cuts 20% , 10% get business and 10% our platform
-      const debtAmount =
-        Number(shipment.codAmount) + Number(businessCommission);
-      // create codDebt for driver
-      await financialService.addCODDebt(
-        shipment.assignment?.driver?.id || "",
-        debtAmount || 0,
-        shipment.id,
-      );
-      // release escrow of seller
-      await financialService.releaseEscrow(
-        shipment?.seller?.wallet?.id,
-        Number(shipment.actualRate),
-        "Escrow locked released",
-      );
-      // update payment
-    await prisma.payment.update({
-      where:{
-        id:updated.payment?.id
-      },
-      data:{
-        paymentStatus:"FAILED"
-      }
-    })
-
-    } else {
-      await financialService.processShipmentTransactions(shipment);
-    }
-    return updated;
+      return updated;
+    },{timeout:100000});
   },
 };

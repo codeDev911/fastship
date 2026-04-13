@@ -1,549 +1,617 @@
 import { prisma } from "@/lib/prisma";
-import { TransactionType, PaymentStatus } from "@prisma/client";
+import {  TransactionType } from "@prisma/client";
+import {
+  runIdempotent,
+  addLedger,
+  withWalletLock,
+} from "@/lib/services/financial.engine";
+type Tx = any
 
-
-const getById = (label:string,id:string)=>{
-  switch (label) {
-    case "seller":
-      return {id:{sellerId:id}}
-  
-    case "business":
-      return {id:{businessId:id}}
-  
-    case "driver":
-      return {id:{driverId:id}}
-  
-    default:
-      break;
-  }
-}
-
-export const financialService = {
+export const  financialService = {
+  // =========================
+  // WALLET TOPUP
+  // =========================
   async topUpWallet(walletId: string, amount: number) {
-    return this.createTransaction(walletId, "CREDIT", amount, "Wallet top-up");
+    return prisma.$transaction(async (tx) => {
+      return this.createTransaction(
+        tx,
+        walletId,
+        "CREDIT",
+        amount,
+        "Wallet top-up",
+      );
+    });
   },
 
+  // =========================
+  // CORE TRANSACTION
+  // =========================
   async createTransaction(
+    tx: Tx,
     walletId: string,
     type: TransactionType,
     amount: number,
     description: string,
-    referenceId?: string
+    referenceId?: string,
   ) {
-    const transaction = await prisma.transaction.create({
-      data: {
-        walletId,
-        type,
-        amount,
-        description,
-        referenceId,
-        status: "COMPLETED",
-        completedAt: new Date(),
+    return await runIdempotent(
+      tx,
+      `tx-${walletId}-${amount}-${referenceId}`,
+      "transaction",
+      async () => {
+        const transaction = await tx.transaction.create({
+          data: {
+            walletId,
+            type,
+            amount,
+            description,
+            referenceId,
+            status: "COMPLETED",
+            completedAt: new Date(),
+          },
+        });
+
+        const balanceChange = ["CREDIT", "SETTLEMENT"].includes(type)
+          ? amount
+          : -amount;
+
+        await withWalletLock(tx, walletId, async () => {
+          await addLedger(tx, {
+            walletId,
+            amount: balanceChange,
+            type,
+            category: "TRANSACTION",
+            referenceId,
+          });
+
+          await tx.wallet.update({
+            where: { id: walletId },
+            data: {
+              balance: { increment: balanceChange },
+            },
+          });
+        });
+
+        return transaction;
       },
-    });
-
-    // Update wallet balance
-    const balanceChange =
-      ["CREDIT", "SETTLEMENT"].includes(type) ? amount : -amount;
-
-    await prisma.wallet.update({
-      where: { id: walletId },
-      data: {
-        balance: {
-          increment: balanceChange,
-        },
-      },
-    });
-
-    return transaction;
+    );
   },
 
-  async lockEscrow(walletId: string, amount: number, reason: string) {
-    
+  // =========================
+  // ESCROW LOCK
+  // =========================
+  async lockEscrow(tx: Tx, walletId: string, amount: number, reason: string,referenceId?:string) {
+    return await runIdempotent(
+      tx,
+      `lock-${walletId}-${amount}-${referenceId}`,
+      "lockEscrow",
+      async () => {
+        
+        const wallet = await tx.wallet.findUnique({
+          where: { id: walletId },
+          select: { balance: true },
+        });
 
-    let wallet = await prisma.wallet.findUnique({
-      where:{
-        id:walletId
+        if (Number(amount) > Number(wallet?.balance)) {
+          
+          throw new Error("Insufficient balance");
+        }
+        
+        return withWalletLock(tx, walletId, async () => {
+          await tx.wallet.update({
+            where: { id: walletId },
+            data: {
+              escrowBalance: { increment: amount },
+            },
+          });
+          return tx.transaction.create({
+            data: {
+              walletId,
+              referenceId,
+              type: "ESCROW_LOCK",
+              amount,
+              description: `Escrow locked: ${reason}`,
+              status: "PENDING",
+            },
+          });
+          
+        });
       },
-      select:{
-        balance:true,
-        escrowBalance:true
-      }
-    })
-
-    // if escrow is grater then the wallet balance will rise error
-    if(Number(amount) > Number( wallet?.balance)){
-      throw new Error("Insufficient balance")
-    }
-
-    await prisma.wallet.update({
-      where: { id: walletId },
-      data: {
-        escrowBalance: {
-          increment: amount,
-        },
-      },
-    });
-    
-    const transaction = await prisma.transaction.create({
-      data: {
-        walletId,
-        type: "ESCROW_LOCK",
-        amount,
-        description: `Escrow locked: ${reason}`,
-        status: "PENDING",
-      },
-    });
-
-    return transaction;
+    );
   },
 
-  async releaseEscrow(walletId: string, amount: number, reason: string) {
-    const wallet = await prisma.wallet.findUnique({
-      where: { id: walletId },
-    });
+  // =========================
+  // ESCROW RELEASE
+  // =========================
+  async releaseEscrow(
+    tx: Tx,
+    walletId: string,
+    amount: number,
+    reason: string,
+    referenceId?:string
+  ) {
+    return await runIdempotent(
+      tx,
+      `release-${walletId}-${amount}-${referenceId}`,
+      "releaseEscrow",
+      async () => {
+        const wallet = await tx.wallet.findUnique({ where: { id: walletId } });
 
-    if (!wallet || wallet.escrowBalance < amount) {
-      throw new Error("Insufficient escrow balance");
-    }
+        if (!wallet || wallet.escrowBalance < amount) {
+          throw new Error("Insufficient escrow balance");
+        }
 
-    const transaction = await prisma.transaction.create({
-      data: {
-        walletId,
-        type: "CREDIT",
-        amount, 
-        description: `Escrow released: ${reason}`,
-        status: "COMPLETED",
-        completedAt: new Date(),
+        return withWalletLock(tx, walletId, async () => {
+          await addLedger(tx, {
+            walletId,
+            amount,
+            type: "CREDIT",
+            category: "ESCROW_RELEASE",
+            referenceId: reason,
+          });
+
+          await tx.wallet.update({
+            where: { id: walletId },
+            data: {
+              escrowBalance: { decrement: amount },
+            },
+          });
+
+          return tx.transaction.create({
+            data: {
+              walletId,
+              type: "ESCROW_RELEASE",
+              amount,
+              description: `Escrow released: ${reason}`,
+              status: "COMPLETED",
+              completedAt: new Date(),
+            },
+          });
+        });
       },
-    });
-
-    await prisma.wallet.update({
-      where: { id: walletId },
-      data: {
-        escrowBalance: {
-          decrement: amount,
-        }, 
-      },
-    });
-
-    return transaction;
+    );
   },
 
+  // =========================
+  // COD PAYMENT
+  // =========================
   async processPayment(
+    tx: Tx,
     shipmentId: string,
     amount: number,
-    paymentMethod: "PREPAID" | "COD"
+    paymentMethod: "PREPAID" | "COD",
   ) {
-    const shipment = await prisma.shipment.findUnique({
-      where: { id: shipmentId },
-      include: {
-        seller: {
-          include: {
-            wallet: true,
-          },
-        },
-      },
-    });
+    return await runIdempotent(tx, `payment-${shipmentId}`, "payment", async () => {
+      const shipment = await tx.shipment.findUnique({
+        where: { id: shipmentId },
+      });
 
-    if (!shipment) {
-      throw new Error("Shipment not found");
-    }
+      if (!shipment) throw new Error("Shipment not found");
 
-    let tax = amount * 0; // 0% tax 
-    let commission = amount * 0; // 0% commission
-    let driverPayable = 0;
-    commission = Number(shipment.actualRate)
+      let tax = 0;
+      let commission = Number(shipment.actualRate);
+      let driverPayable = 0;
 
-    if(paymentMethod === "COD"){
-      tax = amount * 0.0; // 0% tax for COD
-      driverPayable = commission * 0.8; // Driver gets 80% of commission for COD
-    }
+      if (paymentMethod === "COD") {
+        driverPayable = commission * 0.8;
+      }
 
-
-    const payment = await prisma.payment.create({
-      data: {
-        shipmentId,
-        amount,
-        tax,
-        commission,
-        driverPayable,
-        paymentMethod,
-        paymentStatus: paymentMethod === "PREPAID" ? "COMPLETED" : "PENDING",
-        paidAt: paymentMethod === "PREPAID" ? new Date() : undefined,
-      },
-    });
-
-    
-
-    return payment;
-  },
-
-  async settleDriverPayment(driverId: string, amount: number) {
-    const driver = await prisma.driver.findUnique({
-      where: { id: driverId },
-      include: {
-        wallet: true,
-      },
-    });
-
-    if (!driver || !driver.wallet) {
-      throw new Error("Driver or wallet not found");
-    }
-
-    // Create earning record
-    const earning = await prisma.earning.create({
-      data: {
-        driverId,
-        amount,
-      },
-    });
-
-    // Add to wallet
-    await this.createTransaction(
-      driver.wallet.id,
-      "CREDIT",
-      amount,
-      `Settlement for delivery`,
-      earning.id
-    );
-
-    return earning;
-  },
-
-  async processSettlement(
-    businessId: string,
-    periodStart: Date,
-    periodEnd: Date
-  ) {
-    const business = await prisma.business.findUnique({
-      where: { id: businessId },
-      include: {
-        wallet: true,
-      },
-    });
-
-    if (!business) {
-      throw new Error("Business not found");
-    }
-
-    // Get all unsettled earnings in period
-    const earnings = await prisma.earning.findMany({
-      where: {
-        earnedAt: {
-          gte: periodStart,
-          lte: periodEnd,
-        },
-        isSettled: false,
-      },
-    });
-
-    const totalAmount = earnings.reduce(
-      (sum, earning) => sum + earning.amount,
-      0
-    );
-    const commission = totalAmount * (business.commissionRate / 100);
-    const netAmount = totalAmount - commission;
-
-    // Create settlement record
-    const settlement = await prisma.settlement.create({
-      data: {
-        businessId,
-        periodStart,
-        periodEnd,
-        totalAmount,
-        commission,
-        netAmount,
-        status: "COMPLETED",
-        settledAt: new Date(),
-      },
-    });
-
-    // Mark earnings as settled
-    await prisma.earning.updateMany({
-      where: {
-        id: {
-          in: earnings.map((e) => e.id),
-        },
-      },
-      data: {
-        isSettled: true,
-        settlementId: settlement.id,
-      },
-    });
-
-    // Add to business wallet
-    if (business.wallet) {
-      await this.createTransaction(
-        business.wallet.id,
-        "SETTLEMENT",
-        netAmount,
-        `Settlement for period ${periodStart.toISOString()} - ${periodEnd.toISOString()}`,
-        settlement.id
-      );
-    }
-
-    return settlement;
-  },
-
-  async addCODDebt(driverId: string, amount: number, shipmentId?: string) {
-    const driver = await prisma.driver.findUnique({
-      where: { id: driverId },
-    });
-
-    if (!driver) {
-      throw new Error("Driver not found");
-    }
-
-    const debt = await prisma.driverDebt.create({
-      data: {
-        driverId,
-        amount,
-        shipmentId: shipmentId || undefined,
-        debtReason: "COD collection not completed",
-      },
-    });
-
-    // Update driver's current debt
-    await prisma.driver.update({
-      where: { id: driverId },
-      data: {
-        currentDebt: {
-          increment: amount,
-        },
-      },
-    });
-
-    return debt;
-  },
-
-  async settleCODDebt(driverId: string, amount: number) {
-    const driver = await prisma.driver.findUnique({
-      where: { id: driverId },
-      include: {
-        wallet: true,
-      },
-    });
-
-    if (!driver || !driver.wallet) {
-      throw new Error("Driver or wallet not found");
-    }
-
-    if (driver.currentDebt < amount) {
-      throw new Error("Amount exceeds current debt");
-    }
- 
-
-    // Update unsettled debts
-    const debts = await prisma.driverDebt.findMany({
-      where: {
-        driverId,
-        isSettled: false,
-      },
-      orderBy: {
-        createdAt: "asc",
-      },
-    });
-
-    let remainingAmount = amount;
-    for (const debt of debts) {
-      if (remainingAmount <= 0) break;
-
-      const settleAmount = Math.min(remainingAmount, debt.amount);
-      await prisma.driverDebt.update({
-        where: { id: debt.id },
+      return tx.payment.create({
         data: {
-          isSettled: true,
-          settledAt: new Date(),
+          shipmentId,
+          amount,
+          tax,
+          commission,
+          driverPayable,
+          paymentMethod,
+          paymentStatus: paymentMethod === "PREPAID" ? "COMPLETED" : "PENDING",
+          paidAt: paymentMethod === "PREPAID" ? new Date() : undefined,
+        },
+      });
+    });
+  },
+
+  // =========================
+  // DRIVER SETTLEMENT
+  // =========================
+  async settleDriverPayment(tx: Tx, driverId: string, amount: number,referenceId?:string) {
+    return await runIdempotent(
+      tx,
+      `driver-settle-${driverId}-${referenceId}`,
+      "settlement",
+      async () => {
+        const driver = await tx.driver.findUnique({
+          where: { id: driverId },
+          include: { wallet: true },
+        });
+
+        if (!driver?.wallet) throw new Error("Driver or wallet not found");
+
+        const earning = await tx.earning.create({
+          data: { driverId, amount },
+        });
+
+        return earning;
+      },
+    );
+  },
+
+  // =========================
+  // COD DEBT
+  // =========================
+  async addCODDebt(
+    tx: Tx,
+    driverId: string,
+    amount: number,
+    shipmentId?: string,
+  ) {
+    return await runIdempotent(tx, `cod-${shipmentId}`, "codDebt", async () => {
+      const debt = await tx.driverDebt.create({
+        data: {
+          driverId,
+          amount,
+          shipmentId,
+          debtReason: "COD collection not completed",
         },
       });
 
-      remainingAmount -= settleAmount;
-    }
-
-    // Update driver current debt
-    await prisma.driver.update({
-      where: { id: driverId },
-      data: {
-        currentDebt: {
-          decrement: Number(amount),
+      await tx.driver.update({
+        where: { id: driverId },
+        data: {
+          currentDebt: { increment: amount },
         },
-      },
+      });
+
+      return debt;
     });
-
-    return { settledAmount: Number(amount), remainingDebt: driver.currentDebt - Number(amount) };
   },
 
-  async transferFunds(from:"driver"|"business"|"seller", to : "driver"|"business"|"seller", fromId:any,toId:any,amount:any,description?:"Funds transfer"){
+  // =========================
+  // SHIPMENT PROCESSING (CORE FLOW)
+  // =========================
+  async processShipmentTransactions(tx: Tx, shipment: any) {
+    return await runIdempotent(
+      tx,
+      `shipment-${shipment.id}`,
+      "shipmentProcess",
+      async () => {
+        const amount = Number(
+          shipment.actualRate || shipment.expectedRate || 0,
+        );
+        const businessFee = amount * 0.1;
+        const platformFee = amount * 0.1;
+        const driverFee = amount * 0.8;
 
-    const getIdSender = getById(from,fromId) || {id:{sellerId:"s"}}
-    const getIdReciever = getById(to,toId) || {id:{sellerId:"s"}}
-
-    try {
-      await prisma.$transaction(async (tx)=>{
-      let senderWallet = await tx.wallet.findUnique({
-        where:getIdSender?.id
-      })
-
-      let recievedWallet = await tx.wallet.findUnique({
-        where:getIdReciever?.id
-      })
-
-      if(!senderWallet || !recievedWallet){
-        throw new Error("No wallets founded!")
-      }
-
-      if(senderWallet?.balance < Number(amount)){
-        throw new Error("Insufficient Balance")
-      }
-
-      console.log(getIdReciever);
-      console.log(getIdSender);
-      console.log(from);
-      console.log(to);
-      
-
-      // begin transaction
-
-      // Deduct from sender
-      await tx.wallet.update({
-        where:{
-          id:senderWallet.id
-        },data:{
-          balance:{
-            decrement:Number(amount)
-          }
-        }
-      })
-
-      let sender = await tx.transaction.create({
-        data:{
-          referenceId:senderWallet.id,
-          amount:Number(amount),
-          description:description||"Funds Transfer",
-          type:"DEBIT",
-          completedAt:new Date(),
-          status:"COMPLETED",
-          walletId:senderWallet.id
-        }
-      })
-
-      // add to reciever
-      await tx.wallet.update({
-        where:{
-          id:recievedWallet.id
-        },data:{
-          balance:{
-            increment:Number(amount)
-          }
-        }
-      })
-      let reciever = await tx.transaction.create({
-        data:{
-          referenceId:recievedWallet.id,
-          amount:Number(amount),
-          description:description||"Funds Transfer",
-          type:"CREDIT",
-          completedAt:new Date(),
-          status:"COMPLETED",
-          walletId:recievedWallet.id
-        }
-      })
-      return JSON.stringify({sender,reciever})
-    })
-    } catch (error) {
-      return error
-    }
-
-  },
-
-  async processShipmentTransactions(shipment:any){
-      await prisma.$transaction(async (tx) => {
-        // cut escrow from sellet wallet
-        await tx.wallet.update({
-          where: { id: shipment.seller.wallet?.id },
-          data: {
-            balance: {
-              decrement: shipment.actualRate || shipment.expectedRate || 0,
-            },
-            escrowBalance: {
-              decrement: shipment.actualRate || shipment.expectedRate || 0,
-            },
-          },
-        });
-        await tx.transaction.create({
-          data: {
-            walletId: shipment.seller.wallet?.id || "",
-            amount: shipment.actualRate || shipment.expectedRate || 0,
+        // Deduct fee from seller
+        await withWalletLock(tx, shipment.seller.wallet.id, async () => {
+          await addLedger(tx, {
+            walletId: shipment.seller.wallet.id,
+            amount: -amount,
             type: "DEBIT",
-            description: `${shipment.actualRate || shipment.expectedRate || 0} Escrow cut for shipment ${shipment.id}`,
-          },
+            category: "SHIPMENT_CLEAR",
+            referenceId: shipment.id,
+          });
+
+          await tx.wallet.update({
+            where: { id: shipment.seller.wallet.id },
+            data: {
+              balance: { decrement: amount },
+              escrowBalance: { decrement: amount },
+            },
+          });
+
+          await tx.transaction.create({
+            data: {
+              amount: amount,
+              description: "Shipping fee deducted",
+              type: "DEBIT",
+              completedAt: new Date(),
+              referenceId: shipment.id,
+              status: "COMPLETED",
+              walletId: shipment?.seller?.wallet.id,
+            },
+          });
         });
 
-        // release fund to business wallet
-        let businessWallet = await tx.wallet.update({
-          where: { businessId: shipment.businessId || "" },
-          select: {
-            id: true,
-          },
-          data: {
-            escrowBalance:{
-              decrement:  (shipment.actualRate || shipment.expectedRate || 0) * 0.1, // release escrow 10% 
-            },
-            balance: {
-              increment:
-                (shipment.actualRate || shipment.expectedRate || 0) * 0.1, // 10% to business
-            },
-          },
+        const businessWallet = await tx.wallet.findUnique({
+          where: { businessId: shipment.businessId },
         });
 
-        await tx.transaction.create({
-          data: {
+        if (!businessWallet) throw new Error("Business wallet not found");
+
+        await withWalletLock(tx, businessWallet.id, async () => {
+          await addLedger(tx, {
             walletId: businessWallet.id,
-            amount: (shipment.actualRate || shipment.expectedRate || 0) * 0.1, // 10% to business
+            amount: businessFee,
             type: "CREDIT",
-            description: `10% Credit  shipment ${shipment.id}`,
-          },
+            category: "DELIVERY_FEE",
+            referenceId: shipment.id,
+          });
+
+          await tx.wallet.update({
+            where: { id: businessWallet.id },
+            data: {
+              balance: { increment: businessFee },
+              escrowBalance: { decrement: platformFee },
+            },
+          });
+
+          await tx.transaction.create({
+            data: {
+              amount: businessFee,
+              description: "Delivery fee and Released Escrow",
+              type: "CREDIT",
+              completedAt: new Date(),
+              referenceId: shipment.id,
+              status: "COMPLETED",
+              walletId: businessWallet.id,
+            },
+          });
+           
         });
-      });
-      await financialService.settleDriverPayment(
-        shipment.assignment?.driverId,
-        (shipment.actualRate || shipment.expectedRate || 0) * 0.8,
-      );
+
+        if (!shipment?.assignment?.driver?.wallet.id)
+          throw new Error("Driver wallet not found"); 
+        
+        await withWalletLock(tx, shipment?.assignment?.driver?.wallet.id, async () => {
+          await addLedger(tx, {
+            walletId: shipment?.assignment?.driver?.wallet.id,
+            amount: driverFee,
+            type: "CREDIT",
+            category: "DELIVERY_FEE",
+            referenceId: shipment.id,
+          });
+
+          await tx.wallet.update({
+            where: { id: shipment?.assignment?.driver?.wallet.id },
+            data: {
+              balance: { increment: driverFee },
+            },
+          });
+          
+          await tx.transaction.create({
+            data: {
+              amount: driverFee,
+              description: "Delivery fee",
+              type: "CREDIT",
+              completedAt: new Date(),
+              referenceId: shipment.id,
+              status: "COMPLETED",
+              walletId: shipment?.assignment?.driver?.wallet.id,
+            },
+          });
+        });
+
+        await this.settleDriverPayment(
+          tx,
+          shipment.assignment?.driverId,
+          amount * 0.8,
+        );
+      },
+    );
   },
 
-  async cutEscrow(walletId:string,amount:number,reason:string){
-     const wallet = await prisma.wallet.findUnique({
-      where: { id: walletId },
-    });
+  // =========================
+  // ESCROW CUT
+  // =========================
+  async cutEscrow(tx: Tx, walletId: string, amount: number, reason: string,referenceId:string) {
+    return await runIdempotent(
+      tx,
+      `cut-${walletId}-${amount}-${referenceId}`,
+      "cutEscrow",
+      async () => {
+        return withWalletLock(tx, walletId, async () => {
+          await addLedger(tx, {
+            walletId,
+            amount: -amount,
+            type: "DEBIT",
+            category: "ESCROW_CUT",
+            referenceId: reason,
+          });
 
-    if (!wallet || wallet.escrowBalance < Number(amount)) {
-      throw new Error("Insufficient escrow balance");
+          await tx.wallet.update({
+            where: { id: walletId },
+            data: {
+              balance: { decrement: amount },
+              escrowBalance: { decrement: amount },
+            },
+          });
+
+          return tx.transaction.create({
+            data: {
+              walletId,
+              type: "COMMISSION",
+              amount,
+              description: `Escrow cut: ${reason}`,
+              status: "COMPLETED",
+              completedAt: new Date(),
+            },
+          });
+        });
+      },
+    );
+  },
+
+  // =========================
+  // ESCROW CUT
+  // =========================
+  async transferFunds(
+    tx: Tx,
+    from: "driver" | "business" | "seller",
+    to: "driver" | "business" | "seller",
+    fromId: string,
+    toId: string,
+    amount: number,
+    description: string = "Funds Transfer",
+    referenceId?: string,
+  ) {
+    if (amount <= 0) throw new Error("Invalid transfer amount");
+
+    return await runIdempotent(
+      tx,
+      `transfer-${from}-${fromId}-${to}-${toId}-${referenceId}`,
+      "transfer",
+      async () => {
+        // 🔐 resolve wallets safely
+        const senderWhere =
+          from === "seller"
+            ? { sellerId: fromId }
+            : from === "business"
+              ? { businessId: fromId }
+              : { driverId: fromId };
+
+        const receiverWhere =
+          to === "seller"
+            ? { sellerId: toId }
+            : to === "business"
+              ? { businessId: toId }
+              : { driverId: toId };
+
+        const senderWallet = await tx.wallet.findFirst({
+          where: senderWhere,
+        });
+
+        const receiverWallet = await tx.wallet.findFirst({
+          where: receiverWhere,
+        });
+
+        if (!senderWallet || !receiverWallet) {
+          throw new Error("Wallet not found");
+        }
+
+        if (senderWallet.balance < amount) {
+          throw new Error("Insufficient balance");
+        }
+
+        // 🔒 LOCK SENDER WALLET FIRST
+        await withWalletLock(tx, senderWallet.id, async () => {
+          // 💰 DEBIT sender (ledger + balance)
+          await addLedger(tx, {
+            walletId: senderWallet.id,
+            amount: -amount,
+            type: "DEBIT",
+            category: "TRANSFER_OUT",
+            referenceId,
+          });
+
+          await tx.wallet.update({
+            where: { id: senderWallet.id },
+            data: {
+              balance: { decrement: amount },
+            },
+          });
+
+          // 🔒 LOCK RECEIVER WALLET
+          await withWalletLock(tx, receiverWallet.id, async () => {
+            // 💰 CREDIT receiver (ledger + balance)
+            await addLedger(tx, {
+              walletId: receiverWallet.id,
+              amount: amount,
+              type: "CREDIT",
+              category: "TRANSFER_IN",
+              referenceId,
+            });
+
+            await tx.wallet.update({
+              where: { id: receiverWallet.id },
+              data: {
+                balance: { increment: amount },
+              },
+            });
+          });
+        });
+
+        return {
+          success: true,
+          from: senderWallet.id,
+          to: receiverWallet.id,
+          amount,
+        };
+      },
+    );
+  },
+
+// =========================
+  // Settle COD Debt
+  // =========================
+  async settleCODDebt(
+  tx: Tx,
+  driverId: string,
+  amount: number,
+  referenceId?: string
+) {
+  if (amount <= 0) throw new Error("Invalid amount");
+
+  return runIdempotent(
+    tx,
+    `cod-settle:${driverId}:${amount}:${referenceId}`,
+    "cod_debt_settlement",
+    async () => {
+
+      const driver = await tx.driver.findUnique({
+        where: { id: driverId },
+        include: { wallet: true },
+      });
+
+      if (!driver || !driver.wallet) {
+        throw new Error("Driver or wallet not found");
+      }
+
+      if (driver.currentDebt < amount) {
+        throw new Error("Amount exceeds current debt");
+      }
+
+      // 🔒 lock driver wallet to prevent concurrent debt modifications
+      await withWalletLock(tx, driver.wallet.id, async () => {
+
+        // Get oldest debts first (FIFO settlement)
+        const debts = await tx.driverDebt.findMany({
+          where: {
+            driverId,
+            isSettled: false,
+          },
+          orderBy: {
+            createdAt: "asc",
+          },
+        });
+
+        let remainingAmount = amount;
+
+        for (const debt of debts) {
+          if (remainingAmount <= 0) break;
+
+          const settleAmount = Math.min(remainingAmount, debt.amount);
+
+          // mark debt as settled (or partially settled if you later upgrade)
+          await tx.driverDebt.update({
+            where: { id: debt.id },
+            data: {
+              isSettled: true,
+              settledAt: new Date(),
+            },
+          });
+
+          remainingAmount -= settleAmount;
+        }
+
+        // update driver debt safely
+        await tx.driver.update({
+          where: { id: driverId },
+          data: {
+            currentDebt: {
+              decrement: amount,
+            },
+          },
+        });
+
+      });
+
+      return {
+        success: true,
+        settledAmount: amount,
+        remainingDebt: driver.currentDebt - amount,
+      };
     }
-
-    const transaction = await prisma.transaction.create({
-      data: {
-        walletId,
-        type: "COMMISSION",
-        amount:Number(amount), 
-        description: `Escrow cuts: ${reason}`,
-        status: "COMPLETED",
-        completedAt: new Date(),
-      },
-    });
-
-    await prisma.wallet.update({
-      where: { id: walletId },
-      data: {
-        balance:{
-          decrement:Number(amount)
-        },
-        escrowBalance: {
-          decrement: Number(amount),
-        }, 
-      },
-    });
-
-    return transaction;
-  }
+  );
+}
 };

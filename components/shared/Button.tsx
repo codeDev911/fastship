@@ -23,7 +23,7 @@ export function Button({
   disabled = false,
   ...props
 }: ButtonProps) {
-  const baseClasses = 'font-medium transition-all duration-200 flex items-center justify-center gap-2 rounded-full disabled:opacity-50 disabled:cursor-not-allowed';
+  const baseClasses = 'font-medium  cursor-pointer transition-all duration-200 flex items-center justify-center gap-2 rounded-full disabled:opacity-50 disabled:cursor-not-allowed';
 
   const variantClasses = {
     primary: 'bg-accent text-accent-foreground hover:opacity-90 active:opacity-80',

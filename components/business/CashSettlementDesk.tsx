@@ -29,7 +29,7 @@ export function CashSettlementDesk() {
   const [showCameraPlaceholder, setShowCameraPlaceholder] = useState(false);
   const [settlement, setSettlement] = useState<SettlementResponse | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
-
+  const [uniqueId,setUniqueId] = useState("")
 
   const [driverDepts,setDriverDepts] = useState([])
 
@@ -45,6 +45,8 @@ export function CashSettlementDesk() {
 
     } catch (error) {
       alert("Failed to fetch");
+    }
+    finally{
     }
   }
 
@@ -88,12 +90,15 @@ export function CashSettlementDesk() {
     }else{
       try {
         setIsProcessing(true);
+              setUniqueId(new Date().toISOString()) // just to avoid duplicate clicks
+
         await fetch('/api/business/driver-depts', {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             driverId: formState.selectedDriver,
             amount: formState.cashAmount,
+            uniqueId
           }),
         });
         
@@ -110,6 +115,8 @@ export function CashSettlementDesk() {
         });
       } finally {
         setIsProcessing(false);
+              setUniqueId("")
+
       }
     }
 

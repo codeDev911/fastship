@@ -1,15 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { financialService } from "@/lib/services/financial.service"
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
    const {
-      sellerId,
-      receiverName,
-      receiverPhone,
-      receiverAddress,
+      sellerId, 
       weight,
       dimensions,
       paymentMethod,
@@ -25,10 +21,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    
+
     // Create shipment
     const shipment = await prisma.shipment.create({
       data: {
         ...body,
+        sellerId:sellerId,
         weight: parseFloat(weight),
         dimensions,
         status: 'PENDING',

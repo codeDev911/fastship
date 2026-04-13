@@ -1,25 +1,28 @@
 import React, { useEffect, useState } from 'react';
-import { 
-  X, Package, MapPin, Truck, Building2, 
-  CreditCard, Clock, ShieldCheck, Scale, Hash, Plus, 
+import {
+  X, Package, MapPin, Truck, Building2,
+  CreditCard, Clock, ShieldCheck, Scale, Hash, Plus,
   SquareArrowOutUpRight,
-  Banknote
+  Banknote,
+  SkullIcon
 } from 'lucide-react';
 import AssignmentDetailsModal from './AssignmentDetailsModal';
 import { Button } from '../shared/Button';
 import PaymentReceivedModal from './PaymentRecievedModal';
+import CancelShipmentModal from './CancelShipmentModal';
 
-const FullScreenOrderModal = ({ isOpen, onClose, data }:any) => {
+const FullScreenOrderModal = ({ isOpen, onClose, data }: any) => {
 
-  const [paymentRecievedModal,setPaymentRecievedModal] = useState({isOpen:false,data:{}})
+  const [paymentRecievedModal, setPaymentRecievedModal] = useState({ isOpen: false, data: {} })
 
-  const [assignmentModal,setAssignmentModal] = React.useState({isOpen:false,data:{}})
+  const [assignmentModal, setAssignmentModal] = React.useState({ isOpen: false, data: {} })
+  const [cancelationModal,setCancelationModal] = useState({isOpen:false,data:{}})
   // Prevent scrolling when modal is open
   useEffect(() => {
     if (isOpen) document.body.style.overflow = 'hidden';
     else document.body.style.overflow = 'unset';
     console.log(data);
-    
+
     return () => { document.body.style.overflow = 'unset'; };
   }, [isOpen]);
 
@@ -28,194 +31,194 @@ const FullScreenOrderModal = ({ isOpen, onClose, data }:any) => {
   return (
     <>
       <div className="fixed inset-0 h-screen w-screen z-50 flex items-center justify-center bg-black/50"></div>
-     <div className="fixed md:w-[95%] md:rounded-2xl md:h-[95vh] mx-auto my-auto overflow-y-auto inset-0 z-50 flex flex-col bg-slate-50 overflow-hidden animate-in fade-in duration-200">
-      
-      {/* Header Bar (Matching your Wallet Page) */}
-      <div className="bg-white px-8 py-6 flex items-center justify-between border-b border-slate-100">
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Order Details</h1>
-          <p className="mt-1 text-sm text-slate-500">ID: {data?.id}</p>
+      <div className="fixed md:w-[95%] md:rounded-2xl md:h-[95vh] mx-auto my-auto overflow-y-auto inset-0 z-50 flex flex-col bg-slate-50 overflow-hidden animate-in fade-in duration-200">
+
+        {/* Header Bar (Matching your Wallet Page) */}
+        <div className=" px-8 py-6 flex items-center justify-between ">
+          <div>
+            <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Order Details</h1>
+            <p className="mt-1 text-sm text-slate-500">ID: {data?.id}</p>
+          </div>
+          <div className="flex items-center gap-4">
+            <button className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-6 py-2.5 rounded-full font-medium transition-all">
+              <SquareArrowOutUpRight className="h-4 w-4" />
+              Track shipment
+            </button>
+            <button
+              onClick={onClose}
+              className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-400"
+            >
+              <X className="h-6 w-6" />
+            </button>
+          </div>
         </div>
-        <div className="flex items-center gap-4">
-          <button className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-6 py-2.5 rounded-full font-medium transition-all">
-            <SquareArrowOutUpRight className="h-4 w-4" />
-            Track shipment
-          </button>
-          <button 
-            onClick={onClose}
-            className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-400"
-          >
-            <X className="h-6 w-6" />
-          </button>
-        </div>
-      </div>
 
-      {/* Main Content Scrollable Area */}
-      <div className="flex-1 p-8 space-y-8">
-        <div className="max-w-7xl mx-auto space-y-8">
-          
-          {/* Top Metric Cards Section */}
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-            {/* Status Card */}
-            <div className="bg-white rounded-2xl overflow-hidden border-none shadow-none">
-              <div className="h-1 bg-red-600" />
-              <div className="p-6">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="rounded-lg bg-red-50 p-3">
-                    <Package className="h-6 w-6 text-red-600" />
+        {/* Main Content Scrollable Area */}
+        <div className="flex-1 p-8 space-y-8">
+          <div className="max-w-7xl mx-auto space-y-8">
+
+            {/* Top Metric Cards Section */}
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+              {/* Status Card */}
+              <div className="bg-white rounded-2xl overflow-hidden border-none shadow-none">
+                <div className="h-1 bg-red-600" />
+                <div className="p-6">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="rounded-lg bg-red-50 p-3">
+                      <Package className="h-6 w-6 text-red-600" />
+                    </div>
+                    <p className="text-sm font-medium text-slate-500 uppercase tracking-wide text-[10px]">Current Status</p>
                   </div>
-                  <p className="text-sm font-medium text-slate-500 uppercase tracking-wide text-[10px]">Current Status</p>
-                </div>
-                <p className="text-3xl font-bold text-red-600">{data.status || "PENDING"}</p>
-                <p className="mt-2 text-xs text-slate-400 font-medium tracking-tight">Priority: {data.priority}</p>
-              </div>
-            </div>
-
-            {/* Financial Card */}
-            <div className="bg-white rounded-2xl overflow-hidden border-none shadow-none">
-              <div className="h-1 bg-green-500" />
-              <div className="p-6">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="rounded-lg bg-green-50 p-3">
-                    <CreditCard className="h-6 w-6 text-green-600" />
-                  </div>
-                  <p className="text-sm font-medium text-slate-500 uppercase tracking-wide text-[10px]">COD Amount</p>
-                </div>
-                <p className="text-3xl font-bold text-green-600">
-                  {data.codAmount?.toLocaleString() || "0"} <span className="text-lg font-normal">PKR</span>
-                </p>
-                <p className="mt-2 text-xs text-slate-400 font-medium">Payment: {data.paymentMethod}</p>
-              </div>
-            </div>
-
-            {/* Logistics Card */}
-            <div className="bg-white rounded-2xl overflow-hidden border-none shadow-none">
-              <div className="h-1 bg-slate-800" />
-              <div className="p-6">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="rounded-lg bg-slate-100 p-3">
-                    <Scale className="h-6 w-6 text-slate-700" />
-                  </div>
-                  <p className="text-sm font-medium text-slate-500 uppercase tracking-wide text-[10px]">Package Weight</p>
-                </div>
-                <p className="text-3xl font-bold text-slate-800">{data.weight} <span className="text-lg font-normal text-slate-400">kg</span></p>
-                <p className="mt-2 text-xs text-slate-400 font-medium">Type: {data.packageType || "Standard"}</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Details Table - Built like your Recent Transactions */}
-          <div className="bg-white rounded-2xl overflow-hidden">
-            <div className="px-8 py-6 border-b border-slate-100 flex items-center gap-3">
-              <div className="rounded-lg bg-red-50 p-2">
-                <Hash className="h-4 w-4 text-red-600" />
-              </div>
-              <h2 className="text-lg font-bold text-slate-800 tracking-tight">System Metadata</h2>
-            </div>
-            <div className="w-full overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-slate-100 bg-slate-50/30">
-                    <th className="px-8 py-4 text-left text-[10px] font-bold uppercase tracking-widest text-slate-400">Field Name</th>
-                    <th className="px-8 py-4 text-left text-[10px] font-bold uppercase tracking-widest text-slate-400">Value</th>
-                    <th className="px-8 py-4 text-left text-[10px] font-bold uppercase tracking-widest text-slate-400">Field Name</th>
-                    <th className="px-8 py-4 text-left text-[10px] font-bold uppercase tracking-widest text-slate-400">Value</th>
-                    <th className="px-8 py-4 text-left text-[10px] font-bold uppercase tracking-widest text-slate-400">Field Name</th>
-                    <th className="px-8 py-4 text-left text-[10px] font-bold uppercase tracking-widest text-slate-400">Value</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-50">
-                  <tr>
-                    <td className="px-8 py-4 text-sm text-slate-500">Actual Rate</td>
-                    <td className="px-8 py-4 text-sm font-medium text-slate-700">{data.actualRate || "—"}</td>
-                    <td className="px-8 py-4 text-sm text-slate-500">Expected Rate</td>
-                    <td className="px-8 py-4 text-sm font-medium text-slate-700">{data.expectedRate || "—"}</td>
-                    <td className="px-8 py-4 text-sm text-slate-500">Business ID</td>
-                    <td className="px-8 py-4 text-sm font-medium text-slate-700">{data.businessId || "—"}</td>
-                  </tr>
-                  <tr>
-                    <td className="px-8 py-4 text-sm text-slate-500">Created At</td>
-                    <td className="px-8 py-4 text-sm font-medium text-slate-700">{new Date(data.createdAt).toLocaleString()}</td>
-                    <td className="px-8 py-4 text-sm text-slate-500">Dimensions</td>
-                    <td className="px-8 py-4 text-sm font-medium text-slate-700">{data.dimensions || "Not specified"}</td>
-                    <td className="px-8 py-4 text-sm text-slate-500">Payment Status</td>
-                    <td className="px-8 py-4 text-sm font-medium text-slate-700">{data.payment?.paymentStatus}</td>
-                  </tr>
-                  <tr>
-                    <td className="px-8 py-4 text-sm text-slate-500">Assignment</td>
-                    <td className="px-8 py-4 text-sm flex space-x-2 font-medium text-slate-700">{data?.assignment?.id || "—"} <button onClick={()=> setAssignmentModal({isOpen:true,data:data?.assignment})} className='text-red-500 mx-2 hover:underline cursor-pointer'>view</button></td>
-                    <td className="px-8 py-4 text-sm text-slate-500">Package Type</td>
-                    <td className="px-8 py-4 text-sm font-medium text-slate-700">{data.packageType || "Standard"}</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-
-
-          {/* Grid for Pickup & Delivery */}
-          <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
-            {/* Pickup Information */}
-            <div className="bg-white rounded-2xl p-8 space-y-6">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="bg-slate-100 p-2 rounded-lg">
-                    <MapPin className="h-5 w-5 text-slate-600" />
-                  </div>
-                  <h3 className="text-lg font-bold text-slate-800 tracking-tight">Pickup Information</h3>
+                  <p className="text-3xl font-bold text-red-600">{data?.status || "PENDING"}</p>
+                  <p className="mt-2 text-xs text-slate-400 font-medium tracking-tight">Priority: {data?.priority}</p>
                 </div>
               </div>
-              
-              <div className="space-y-4">
-                <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl">
-                  <div>
-                    <p className="text-xs text-slate-400 mb-0.5">Contact Name</p>
-                    <p className="font-medium text-slate-900">{data.pickupName}</p>
+
+              {/* Financial Card */}
+              <div className="bg-white rounded-2xl overflow-hidden border-none shadow-none">
+                <div className="h-1 bg-green-500" />
+                <div className="p-6">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="rounded-lg bg-green-50 p-3">
+                      <CreditCard className="h-6 w-6 text-green-600" />
+                    </div>
+                    <p className="text-sm font-medium text-slate-500 uppercase tracking-wide text-[10px]">COD Amount</p>
                   </div>
-                  <p className="text-sm font-medium text-red-600">{data.pickupPhone}</p>
-                </div>
-                <div className="p-4 border border-slate-100 rounded-2xl space-y-2">
-                  <p className="text-xs text-slate-400 uppercase tracking-widest font-bold">Address Detail</p>
-                  <p className="text-sm text-slate-600 leading-relaxed">
-                    {data.pickupAddress}, {data.pickupCity}, {data.pickupState} {data.pickupZipCode}
+                  <p className="text-3xl font-bold text-green-600">
+                    {data?.codAmount?.toLocaleString() || "0"} <span className="text-lg font-normal">PKR</span>
                   </p>
+                  <p className="mt-2 text-xs text-slate-400 font-medium">Payment: {data?.paymentMethod}</p>
+                </div>
+              </div>
+
+              {/* Logistics Card */}
+              <div className="bg-white rounded-2xl overflow-hidden border-none shadow-none">
+                <div className="h-1 bg-slate-800" />
+                <div className="p-6">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="rounded-lg bg-slate-100 p-3">
+                      <Scale className="h-6 w-6 text-slate-700" />
+                    </div>
+                    <p className="text-sm font-medium text-slate-500 uppercase tracking-wide text-[10px]">Package Weight</p>
+                  </div>
+                  <p className="text-3xl font-bold text-slate-800">{data?.weight} <span className="text-lg font-normal text-slate-400">kg</span></p>
+                  <p className="mt-2 text-xs text-slate-400 font-medium">Type: {data?.packageType || "Standard"}</p>
                 </div>
               </div>
             </div>
 
-            {/* Delivery Information */}
-            <div className="bg-white rounded-2xl p-8 space-y-6">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="bg-slate-100 p-2 rounded-lg">
-                    <Truck className="h-5 w-5 text-slate-600" />
+            {/* Details Table - Built like your Recent Transactions */}
+            <div className="bg-white rounded-2xl overflow-hidden">
+              <div className="px-8 py-6 border-b border-slate-100 flex items-center gap-3">
+                <div className="rounded-lg bg-red-50 p-2">
+                  <Hash className="h-4 w-4 text-red-600" />
+                </div>
+                <h2 className="text-lg font-bold text-slate-800 tracking-tight">System Metadata</h2>
+              </div>
+              <div className="w-full overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-slate-100 bg-slate-50/30">
+                      <th className="px-8 py-4 text-left text-[10px] font-bold uppercase tracking-widest text-slate-400">Field Name</th>
+                      <th className="px-8 py-4 text-left text-[10px] font-bold uppercase tracking-widest text-slate-400">Value</th>
+                      <th className="px-8 py-4 text-left text-[10px] font-bold uppercase tracking-widest text-slate-400">Field Name</th>
+                      <th className="px-8 py-4 text-left text-[10px] font-bold uppercase tracking-widest text-slate-400">Value</th>
+                      <th className="px-8 py-4 text-left text-[10px] font-bold uppercase tracking-widest text-slate-400">Field Name</th>
+                      <th className="px-8 py-4 text-left text-[10px] font-bold uppercase tracking-widest text-slate-400">Value</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-50">
+                    <tr>
+                      <td className="px-8 py-4 text-sm text-slate-500">Actual Rate</td>
+                      <td className="px-8 py-4 text-sm font-medium text-slate-700">{data?.actualRate || "—"}</td>
+                      <td className="px-8 py-4 text-sm text-slate-500">Expected Rate</td>
+                      <td className="px-8 py-4 text-sm font-medium text-slate-700">{data?.expectedRate || "—"}</td>
+                      <td className="px-8 py-4 text-sm text-slate-500">Business ID</td>
+                      <td className="px-8 py-4 text-sm font-medium text-slate-700">{data?.businessId || "—"}</td>
+                    </tr>
+                    <tr>
+                      <td className="px-8 py-4 text-sm text-slate-500">Created At</td>
+                      <td className="px-8 py-4 text-sm font-medium text-slate-700">{new Date(data?.createdAt).toLocaleString()}</td>
+                      <td className="px-8 py-4 text-sm text-slate-500">Dimensions</td>
+                      <td className="px-8 py-4 text-sm font-medium text-slate-700">{data?.dimensions || "Not specified"}</td>
+                      <td className="px-8 py-4 text-sm text-slate-500">Payment Status</td>
+                      <td className="px-8 py-4 text-sm font-medium text-slate-700">{data?.payment?.paymentStatus}</td>
+                    </tr>
+                    <tr>
+                      <td className="px-8 py-4 text-sm text-slate-500">Assignment</td>
+                      <td className="px-8 py-4 text-sm flex space-x-2 font-medium text-slate-700">{data?.assignment?.id || "—"} <button onClick={() => setAssignmentModal({ isOpen: true, data: data?.assignment })} className='text-red-500 mx-2 hover:underline cursor-pointer'>view</button></td>
+                      <td className="px-8 py-4 text-sm text-slate-500">Package Type</td>
+                      <td className="px-8 py-4 text-sm font-medium text-slate-700">{data?.packageType || "Standard"}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+
+
+            {/* Grid for Pickup & Delivery */}
+            <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
+              {/* Pickup Information */}
+              <div className="bg-white rounded-2xl p-8 space-y-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="bg-slate-100 p-2 rounded-lg">
+                      <MapPin className="h-5 w-5 text-slate-600" />
+                    </div>
+                    <h3 className="text-lg font-bold text-slate-800 tracking-tight">Pickup Information</h3>
                   </div>
-                  <h3 className="text-lg font-bold text-slate-800 tracking-tight">Delivery Information</h3>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl">
+                    <div>
+                      <p className="text-xs text-slate-400 mb-0.5">Contact Name</p>
+                      <p className="font-medium text-slate-900">{data?.pickupName}</p>
+                    </div>
+                    <p className="text-sm font-medium text-red-600">{data?.pickupPhone}</p>
+                  </div>
+                  <div className="p-4 border border-slate-100 rounded-2xl space-y-2">
+                    <p className="text-xs text-slate-400 uppercase tracking-widest font-bold">Address Detail</p>
+                    <p className="text-sm text-slate-600 leading-relaxed">
+                      {data?.pickupAddress}, {data?.pickupCity}, {data?.pickupState} {data?.pickupZipCode}
+                    </p>
+                  </div>
                 </div>
               </div>
 
-              <div className="space-y-4">
-                <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl">
-                  <div>
-                    <p className="text-xs text-slate-400 mb-0.5">Recipient Name</p>
-                    <p className="font-medium text-slate-900">{data.deliveryName}</p>
+              {/* Delivery Information */}
+              <div className="bg-white rounded-2xl p-8 space-y-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="bg-slate-100 p-2 rounded-lg">
+                      <Truck className="h-5 w-5 text-slate-600" />
+                    </div>
+                    <h3 className="text-lg font-bold text-slate-800 tracking-tight">Delivery Information</h3>
                   </div>
-                  <p className="text-sm font-medium text-red-600">{data.deliveryPhone}</p>
                 </div>
-                <div className="p-4 border border-slate-100 rounded-2xl space-y-2">
-                  <p className="text-xs text-slate-400 uppercase tracking-widest font-bold">Shipping Address</p>
-                  <p className="text-sm text-slate-600 leading-relaxed">
-                    {data.deliveryAddress}, {data.deliveryCity}, {data.deliveryState} {data.deliveryZipCode}
-                  </p>
+
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl">
+                    <div>
+                      <p className="text-xs text-slate-400 mb-0.5">Recipient Name</p>
+                      <p className="font-medium text-slate-900">{data?.deliveryName}</p>
+                    </div>
+                    <p className="text-sm font-medium text-red-600">{data?.deliveryPhone}</p>
+                  </div>
+                  <div className="p-4 border border-slate-100 rounded-2xl space-y-2">
+                    <p className="text-xs text-slate-400 uppercase tracking-widest font-bold">Shipping Address</p>
+                    <p className="text-sm text-slate-600 leading-relaxed">
+                      {data?.deliveryAddress}, {data?.deliveryCity}, {data?.deliveryState} {data?.deliveryZipCode}
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
 
-          {/* Seller Profile Section */}
-          <div className="bg-white rounded-2xl p-8 border border-slate-100">
-             <div className="flex items-center gap-3 mb-6">
+            {/* Seller Profile Section */}
+            <div className="bg-white rounded-2xl p-8 border border-slate-100">
+              <div className="flex items-center gap-3 mb-6">
                 <div className="bg-red-50 p-2 rounded-lg">
                   <Banknote className="h-5 w-5 text-red-600" />
                 </div>
@@ -224,50 +227,50 @@ const FullScreenOrderModal = ({ isOpen, onClose, data }:any) => {
               <div className="grid grid-cols-2 md:grid-cols-7 gap-8">
                 <div>
                   <p className="text-xs text-slate-400 mb-1 font-medium">Amount</p>
-                  <p className="font-semibold text-slate-900">Rs. {data.payment?.amount?.toFixed(2) || "-"}</p>
+                  <p className="font-semibold text-slate-900">Rs. {data?.payment?.amount?.toFixed(2) || "-"}</p>
                 </div>
                 <div>
                   <p className="text-xs text-slate-400 mb-1 font-medium">Commission</p>
-                  <p className="text-slate-700">Rs. {data.payment?.commission?.toFixed(2) || "-"}</p>
+                  <p className="text-slate-700">Rs. {data?.payment?.commission?.toFixed(2) || "-"}</p>
                 </div>
                 <div>
                   <p className="text-xs text-slate-400 mb-1 font-medium">Tax </p>
-                  <p className="text-slate-700 font-mono text-sm tracking-tighter">Rs {data.payment?.tax?.toFixed(2) || "-"}</p>
+                  <p className="text-slate-700 font-mono text-sm tracking-tighter">Rs {data?.payment?.tax?.toFixed(2) || "-"}</p>
                 </div>
                 <div>
                   <p className="text-xs text-slate-400 mb-1 font-medium">Method </p>
-                  <p className="text-slate-700 font-mono text-sm tracking-tighter">{data.payment?.paymentMethod || "-"}</p>
-                </div> 
+                  <p className="text-slate-700 font-mono text-sm tracking-tighter">{data?.payment?.paymentMethod || "-"}</p>
+                </div>
                 <div>
                   <p className="text-xs text-slate-400 mb-1 font-medium">Transaction Id</p>
-                  <p className="text-slate-700 text-sm">{data.payment?.transactionId || "Null"}</p>
+                  <p className="text-slate-700 text-sm">{data?.payment?.transactionId || "Null"}</p>
                 </div>
                 <div>
                   <p className="text-xs text-slate-400 mb-1 font-medium">Paid At</p>
-                  <p className="text-slate-700 text-sm">{data.payment?.paidAt ? new Date(data.payment?.paidAt).toLocaleDateString() : "Not-Paid"}</p>
+                  <p className="text-slate-700 text-sm">{data?.payment?.paidAt ? new Date(data?.payment?.paidAt).toLocaleDateString() : "Not-Paid"}</p>
                 </div>
                 <div>
                   <p className="text-xs text-slate-400 mb-1 font-medium">Status</p>
                   <span className={`inline-block px-3 py-0.5 rounded-full text-[10px] font-black uppercase ${data?.payment?.paymentStatus == "COMPLETED" ? 'bg-green-50 text-green-700' : 'bg-yellow-50 text-yellow-600'}`}>
-                    {data.payment?.paymentStatus || "-"}
+                    {data?.payment?.paymentStatus || "-"}
                   </span>
                 </div>
-                {data.payment.paymentMethod === "COD" && data.payment.paymentStatus === "PENDING"? <div className='col-span-2 md:col-span-6'>
+                {data?.payment?.paymentMethod === "COD" && data?.payment?.paymentStatus === "PENDING" ? <div className='col-span-2 md:col-span-6'>
                   <p className="text-xs text-slate-400 mb-1 font-medium">Payment Recieved?</p>
                   <p className="text-slate-700 text-sm ">If you have recieved COD payments, please update the status to avoid conflicts</p>
                   <br />
-                  <Button onClick={()=>setPaymentRecievedModal({isOpen:true,data:data.payment})} className='cursor-pointer'>Confirm Payment Recieved</Button>
+                  <Button onClick={() => setPaymentRecievedModal({ isOpen: true, data: data?.payment })} className='cursor-pointer'>Confirm Payment Recieved</Button>
                 </div>
-                  : data.payment.paymentMethod === "COD" && data.payment.paymentStatus === "COMPLETED" &&
+                  : data?.payment?.paymentMethod === "COD" && data?.payment?.paymentStatus === "COMPLETED" &&
                   <div className='col-span-2 md:col-span-6'>
                     <p className="text-xs text-slate-400 mb-1 font-medium">Payment Recieved</p>
                     <p className="text-slate-700 text-sm ">The Payment Rs {data?.payment?.amount} has been recieved</p></div>
-                  }
+                }
               </div>
-          </div>
+            </div>
 
-          <div className="bg-white rounded-2xl p-8 border border-slate-100">
-             <div className="flex items-center gap-3 mb-6">
+            <div className="bg-white rounded-2xl p-8 border border-slate-100">
+              <div className="flex items-center gap-3 mb-6">
                 <div className="bg-red-50 p-2 rounded-lg">
                   <Building2 className="h-5 w-5 text-red-600" />
                 </div>
@@ -276,40 +279,56 @@ const FullScreenOrderModal = ({ isOpen, onClose, data }:any) => {
               <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
                 <div>
                   <p className="text-xs text-slate-400 mb-1 font-medium">Company Name</p>
-                  <p className="font-semibold text-slate-900">{data.business?.companyName}</p>
+                  <p className="font-semibold text-slate-900">{data?.business?.companyName}</p>
                 </div>
                 <div>
                   <p className="text-xs text-slate-400 mb-1 font-medium">Business Type</p>
-                  <p className="text-slate-700">{data.business?.businessType}</p>
+                  <p className="text-slate-700">{data?.business?.businessType}</p>
                 </div>
                 <div>
                   <p className="text-xs text-slate-400 mb-1 font-medium">Tax ID</p>
-                  <p className="text-slate-700 font-mono text-sm tracking-tighter">{data.business?.taxId}</p>
+                  <p className="text-slate-700 font-mono text-sm tracking-tighter">{data?.business?.taxId}</p>
                 </div>
                 <div>
                   <p className="text-xs text-slate-400 mb-1 font-medium">Verification Status</p>
-                  <span className={`inline-block px-3 py-0.5 rounded-full text-[10px] font-black uppercase ${data.business?.isVerified ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600'}`}>
-                    {data.seller?.isVerified ? 'Verified' : 'Pending'}
+                  <span className={`inline-block px-3 py-0.5 rounded-full text-[10px] font-black uppercase ${data?.business?.isVerified ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600'}`}>
+                    {data?.seller?.isVerified ? 'Verified' : 'Pending'}
                   </span>
                 </div>
               </div>
-          </div>
+            </div>
+            {!["CANCELLED","FAILED","DELIVERED","RETURNED"].includes(data.status) && <div className="bg-white rounded-2xl p-8 border-2 border-red-400">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="bg-red-50 p-2 rounded-lg">
+                  <SkullIcon className="h-5 w-5 text-red-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-slate-800 tracking-tight">Danger Zone</h3>
+                  <p className="text-sm text-muted-foreground font-bold">Cancel this shipment?</p>
+                </div>
+              </div>
+              <div>
+                <p className="text-sm">If you cancel this shipment, the courier will be notified to stop delivery. Please be advised that the Escrow-locked delivery fee of <strong>Rs. {data?.actualRate?.toFixed(2)}</strong> may apply.</p>
+                <br />
+                <Button onClick={()=>setCancelationModal({isOpen:true,data:data})}>Cancel Shipment</Button>
+              </div>
+            </div>}
 
+          </div>
+        </div>
+
+        {/* Persistent Action Bar at bottom */}
+        <div className="p-6 flex justify-center gap-4">
+          <button onClick={onClose} className="px-10 py-3 rounded-full text-sm font-medium text-slate-500 hover:bg-slate-100 transition-colors">
+            Close Window
+          </button>
         </div>
       </div>
-
-      {/* Persistent Action Bar at bottom */}
-      <div className="bg-white border-t border-slate-100 p-6 flex justify-center gap-4">
-        <button onClick={onClose} className="px-10 py-3 rounded-full text-sm font-medium text-slate-500 hover:bg-slate-100 transition-colors">
-          Close Window
-        </button> 
-      </div>
-    </div>
-          <PaymentReceivedModal onClose={()=>setPaymentRecievedModal({isOpen:false,data:{}})} isOpen={paymentRecievedModal.isOpen} data={paymentRecievedModal.data} />
-    <AssignmentDetailsModal isOpen={assignmentModal.isOpen} onClose={() => setAssignmentModal({isOpen:false,data:{}})} data={assignmentModal.data}/>
-
+      <PaymentReceivedModal onClose={() => setPaymentRecievedModal({ isOpen: false, data: {} })} isOpen={paymentRecievedModal.isOpen} data={paymentRecievedModal.data} />
+      <AssignmentDetailsModal isOpen={assignmentModal.isOpen} onClose={() => setAssignmentModal({ isOpen: false, data: {} })} data={assignmentModal.data} />
+      <CancelShipmentModal isOpen={cancelationModal.isOpen} onClose={() => {setCancelationModal({isOpen:false,data:{}}) }} data={cancelationModal.data} />
     </>
-   
+
   );
 };
 

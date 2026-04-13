@@ -34,20 +34,22 @@ export async function POST(req:NextRequest) {
         }
         let toID = ""
         try {
-            toID = user.business.id
+            toID = user?.business?.id || ""
         } catch (error) {
             try {
-                toID = user.seller.id
+                toID = user?.seller?.id || ""
                 
             } catch (error) {
-                toID = user.driver.id
+                toID = user?.driver?.id || ""
                 
             }
         }
 
-        await financialService.transferFunds(from?.toLowerCase(),to?.toLowerCase(),fromId,toID,Number(amount),description ?description:null)
-
-        return NextResponse.json({success:true},{status:201})
+        await prisma.$transaction(async(tx)=>{
+            await financialService.transferFunds(tx,from?.toLowerCase(),to?.toLowerCase(),fromId,toID,Number(amount),description ?description:null)
+            return NextResponse.json({success:true},{status:201})
+        })
+        
     } catch (error) {
         console.log(error);
         
