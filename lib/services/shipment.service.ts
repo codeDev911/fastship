@@ -103,6 +103,7 @@ export const shipmentService = {
           shipment.codAmount || shipment.actualRate || shipment.expectedRate,
         ),
         shipment.paymentMethod as PaymentMethod,
+        
       );
 
       return updated;
@@ -178,6 +179,7 @@ export const shipmentService = {
             businessWallet?.id!,
             amount * 0.1,
             "Platform fee 10%",
+            updated.id,
           );
 
           await financialService.releaseEscrow(
@@ -185,6 +187,7 @@ export const shipmentService = {
             shipment.seller.wallet?.id!,
             amount,
             "Escrow released",
+            updated.id,
           );
         }
 
@@ -230,6 +233,7 @@ export const shipmentService = {
         updated.seller.wallet?.id!,
         safeNumber(updated.actualRate),
         "Failed delivery release",
+        shipmentId
       );
 
       const businessWallet = await tx.wallet.findUnique({
@@ -242,6 +246,7 @@ export const shipmentService = {
         businessWallet?.id!,
         safeNumber(updated.actualRate) * 0.1,
         "Platform cut",
+        shipmentId
       );
 
       await tx.shipmentActivity.create({
@@ -323,12 +328,14 @@ export const shipmentService = {
             shipment.seller.wallet?.id!,
             amount,
             "Seller cancel",
+            shipment.id
           );
           await financialService.releaseEscrow(
             tx,
             businessWallet?.id!,
             amount * 0.1,
             "Platform refund",
+            shipment.id
           );
         } else if (canceledBy === "seller") {
           await financialService.processShipmentTransactions(tx, shipment);
@@ -338,6 +345,7 @@ export const shipmentService = {
             shipment.seller.wallet?.id!,
             amount,
             "Business cancel",
+            shipment.id
           );
 
           await financialService.cutEscrow(
@@ -345,6 +353,7 @@ export const shipmentService = {
             businessWallet?.id!,
             amount * 0.1,
             "Platform fee",
+            shipment.id
           );
         }
 
@@ -413,6 +422,7 @@ export const shipmentService = {
           shipment.seller.wallet?.id!,
           safeNumber(shipment.actualRate),
           "Escrow deducted of return delivery",
+          shipment.id
         );
 
         await tx.payment.update({
