@@ -103,7 +103,7 @@ export const shipmentService = {
           shipment.codAmount || shipment.actualRate || shipment.expectedRate,
         ),
         shipment.paymentMethod as PaymentMethod,
-        
+
       );
 
       return updated;
@@ -257,14 +257,6 @@ export const shipmentService = {
         },
       });
 
-      await tx.transaction.create({
-        data: {
-          walletId: updated.seller.wallet?.id || "",
-          amount: safeNumber(updated.actualRate),
-          type: "CREDIT",
-          description: `Refund shipment ${shipmentId}`,
-        },
-      });
 
       return updated;
     },{timeout:100000});
@@ -357,7 +349,7 @@ export const shipmentService = {
           );
         }
 
-        if (shipment.paymentMethod === "COD") {
+        if (shipment.paymentMethod === "COD" && shipment?.payment?.id) {
           await tx.payment.update({
             where: { id: shipment.payment?.id },
             data: {
@@ -383,7 +375,11 @@ export const shipmentService = {
         include: {
           payment: true,
           seller: { include: { wallet: true } },
-          assignment: { include: { driver: true } },
+          assignment: { include: { driver: {include:{
+            wallet:{
+              select:{id:true}
+            }
+          }} } },
         },
       });
 
@@ -406,35 +402,20 @@ export const shipmentService = {
         },
       });
 
-      if (shipment.paymentMethod === "COD") {
-        const businessCommission = safeNumber(shipment.actualRate) * 0.2;
-        const debtAmount = safeNumber(shipment.codAmount) + businessCommission;
-
-        await financialService.addCODDebt(
-          tx,
-          shipment.assignment?.driver?.id || "",
-          debtAmount,
-          shipment.id,
-        );
-
-        await financialService.cutEscrow(
-          tx,
-          shipment.seller.wallet?.id!,
-          safeNumber(shipment.actualRate),
-          "Escrow deducted of return delivery",
-          shipment.id
-        );
-
+      if(updated.paymentMethod === "COD"){
         await tx.payment.update({
-          where: { id: updated.payment?.id },
-          data: {
-            notes: "Returned: " + reason,
-            paymentStatus: "FAILED",
+          where:{
+            shipmentId:updated.id
           },
-        });
-      } else {
-        await financialService.processShipmentTransactions(tx, shipment);
+          data:{
+            paymentStatus:"FAILED",
+            notes:"Payment failed due to return delivery"
+          }
+        })
       }
+
+      
+      await financialService.processShipmentTransactions(tx, shipment);
 
       return updated;
     },{timeout:100000});

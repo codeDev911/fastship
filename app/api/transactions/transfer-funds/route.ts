@@ -5,7 +5,7 @@ import { financialService } from "@/lib/services/financial.service";
 
 export async function POST(req:NextRequest) {
     try {
-        const {from,to,fromId,toId,amount,description} = await req.json()
+        const {from,to,fromId,toId,amount,description,uniqueId} = await req.json()
         let user = await prisma.user.findUnique({
             where:{
                 id:toId
@@ -45,10 +45,10 @@ export async function POST(req:NextRequest) {
             }
         }
 
-        await prisma.$transaction(async(tx)=>{
-            await financialService.transferFunds(tx,from?.toLowerCase(),to?.toLowerCase(),fromId,toID,Number(amount),description ?description:null)
+        return await prisma.$transaction(async(tx)=>{
+            await financialService.transferFunds(tx,from?.toLowerCase(),to?.toLowerCase(),fromId,toID,Number(amount),description ?description:null,uniqueId)
             return NextResponse.json({success:true},{status:201})
-        })
+        },{timeout:100000})
         
     } catch (error) {
         console.log(error);

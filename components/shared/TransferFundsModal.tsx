@@ -1,11 +1,11 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { 
-  X, Search, User, Check, ArrowLeft, 
-  Loader2, AlertCircle, Building2, Truck, 
-  Store, CheckCircle2, XCircle, Share2, 
-  ShieldCheck, ArrowRight 
+import {
+  X, Search, User, Check, ArrowLeft,
+  Loader2, AlertCircle, Building2, Truck,
+  Store, CheckCircle2, XCircle, Share2,
+  ShieldCheck, ArrowRight
 } from 'lucide-react';
 
 interface TransferModalProps {
@@ -16,13 +16,13 @@ interface TransferModalProps {
 const TransferFundsModal = ({ isOpen, onClose }: TransferModalProps) => {
   // Navigation State: 1: Search, 2: Amount, 3: Review, 4: Success, 5: Error
   const [step, setStep] = useState(1);
-  
+
   // Search & Data State
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedType, setSelectedType] = useState("BUSINESS");
   const [users, setUsers] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
-  
+
   // Transaction State
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [amount, setAmount] = useState("");
@@ -48,7 +48,7 @@ const TransferFundsModal = ({ isOpen, onClose }: TransferModalProps) => {
       } finally {
         setIsSearching(false);
       }
-    }, 1000); 
+    }, 1000);
 
     return () => clearTimeout(delayDebounceFn);
   }, [searchQuery, selectedType, step]);
@@ -58,15 +58,16 @@ const TransferFundsModal = ({ isOpen, onClose }: TransferModalProps) => {
     const user = JSON.parse(localStorage.getItem('user') || '{}');
     const userId = user?.jobId;
     const userRole = user.role
+    const uniqueId = new Date().toISOString()
     setIsLoading(true);
     try {
       const response = await fetch('/api/transactions/transfer-funds', {
         method: 'POST',
-        body: JSON.stringify({ from:userRole,to:selectedUser.role,fromId:userId,toId:selectedUser?.id,amount:Number(amount) }),
+        body: JSON.stringify({ from: userRole?.toLowerCase(), to: selectedUser.role?.toLowerCase(), fromId: userId, toId: selectedUser?.id, amount: Number(amount), uniqueId }),
       });
-      
+
       const result = await response.json();
-      
+
       if (response.ok) {
         setTransactionData(result);
         setStep(4); // Success
@@ -87,16 +88,26 @@ const TransferFundsModal = ({ isOpen, onClose }: TransferModalProps) => {
   const btnPrimary = "w-full py-5 bg-red-600 text-white rounded-full font-bold text-sm active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-40";
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center md:p-4">
       {/* Backdrop */}
       <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={onClose} />
 
       {/* Main Container - 2xl Rounded White */}
-      <div className="relative bg-white w-full max-w-xl rounded-2xl p-10 shadow-none overflow-hidden animate-in zoom-in-95 duration-200">
-        
+      <div className="relative bg-white w-full md:max-w-xl max-sm:w-screen max-sm:h-screen md:rounded-2xl md:p-10 p-6 shadow-none overflow-hidden animate-in zoom-in-95 duration-200">
+
         {/* Modal Header (Steps 1-3) */}
         {step <= 3 && (
-          <div className="flex items-center justify-between mb-8">
+          <div className="  mb-8">
+            <div className='flex items-start justify-between'>
+              <div>
+                <h3 className="text-2xl font-bold">Transfer funds</h3>
+              <p className="text-xs text-muted-foreground">Transfer digital funds from your wallet, easy ,secure and relaible </p>
+              <br />
+              </div>
+              <button onClick={onClose} className="p-2 text-slate-400 hover:bg-slate-50 rounded-full transition-colors">
+                <X className="w-6 h-6" />
+              </button>
+            </div>
             <div>
               <div className="flex gap-1.5 mb-2">
                 {[1, 2, 3].map((s) => (
@@ -109,9 +120,7 @@ const TransferFundsModal = ({ isOpen, onClose }: TransferModalProps) => {
                 {step === 3 && "Review Transfer"}
               </h2>
             </div>
-            <button onClick={onClose} className="p-2 text-slate-400 hover:bg-slate-50 rounded-full transition-colors">
-              <X className="w-6 h-6" />
-            </button>
+
           </div>
         )}
 
@@ -120,13 +129,12 @@ const TransferFundsModal = ({ isOpen, onClose }: TransferModalProps) => {
           <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
             {/* Filter Types */}
             <div className="flex flex-wrap gap-2">
-              {[ 'BUSINESS', 'SELLER', 'DRIVER'].map((t) => (
+              {['BUSINESS', 'SELLER', 'DRIVER'].map((t) => (
                 <button
                   key={t}
                   onClick={() => setSelectedType(t)}
-                  className={`px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all border ${
-                    selectedType === t ? 'bg-red-600 border-red-600 text-white' : 'bg-white border-slate-100 text-slate-400'
-                  }`}
+                  className={`px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all border ${selectedType === t ? 'bg-red-600 border-red-600 text-white' : 'bg-white border-slate-100 text-slate-400'
+                    }`}
                 >
                   {t}
                 </button>
@@ -138,8 +146,8 @@ const TransferFundsModal = ({ isOpen, onClose }: TransferModalProps) => {
               <div className="absolute left-6 top-1/2 -translate-y-1/2">
                 {isSearching ? <Loader2 className="w-4 h-4 text-red-600 animate-spin" /> : <Search className="w-4 h-4 text-slate-300" />}
               </div>
-              <input 
-                type="text" 
+              <input
+                type="text"
                 placeholder="Search by email, ID or name..."
                 className={`${inputStyle} pl-14`}
                 value={searchQuery}
@@ -150,12 +158,11 @@ const TransferFundsModal = ({ isOpen, onClose }: TransferModalProps) => {
             {/* Results List */}
             <div className="space-y-2 max-h-[280px] overflow-y-auto pr-2">
               {users.map((user: any) => (
-                <button 
+                <button
                   key={user?.id}
                   onClick={() => setSelectedUser(user)}
-                  className={`w-full p-4 rounded-2xl border transition-all flex items-center gap-4 text-left ${
-                    selectedUser?.id === user?.id ? 'bg-red-50 border-red-200' : 'bg-white border-slate-50 hover:border-red-100'
-                  }`}
+                  className={`w-full p-4 rounded-2xl border transition-all flex items-center gap-4 text-left ${selectedUser?.id === user?.id ? 'bg-red-50 border-red-200' : 'bg-white border-slate-50 hover:border-red-100'
+                    }`}
                 >
                   <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center border border-slate-100 text-red-600 shrink-0">
                     <User className="w-5 h-5" />
@@ -172,7 +179,7 @@ const TransferFundsModal = ({ isOpen, onClose }: TransferModalProps) => {
               )}
             </div>
 
-            <button 
+            <button
               disabled={!selectedUser}
               onClick={() => setStep(2)}
               className={btnPrimary}
@@ -195,15 +202,15 @@ const TransferFundsModal = ({ isOpen, onClose }: TransferModalProps) => {
                 <p className="text-[10px] text-slate-400 font-medium mb-1">{selectedUser?.email}</p>
                 <p className="text-[10px] text-slate-400 font-medium mb-1">{selectedUser?.phone}</p>
                 <span className="bg-red-100 text-red-600 px-2 py-0.5 rounded-full text-[9px] font-black uppercase">
-                    {selectedUser?.role || "CLIENT"}
+                  {selectedUser?.role || "CLIENT"}
                 </span>
               </div>
             </div>
 
             <div className="space-y-2">
               <label className="text-[10px] uppercase font-bold text-slate-400 tracking-widest ml-4">Amount to send (PKR)</label>
-              <input 
-                type="number" 
+              <input
+                type="number"
                 placeholder="0.00"
                 className={inputStyle}
                 value={amount}
@@ -224,16 +231,16 @@ const TransferFundsModal = ({ isOpen, onClose }: TransferModalProps) => {
             <div className="bg-slate-50 rounded-2xl overflow-hidden border border-slate-100">
               <div className="p-8 space-y-4">
                 <div className="flex justify-between items-center">
-                    <span className="text-[10px] uppercase font-bold text-slate-400">Target Recipient</span>
-                    <div className='flex flex-col text-right'>
-                        <span className="text-sm font-bold text-slate-800">{selectedUser?.name}</span>
-                        <span className="text-xs  text-slate-800">{selectedUser?.phone}</span>
-                        <span className="text-xs  text-slate-800">{selectedUser?.email}</span>
-                    </div>
+                  <span className="text-[10px] uppercase font-bold text-slate-400">Target Recipient</span>
+                  <div className='flex flex-col text-right'>
+                    <span className="text-sm font-bold text-slate-800">{selectedUser?.name}</span>
+                    <span className="text-xs  text-slate-800">{selectedUser?.phone}</span>
+                    <span className="text-xs  text-slate-800">{selectedUser?.email}</span>
+                  </div>
                 </div>
                 <div className="flex justify-between items-center">
-                    <span className="text-[10px] uppercase font-bold text-slate-400">Transfer Fee</span>
-                    <span className="text-xs font-bold text-green-600">PKR 0.00</span>
+                  <span className="text-[10px] uppercase font-bold text-slate-400">Transfer Fee</span>
+                  <span className="text-xs font-bold text-green-600">PKR 0.00</span>
                 </div>
               </div>
               <div className="bg-red-600 p-8 flex justify-between items-center text-white">
@@ -243,8 +250,8 @@ const TransferFundsModal = ({ isOpen, onClose }: TransferModalProps) => {
             </div>
 
             <div className="flex items-center gap-3 p-4 bg-yellow-50 rounded-2xl border border-yellow-100">
-                <ShieldCheck className="w-5 h-5 text-yellow-600 shrink-0" />
-                <p className="text-[10px] text-yellow-700 font-medium">Funds will be moved to escrow immediately. This action is irreversible.</p>
+              <ShieldCheck className="w-5 h-5 text-yellow-600 shrink-0" />
+              <p className="text-[10px] text-yellow-700 font-medium">Funds will be moved to escrow immediately. This action is irreversible.</p>
             </div>
 
             <div className="flex gap-4">
@@ -266,19 +273,19 @@ const TransferFundsModal = ({ isOpen, onClose }: TransferModalProps) => {
             <p className="text-sm text-slate-400 mt-2">The recipient has been notified of the deposit.</p>
 
             <div className="mt-8 p-6 bg-slate-50 rounded-2xl space-y-4 text-left border border-slate-100">
-                <div className="flex justify-between">
-                    <span className="text-[10px] uppercase font-bold text-slate-400">TXN Reference</span>
-                    <span className="text-[11px] font-mono font-bold text-slate-700">{transactionData?.sender?.id || "TXN-88210"}</span>
-                </div>
-                <div className="flex justify-between">
-                    <span className="text-[10px] uppercase font-bold text-slate-400">Amount Sent</span>
-                    <span className="text-sm font-bold text-red-600">PKR {amount}</span>
-                </div>
+              <div className="flex justify-between">
+                <span className="text-[10px] uppercase font-bold text-slate-400">TXN Reference</span>
+                <span className="text-[11px] font-mono font-bold text-slate-700">{transactionData?.sender?.id || "TXN-88210"}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-[10px] uppercase font-bold text-slate-400">Amount Sent</span>
+                <span className="text-sm font-bold text-red-600">PKR {amount}</span>
+              </div>
             </div>
 
             <div className="mt-8 flex gap-3">
-                <button className="flex-1 py-4 border border-slate-200 rounded-full text-xs font-bold text-slate-500 flex items-center justify-center gap-2 active:bg-slate-100"><Share2 className="w-4 h-4" /> Receipt</button>
-                <button onClick={onClose} className="flex-1 py-4 bg-slate-900 text-white rounded-full text-xs font-bold active:scale-95 transition-all">Close Modal</button>
+              <button className="flex-1 py-4 border border-slate-200 rounded-full text-xs font-bold text-slate-500 flex items-center justify-center gap-2 active:bg-slate-100"><Share2 className="w-4 h-4" /> Receipt</button>
+              <button onClick={onClose} className="flex-1 py-4 bg-slate-900 text-white rounded-full text-xs font-bold active:scale-95 transition-all">Close Modal</button>
             </div>
           </div>
         )}
@@ -291,16 +298,16 @@ const TransferFundsModal = ({ isOpen, onClose }: TransferModalProps) => {
             </div>
             <h2 className="text-2xl font-bold text-slate-800">Transaction Failed</h2>
             <p className="text-sm text-slate-400 mt-2 italic">Unable to complete transfer at this time.</p>
-            
+
             <div className="mt-8 p-6 rounded-2xl border border-red-50 bg-red-50/40">
-                <p className="text-xs text-red-600 font-medium leading-relaxed">
-                    Check your connection or wallet balance. If the problem persists, please contact support with code: <span className="font-bold">ERR-WALLET-01</span>.
-                </p>
+              <p className="text-xs text-red-600 font-medium leading-relaxed">
+                Check your connection or wallet balance. If the problem persists, please contact support with code: <span className="font-bold">ERR-WALLET-01</span>.
+              </p>
             </div>
 
             <div className="mt-8 flex flex-col gap-3">
-                <button onClick={() => setStep(2)} className="w-full py-5 bg-red-600 text-white rounded-full font-bold text-sm active:scale-95 transition-all">Try Different Amount</button>
-                <button onClick={onClose} className="w-full py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">Cancel</button>
+              <button onClick={() => setStep(2)} className="w-full py-5 bg-red-600 text-white rounded-full font-bold text-sm active:scale-95 transition-all">Try Different Amount</button>
+              <button onClick={onClose} className="w-full py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">Cancel</button>
             </div>
           </div>
         )}

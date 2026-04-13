@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
     
 
     // Create shipment
-    const shipment = await prisma.shipment.create({
+      const shipment = await prisma.shipment.create({
       data: {
         ...body,
         sellerId:sellerId,
@@ -50,7 +50,6 @@ export async function POST(request: NextRequest) {
     });
 
     
-
     return NextResponse.json(shipment, { status: 201 });
   } catch (error) {
     console.error('[v0] Order creation error:', error);

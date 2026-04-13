@@ -80,9 +80,7 @@ export default function BillingPage() {
             </Button>
           </div>
         </div>
-        <TopUpModal isOpen={isTopupModalOpen} onClose={() => setIsTopupModalOpen(false)} />
-        <TransferFundsModal isOpen={isTransferFundsModalOpen} onClose={() => setIsTransferFundsModalOpen(false)} />
-
+        
         {/* Escrow Visual - Three Prominent Metric Cards */}
         <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
           {/* Available Balance Card - Green */}
@@ -257,6 +255,10 @@ export default function BillingPage() {
           </Card>
         </div>
       </div>
+      <TopUpModal isOpen={isTopupModalOpen} onClose={() => setIsTopupModalOpen(false)} />
+        <TransferFundsModal isOpen={isTransferFundsModalOpen} onClose={() => setIsTransferFundsModalOpen(false)} />
+
     </SellerLayout>
+    
   );
 }

@@ -1,13 +1,13 @@
 import { prisma } from "@/lib/prisma";
-import {  TransactionType } from "@prisma/client";
+import { TransactionType } from "@prisma/client";
 import {
   runIdempotent,
   addLedger,
   withWalletLock,
 } from "@/lib/services/financial.engine";
-type Tx = any
+type Tx = any;
 
-export const  financialService = {
+export const financialService = {
   // =========================
   // WALLET TOPUP
   // =========================
@@ -80,23 +80,27 @@ export const  financialService = {
   // =========================
   // ESCROW LOCK
   // =========================
-  async lockEscrow(tx: Tx, walletId: string, amount: number, reason: string,referenceId?:string) {
+  async lockEscrow(
+    tx: Tx,
+    walletId: string,
+    amount: number,
+    reason: string,
+    referenceId?: string,
+  ) {
     return await runIdempotent(
       tx,
       `lock-${walletId}-${amount}-${referenceId}`,
       "lockEscrow",
       async () => {
-        
         const wallet = await tx.wallet.findUnique({
           where: { id: walletId },
           select: { balance: true },
         });
 
         if (Number(amount) > Number(wallet?.balance)) {
-          
           throw new Error("Insufficient balance");
         }
-        
+
         return withWalletLock(tx, walletId, async () => {
           await tx.wallet.update({
             where: { id: walletId },
@@ -114,7 +118,6 @@ export const  financialService = {
               status: "PENDING",
             },
           });
-          
         });
       },
     );
@@ -128,7 +131,7 @@ export const  financialService = {
     walletId: string,
     amount: number,
     reason: string,
-    referenceId?:string
+    referenceId?: string,
   ) {
     return await runIdempotent(
       tx,
@@ -181,40 +184,51 @@ export const  financialService = {
     amount: number,
     paymentMethod: "PREPAID" | "COD",
   ) {
-    return await runIdempotent(tx, `payment-${shipmentId}`, "payment", async () => {
-      const shipment = await tx.shipment.findUnique({
-        where: { id: shipmentId },
-      });
+    return await runIdempotent(
+      tx,
+      `payment-${shipmentId}`,
+      "payment",
+      async () => {
+        const shipment = await tx.shipment.findUnique({
+          where: { id: shipmentId },
+        });
 
-      if (!shipment) throw new Error("Shipment not found");
+        if (!shipment) throw new Error("Shipment not found");
 
-      let tax = 0;
-      let commission = Number(shipment.actualRate);
-      let driverPayable = 0;
+        let tax = 0;
+        let commission = Number(shipment.actualRate);
+        let driverPayable = 0;
 
-      if (paymentMethod === "COD") {
-        driverPayable = commission * 0.8;
-      }
+        if (paymentMethod === "COD") {
+          driverPayable = commission * 0.8;
+        }
 
-      return tx.payment.create({
-        data: {
-          shipmentId,
-          amount,
-          tax,
-          commission,
-          driverPayable,
-          paymentMethod,
-          paymentStatus: paymentMethod === "PREPAID" ? "COMPLETED" : "PENDING",
-          paidAt: paymentMethod === "PREPAID" ? new Date() : undefined,
-        },
-      });
-    });
+        return tx.payment.create({
+          data: {
+            shipmentId,
+            amount,
+            tax,
+            commission,
+            driverPayable,
+            paymentMethod,
+            paymentStatus:
+              paymentMethod === "PREPAID" ? "COMPLETED" : "PENDING",
+            paidAt: paymentMethod === "PREPAID" ? new Date() : undefined,
+          },
+        });
+      },
+    );
   },
 
   // =========================
   // DRIVER SETTLEMENT
   // =========================
-  async settleDriverPayment(tx: Tx, driverId: string, amount: number,referenceId?:string) {
+  async settleDriverPayment(
+    tx: Tx,
+    driverId: string,
+    amount: number,
+    referenceId?: string,
+  ) {
     return await runIdempotent(
       tx,
       `driver-settle-${driverId}-${referenceId}`,
@@ -347,40 +361,43 @@ export const  financialService = {
               walletId: businessWallet.id,
             },
           });
-           
         });
 
         if (!shipment?.assignment?.driver?.wallet.id)
-          throw new Error("Driver wallet not found"); 
-        
-        await withWalletLock(tx, shipment?.assignment?.driver?.wallet.id, async () => {
-          await addLedger(tx, {
-            walletId: shipment?.assignment?.driver?.wallet.id,
-            amount: driverFee,
-            type: "CREDIT",
-            category: "DELIVERY_FEE",
-            referenceId: shipment.id,
-          });
+          throw new Error("Driver wallet not found");
 
-          await tx.wallet.update({
-            where: { id: shipment?.assignment?.driver?.wallet.id },
-            data: {
-              balance: { increment: driverFee },
-            },
-          });
-          
-          await tx.transaction.create({
-            data: {
-              amount: driverFee,
-              description: "Delivery fee",
-              type: "CREDIT",
-              completedAt: new Date(),
-              referenceId: shipment.id,
-              status: "COMPLETED",
+        await withWalletLock(
+          tx,
+          shipment?.assignment?.driver?.wallet.id,
+          async () => {
+            await addLedger(tx, {
               walletId: shipment?.assignment?.driver?.wallet.id,
-            },
-          });
-        });
+              amount: driverFee,
+              type: "CREDIT",
+              category: "DELIVERY_FEE",
+              referenceId: shipment.id,
+            });
+
+            await tx.wallet.update({
+              where: { id: shipment?.assignment?.driver?.wallet.id },
+              data: {
+                balance: { increment: driverFee },
+              },
+            });
+
+            await tx.transaction.create({
+              data: {
+                amount: driverFee,
+                description: "Delivery fee",
+                type: "CREDIT",
+                completedAt: new Date(),
+                referenceId: shipment.id,
+                status: "COMPLETED",
+                walletId: shipment?.assignment?.driver?.wallet.id,
+              },
+            });
+          },
+        );
 
         await this.settleDriverPayment(
           tx,
@@ -394,7 +411,13 @@ export const  financialService = {
   // =========================
   // ESCROW CUT
   // =========================
-  async cutEscrow(tx: Tx, walletId: string, amount: number, reason: string,referenceId:string) {
+  async cutEscrow(
+    tx: Tx,
+    walletId: string,
+    amount: number,
+    reason: string,
+    referenceId: string,
+  ) {
     return await runIdempotent(
       tx,
       `cut-${walletId}-${amount}-${referenceId}`,
@@ -500,6 +523,16 @@ export const  financialService = {
               balance: { decrement: amount },
             },
           });
+          await tx.transaction.create({
+            data: {
+              walletId: senderWallet.id,
+              type: "DEBIT",
+              amount,
+              description:"Funds transfered",
+              status: "COMPLETED",
+              completedAt: new Date(),
+            },
+          });
 
           // 🔒 LOCK RECEIVER WALLET
           await withWalletLock(tx, receiverWallet.id, async () => {
@@ -518,6 +551,16 @@ export const  financialService = {
                 balance: { increment: amount },
               },
             });
+            await tx.transaction.create({
+              data: {
+                walletId: receiverWallet.id,
+                type: "CREDIT",
+                amount,
+                description: "Funds recieved",
+                status: "COMPLETED",
+                completedAt: new Date(),
+              },
+            });
           });
         });
 
@@ -527,91 +570,90 @@ export const  financialService = {
           to: receiverWallet.id,
           amount,
         };
-      },
+      }
     );
   },
 
-// =========================
+  // =========================
   // Settle COD Debt
   // =========================
-  async settleCODDebt(
-  tx: Tx,
-  driverId: string,
-  amount: number,
-  referenceId?: string
-) {
-  if (amount <= 0) throw new Error("Invalid amount");
+  async   settleCODDebt(
+    tx: Tx,
+    driverId: string,
+    amount: number,
+    referenceId?: string,
+  ) {
+    if (amount <= 0) throw new Error("Invalid amount");
 
-  return runIdempotent(
-    tx,
-    `cod-settle:${driverId}:${amount}:${referenceId}`,
-    "cod_debt_settlement",
-    async () => {
-
-      const driver = await tx.driver.findUnique({
-        where: { id: driverId },
-        include: { wallet: true },
-      });
-
-      if (!driver || !driver.wallet) {
-        throw new Error("Driver or wallet not found");
-      }
-
-      if (driver.currentDebt < amount) {
-        throw new Error("Amount exceeds current debt");
-      }
-
-      // 🔒 lock driver wallet to prevent concurrent debt modifications
-      await withWalletLock(tx, driver.wallet.id, async () => {
-
-        // Get oldest debts first (FIFO settlement)
-        const debts = await tx.driverDebt.findMany({
-          where: {
-            driverId,
-            isSettled: false,
-          },
-          orderBy: {
-            createdAt: "asc",
-          },
+    return runIdempotent(
+      tx,
+      `cod-settle:${driverId}:${amount}:${referenceId}`,
+      "cod_debt_settlement",
+      async () => {
+        console.log("here it has");
+        
+        const driver = await tx.driver.findUnique({
+          where: { id: driverId },
+          include: { wallet: true },
         });
 
-        let remainingAmount = amount;
+        if (!driver || !driver.wallet) {
+          throw new Error("Driver or wallet not found");
+        }
 
-        for (const debt of debts) {
-          if (remainingAmount <= 0) break;
+        if (driver.currentDebt < amount) {
+          throw new Error("Amount exceeds current debt");
+        }
+        console.log("working...");
 
-          const settleAmount = Math.min(remainingAmount, debt.amount);
-
-          // mark debt as settled (or partially settled if you later upgrade)
-          await tx.driverDebt.update({
-            where: { id: debt.id },
-            data: {
-              isSettled: true,
-              settledAt: new Date(),
+        // 🔒 lock driver wallet to prevent concurrent debt modifications
+        await withWalletLock(tx, driver.wallet.id, async () => {
+          // Get oldest debts first (FIFO settlement)
+          const debts = await tx.driverDebt.findMany({
+            where: {
+              driverId,
+            },
+            orderBy: {
+              createdAt: "asc",
             },
           });
 
-          remainingAmount -= settleAmount;
-        }
+          let remainingAmount = amount;
 
-        // update driver debt safely
-        await tx.driver.update({
-          where: { id: driverId },
-          data: {
-            currentDebt: {
-              decrement: amount,
+          for (const debt of debts) {
+            if (remainingAmount <= 0) break;
+
+            const settleAmount = Math.min(remainingAmount, debt.amount);
+
+            // mark debt as settled (or partially settled if you later upgrade)
+            await tx.driverDebt.update({
+              where: { id: debt.id },
+              data: {
+                isSettled: true,
+                settledAt: new Date(),
+              },
+            });
+
+            remainingAmount -= settleAmount;
+          }
+
+          // update driver debt safely
+          await tx.driver.update({
+            where: { id: driverId },
+            data: {
+              currentDebt: {
+                decrement: amount,
+              },
             },
-          },
+          });
         });
 
-      });
-
-      return {
-        success: true,
-        settledAmount: amount,
-        remainingDebt: driver.currentDebt - amount,
-      };
-    }
-  );
-}
+        return {
+          success: true,
+          settledAmount: amount,
+          remainingDebt: driver.currentDebt - amount,
+        };
+      },
+    );
+  },
 };
