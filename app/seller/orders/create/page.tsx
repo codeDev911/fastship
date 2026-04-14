@@ -2,6 +2,7 @@
 
 import { SellerLayout } from '@/components/seller/SellerLayout';
 import React, { useState } from 'react';
+import { secureFetch } from '@/lib/secure-fetch';
 
 const CreateOrderForm = () => {
   const [loading, setLoading] = useState(false);
@@ -29,7 +30,7 @@ const CreateOrderForm = () => {
     const user = JSON.parse(localStorage.getItem('user') || '{}');
     const sellerId = user?.jobId;
     try {
-      const response = await fetch('/api/sellers/orders/create', {
+      const response = await secureFetch('/api/sellers/orders/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(

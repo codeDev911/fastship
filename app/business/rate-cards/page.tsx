@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { BusinessLayout } from '@/components/business/BusinessLayout';
 import { RateCardList } from '@/components/business/RateCardList';
 import RateCardForm from '@/components/business/RateCardForm';
+import { secureFetch } from '@/lib/secure-fetch';
 
 export default function RateCardsPage() {
   const [rateCards, setRateCards] = useState<any[]>([]);
@@ -24,7 +25,7 @@ export default function RateCardsPage() {
       }
       try {
         setIsLoading(true);
-        const response = await fetch(`/api/rate-cards?businessId=${businessId}`);
+        const response = await secureFetch(`/api/rate-cards?businessId=${businessId}`);
         if (!response.ok) throw new Error('Failed to fetch');
         const data = await response.json();
         setRateCards(data.data);
@@ -52,7 +53,7 @@ export default function RateCardsPage() {
 
       if (selectedRateCard) {
         // Update existing
-        const response = await fetch(`/api/rate-cards/${rateCard.id}`, {
+        const response = await secureFetch(`/api/rate-cards/${rateCard.id}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(rateCard),
@@ -62,7 +63,7 @@ export default function RateCardsPage() {
         setRateCards((prev) => prev.map((card) => (card.id === rateCard.id ? rateCard : card)));
       } else {
         // Create new
-        const response = await fetch('/api/rate-cards', {
+        const response = await secureFetch('/api/rate-cards', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ ...rateCard, businessId }),
@@ -85,7 +86,7 @@ export default function RateCardsPage() {
     if (!confirm('Are you sure you want to delete this rate card?')) return;
 
     try {
-      const response = await fetch(`/api/rate-cards/${id}`, { method: 'DELETE' });
+      const response = await secureFetch(`/api/rate-cards/${id}`, { method: 'DELETE' });
       if (!response.ok) throw new Error('Failed to delete');
 
       setRateCards((prev) => prev.filter((card) => card.id !== id));

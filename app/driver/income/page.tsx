@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { DriverLayout } from '@/components/driver/DriverLayout';
 import { IncomeTracker } from '@/components/driver/IncomeTracker';
 import { useNotifications } from '@/lib/hooks';
+import { secureFetch } from '@/lib/secure-fetch';
 
 export default function DriverIncomePage() {
   const { getUnreadCount } = useNotifications();
@@ -18,7 +19,7 @@ export default function DriverIncomePage() {
     const fetchEarnings = async () => {
       try {
         setIsLoading(true);
-        const response = await fetch(`/api/analytics?driverId=${driverId}`);
+        const response = await secureFetch(`/api/analytics?driverId=${driverId}`);
         if (!response.ok) throw new Error('Failed to fetch earnings');
         const data = await response.json();
         setEarnings(data.stats.earnings);

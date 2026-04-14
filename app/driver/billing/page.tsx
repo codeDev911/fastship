@@ -7,6 +7,7 @@ import { CreditCardDisplay } from '@/components/seller/CreditCardDisplay';
 import { Plus, Lock, Wallet, DollarSign } from 'lucide-react';
 import { DriverLayout } from '@/components/driver/DriverLayout';
 import TopUpModal from '@/components/shared/TopupWallet';
+import { secureFetch } from '@/lib/secure-fetch';
 
 export default function BillingPage() {
   const [walletBalance, setWalletBalance] = useState(0);
@@ -22,8 +23,8 @@ export default function BillingPage() {
       try {
         setIsLoading(true);
         const [walletRes, billingRes] = await Promise.all([
-          fetch(`/api/wallets?driverId=${sellerId}`),
-          fetch(`/api/billing?driverId=${sellerId}&limit=10`),
+          secureFetch(`/api/wallets?driverId=${sellerId}`),
+          secureFetch(`/api/billing?driverId=${sellerId}&limit=10`),
         ]);
 
         if (walletRes.ok) {
@@ -50,7 +51,8 @@ export default function BillingPage() {
     <DriverLayout
       currentPage="billing"
       walletBalance={walletBalance}
-      currency="PKR"
+      currency="PKR" 
+      unreadNotifications={0}
     >
       <div className="space-y-6">
         {/* Header */}

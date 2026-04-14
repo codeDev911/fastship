@@ -105,6 +105,7 @@ model User {
   business      Business?
   notifications Notification[]
   auditLogs     AuditLog[]
+  apiKeys       ApiKey[]        @relation("apiKeys")
 
   @@index([email])
   @@index([role])
@@ -541,4 +542,30 @@ model AuditLog {
 
   @@index([userId])
   @@index([createdAt])
+}
+
+model ApiKey {
+  id                String    @id @default(cuid())
+  userId            String
+  name              String
+  keyHash           String    @unique // Hashed version of the actual key (never store plain text)
+  prefix            String    @unique // First 8 chars of key for display (e.g. "sk_test_abc123...")
+  scope             String    @default("all") // Comma-separated permissions: "read,write,admin"
+  rateLimit         Int       @default(1000) // Requests per hour
+  lastUsedAt        DateTime?
+  lastUsedIp        String?
+  requestCount      Int       @default(0) // Total requests made with this key
+  requestCountHour  Int       @default(0) // Requests in current hour
+  requestCountReset DateTime  @default(now())
+  isActive          Boolean   @default(true)
+  revokedAt         DateTime?
+  createdAt         DateTime  @default(now())
+  expiresAt         DateTime?
+
+  user User @relation("apiKeys", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([isActive])
+  @@index([createdAt])
+  @@index([keyHash])
 }

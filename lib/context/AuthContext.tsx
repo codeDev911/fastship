@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { setSessionCookie } from '../actions';
+import { refreshCSRFToken, clearCSRFToken } from '../secure-fetch';
 
 export interface User {
   id: string;
@@ -46,7 +47,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setUser(null);
         }
       } catch (err) {
-        console.error('[v0] Auth check failed:', err);
+        console.error(' Auth check failed:', err);
         setUser(null);
       } finally {
         setIsLoading(false);
@@ -60,7 +61,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       setError(null);
       setIsLoading(true);
-      console.log('[v0] Login attempt:', { email, role });
+      console.log(' Login attempt:', { email, role });
 
       const response = await fetch('/api/auth/login', {
         method: 'POST',
@@ -69,9 +70,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         credentials: 'include',
       });
 
-      console.log('[v0] Login response status:', response.status);
+      console.log(' Login response status:', response.status);
       const data = await response.json();
-      console.log('[v0] Login response data:', data);
 
       if (!response.ok) {
         throw new Error(data.message || 'Login failed');
@@ -79,10 +79,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       setUser(data.user);
       localStorage.setItem("user", JSON.stringify(data.user));
-      console.log('[v0] Login successful:', data.user);
+      
+      // Refresh CSRF token after successful login
+      try {
+        await refreshCSRFToken();
+      } catch (err) {
+        console.warn(' Failed to refresh CSRF token:', err);
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Login failed';
-      console.error('[v0] Login error:', message);
+      console.error(' Login error:', message);
       setError(message);
       throw err;
     } finally {
@@ -183,8 +189,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         credentials: 'include',
       });
       setUser(null);
+      
+      // Clear CSRF token on logout
+      clearCSRFToken();
     } catch (err) {
-      console.error('[v0] Logout failed:', err);
+      console.error(' Logout failed:', err);
     }
   };
 
@@ -198,7 +207,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(null);
       }
     } catch (err) {
-      console.error('[v0] Refresh failed:', err);
+      console.error(' Refresh failed:', err);
       setUser(null);
     }
   };

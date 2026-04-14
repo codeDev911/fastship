@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { SellerLayout } from '@/components/seller/SellerLayout';
 import { Card, CardHeader, CardContent } from '@/components/shared/Card';
 import { Star, TrendingUp } from 'lucide-react';
+import { secureFetch } from '@/lib/secure-fetch';
 
 export default function BiddingMarketplacePage() {
   const [sellerId] = useState<string>('seller-1');

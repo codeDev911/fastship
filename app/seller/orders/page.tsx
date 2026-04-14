@@ -9,6 +9,7 @@ import { Filter, Download, Plus } from 'lucide-react';
 import { Button } from '@/components/shared/Button';
 import OrderDetailsSheet from '@/components/seller/OrderDetails';
 import Link from 'next/link';
+import { secureFetch } from '@/lib/secure-fetch';
 
 export default function SellerOrdersPage() {
   const [orders, setOrders] = useState<any[]>([]);
@@ -26,7 +27,7 @@ export default function SellerOrdersPage() {
         setIsLoading(true);
         const user= JSON.parse(localStorage.getItem('user') || '{}');
         const sellerId = user?.jobId;
-        const response = await fetch(`/api/sellers/orders?sellerId=${sellerId}`);
+        const response = await secureFetch(`/api/sellers/orders?sellerId=${sellerId}`);
         if (!response.ok) throw new Error('Failed to fetch');
         const data = await response.json();
         setOrders(data.data);
@@ -42,7 +43,7 @@ export default function SellerOrdersPage() {
 
   const handleFindCourier = async (order: any) => {
     try {
-      const response = await fetch(`/api/bids/business-rates?limit=10`);
+      const response = await secureFetch(`/api/bids/business-rates?limit=10`);
       if (response.ok) {
         const data = await response.json();
         setBids(data.data);
@@ -57,7 +58,7 @@ export default function SellerOrdersPage() {
   const handleAcceptBid = async (bid: any) => {
     if (selectedOrderForBidding) {
       try {
-        const response = await fetch(`/api/shipments/${selectedOrderForBidding.id}?lockEscrow=true`, {
+        const response = await secureFetch(`/api/shipments/${selectedOrderForBidding.id}?lockEscrow=true`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

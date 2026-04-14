@@ -5,6 +5,7 @@ import { SellerLayout } from '@/components/seller/SellerLayout';
 import { Card, CardHeader, CardContent } from '@/components/shared/Card';
 import { Button } from '@/components/shared/Button';
 import { Zap, Check, X } from 'lucide-react';
+import { secureFetch } from '@/lib/secure-fetch';
 
 export default function IntegrationsPage() {
   const [sellerId] = useState<string>('seller-1');
@@ -17,8 +18,8 @@ export default function IntegrationsPage() {
       try {
         setIsLoading(true);
         const [intRes, walletRes] = await Promise.all([
-          fetch(`/api/sellers/integrations?sellerId=${sellerId}`),
-          fetch(`/api/wallets?sellerId=${sellerId}`),
+          secureFetch(`/api/sellers/integrations?sellerId=${sellerId}`),
+          secureFetch(`/api/wallets?sellerId=${sellerId}`),
         ]);
 
         if (intRes.ok) {

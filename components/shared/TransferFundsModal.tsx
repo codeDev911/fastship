@@ -12,6 +12,7 @@ interface TransferModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
+import { secureFetch } from '@/lib/secure-fetch';
 
 const TransferFundsModal = ({ isOpen, onClose }: TransferModalProps) => {
   // Navigation State: 1: Search, 2: Amount, 3: Review, 4: Success, 5: Error
@@ -40,7 +41,7 @@ const TransferFundsModal = ({ isOpen, onClose }: TransferModalProps) => {
     const delayDebounceFn = setTimeout(async () => {
       try {
         // Grap search from your API
-        const response = await fetch(`/api/users?search=${searchQuery}&type=${selectedType}`);
+        const response = await secureFetch(`/api/users?search=${searchQuery}&type=${selectedType}`);
         const data = await response.json();
         setUsers(data || []);
       } catch (error) {
@@ -61,7 +62,7 @@ const TransferFundsModal = ({ isOpen, onClose }: TransferModalProps) => {
     const uniqueId = new Date().toISOString()
     setIsLoading(true);
     try {
-      const response = await fetch('/api/transactions/transfer-funds', {
+      const response = await secureFetch('/api/transactions/transfer-funds', {
         method: 'POST',
         body: JSON.stringify({ from: userRole?.toLowerCase(), to: selectedUser.role?.toLowerCase(), fromId: userId, toId: selectedUser?.id, amount: Number(amount), uniqueId }),
       });

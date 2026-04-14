@@ -14,6 +14,7 @@ import {
     StarIcon
 } from 'lucide-react';
 import { Button } from '../shared/Button';
+import { secureFetch } from '@/lib/secure-fetch';
 
 const DeptFundReleaseModal = ({ isOpen, onClose, currentDebt }: any) => {
     const [step, setStep] = useState(1); // 1: Form, 2: Success, 3: Error
@@ -27,10 +28,9 @@ const DeptFundReleaseModal = ({ isOpen, onClose, currentDebt }: any) => {
         const user = JSON.parse(localStorage.getItem('user') || '{}');
         const driverId = user?.jobId;
 
-
         try {
-            let res = await fetch(`/api/wallets?driverId=${driverId}`)
-            let res2 = await fetch(`/api/driver/${driverId}`)
+            let res = await secureFetch(`/api/wallets?driverId=${driverId}`)
+            let res2 = await secureFetch(`/api/driver/${driverId}`)
             const data = await res.json()
             const data2 = await res2.json()
             if (res.ok && res2.ok) {
@@ -56,14 +56,14 @@ const DeptFundReleaseModal = ({ isOpen, onClose, currentDebt }: any) => {
         try {
             setIsLoading(true)
             const uniqueId = new Date().toISOString()
-            const res = await fetch('/api/transactions/transfer-funds', {
+            const res = await secureFetch('/api/transactions/transfer-funds', {
                 method: "POST",
                 body: JSON.stringify({ from: "driver", to: "business", fromId: driverId, toId: business?.user?.id, amount, description: "COD debt released",uniqueId })
             })
             const data = await res.json()
 
             if (res.ok) {
-                let r2 = await fetch('/api/business/driver-depts', {
+                let r2 = await secureFetch('/api/business/driver-depts', {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -72,7 +72,7 @@ const DeptFundReleaseModal = ({ isOpen, onClose, currentDebt }: any) => {
                     }),
                 }); 
                 if (!r2.ok) {
-                    await fetch('/api/transactions/transfer-funds', {
+                    await secureFetch('/api/transactions/transfer-funds', {
                         method: "POST",
                         body: JSON.stringify({ from: "business", to: "driver", toId: user.id, fromId: business?.id, amount, description: "Refunded back",uniqueId })
                     })

@@ -9,18 +9,13 @@ import { DriverAssignmentModal } from '@/components/business/DriverAssignmentMod
 import {
   MapPin,
   Phone,
-  User,
-  Package,
-  DollarSign,
+  User, 
   ArrowLeft,
   AlertCircle,
-  Truck,
-  Calendar,
+  Truck, 
   FileText,
-  Motorbike,
-  BanknoteIcon,
-  Clock10,
-  BoxSelectIcon,
+  Motorbike, 
+  Clock10, 
   CheckCircle,
   XCircle,
   InfoIcon,
@@ -29,6 +24,7 @@ import {
   BoxIcon,
 } from 'lucide-react';
 import { BusinessLayout } from '@/components/business/BusinessLayout';
+import { secureFetch } from '@/lib/secure-fetch';
 
 function formatDuration(date1:any, date2:any) {
      // Ensure start is the earlier date
@@ -98,8 +94,8 @@ export default function ShipmentDetailPage() {
         const user = JSON.parse(localStorage.getItem('user') || '{}');
         const businessId = user?.jobId;
         const [shipmentRes, driversRes] = await Promise.all([
-          fetch(`/api/shipments/${shipmentId}?businessId=${businessId}`),
-          fetch('/api/drivers'),
+          secureFetch(`/api/shipments/${shipmentId}?businessId=${businessId}`),
+          secureFetch('/api/drivers'),
         ]);
 
         if (shipmentRes.ok) {
@@ -166,7 +162,7 @@ export default function ShipmentDetailPage() {
     if (selectedDriver) {
       try {
         setIsUpdating(true);
-        const response = await fetch(`/api/shipments/${shipmentId}`, {
+        const response = await secureFetch(`/api/shipments/${shipmentId}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ driverId: selectedDriver, status: 'ASSIGNED', businessId: shipment.businessId }),
@@ -540,11 +536,11 @@ export default function ShipmentDetailPage() {
             <Card>
               <CardHeader title="Status Timeline" />
               <CardContent className="space-y-4">
-                {shipment?.activities?.map((step, idx) => {
+                {shipment?.activities?.map((step:any, idx:any) => {
                   const isActive =
                     shipment.status === step.status 
 
-                  const getIcon = (status) =>{
+                  const getIcon = (status:any) =>{
                     let icon: any
                   switch (status) {
                     case "PENDING":

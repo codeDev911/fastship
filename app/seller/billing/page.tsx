@@ -8,6 +8,7 @@ import { CreditCardDisplay } from '@/components/seller/CreditCardDisplay';
 import { Plus, Lock, Wallet, DollarSign, Send } from 'lucide-react';
 import TopUpModal from '@/components/shared/TopupWallet';
 import TransferFundsModal from '@/components/shared/TransferFundsModal';
+import { secureFetch } from '@/lib/secure-fetch';
 
 export default function BillingPage() {
   const [walletBalance, setWalletBalance] = useState(0);
@@ -25,13 +26,15 @@ export default function BillingPage() {
       try {
         setIsLoading(true);
         const [walletRes, billingRes] = await Promise.all([
-          fetch(`/api/wallets?sellerId=${sellerId}`),
-          fetch(`/api/billing?sellerId=${sellerId}&limit=10`),
+          secureFetch(`/api/wallets?sellerId=${sellerId}`),
+          secureFetch(`/api/billing?sellerId=${sellerId}&limit=10`),
         ]);
 
         if (walletRes.ok) {
           const data = await walletRes.json();
           setWallet(data?.data)
+          console.log(data?.data);
+          
           setWalletBalance(data.data?.balance || 0);
         }
 
@@ -80,7 +83,7 @@ export default function BillingPage() {
             </Button>
           </div>
         </div>
-        
+
         {/* Escrow Visual - Three Prominent Metric Cards */}
         <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
           {/* Available Balance Card - Green */}
@@ -147,13 +150,15 @@ export default function BillingPage() {
                     <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Transaction ID</th>
                     <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Type</th>
                     <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Details</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Reference</th>
                     <th className="px-4 py-3 text-right text-sm font-semibold text-foreground">Amount</th>
                   </tr>
                 </thead>
                 <tbody>
                   {transactions?.length > 0 && transactions?.map((txn: any, idx: React.Key) => {
                     const isAddition = txn.type === 'TOPUP' || txn.type === 'REFUND' || txn.type === 'CREDIT' ? true : false;
-                    const isEscrow = txn.type === "ESCROW_LOCK" ||txn.type=== "ESCROW_RELEASE"
+                    const isEscrow = txn.type === "ESCROW_LOCK"
+                    const isEscrowReleased = txn.type === "ESCROW_RELEASE"
                     const typeLabel = txn.type
 
                     return (
@@ -162,14 +167,20 @@ export default function BillingPage() {
                         className={idx !== wallet?.recentTransactions?.length - 1 ? 'border-b border-border/50' : ''}
                       >
                         <td className="px-4 py-4 text-sm text-foreground">
-                          {new Date(txn.date)?.toLocaleDateString()}
+                          {new Date(txn.date)?.toLocaleDateString("en-US", {
+                            day: "2-digit",
+                            month: "2-digit",
+                            year: "2-digit",
+                            minute: "2-digit",
+                            hour: "2-digit",
+                            hour12: true
+                          })}
                         </td>
                         <td className="px-4 py-4 text-sm font-medium text-muted-foreground font-mono">
                           {txn?.id}
                         </td>
                         <td className="px-4 py-4 text-sm">
-                          <span className={`inline-block rounded-full px-3 py-1 text-xs font-medium ${
-                            txn.type === 'TOPUP' || txn.type ==="CREDIT"
+                          <span className={`inline-block rounded-full px-3 py-1 text-xs font-medium ${txn.type === 'TOPUP' || txn.type === "CREDIT"
                             ? 'bg-green-50 text-green-700'
                             : txn.type === 'ESCROW_LOCK'
                               ? 'bg-yellow-50 text-yellow-700'
@@ -181,15 +192,14 @@ export default function BillingPage() {
                           </span>
                         </td>
                         <td className="px-4 py-4 text-sm">
-                          {txn.orderReference ? (
-                            <span className="font-medium text-foreground">{txn.orderReference}</span>
-                          ) : (
-                            <span className="text-muted-foreground">{txn.description}</span>
-                          )}
+                          <span className="text-muted-foreground">{txn.description}</span>
                         </td>
-                        <td className={`px-4 py-4 text-right text-sm font-semibold ${isAddition ? 'text-green-600' : isEscrow ? "text-yellow-500" : 'text-red-600'
+                        <td className="px-4 py-4 text-sm">
+                          <span className="text-muted-foreground">{txn.referenceId||"N/A"}</span>
+                        </td>
+                        <td className={`px-4 py-4 text-right text-sm font-semibold ${isAddition ? 'text-green-600' : isEscrow ? "text-yellow-600" : isEscrowReleased ? "text-blue-600" : 'text-red-600'
                           }`}>
-                          {isAddition ? '+' : isEscrow ? "" : '-'} Rs.{txn?.amount?.toLocaleString()} {wallet?.currency}
+                          {isAddition ? '+' : isEscrow || isEscrowReleased ? "" : '-'} Rs.{txn?.amount?.toLocaleString()} {wallet?.currency}
                         </td>
                       </tr>
                     );
@@ -256,9 +266,9 @@ export default function BillingPage() {
         </div>
       </div>
       <TopUpModal isOpen={isTopupModalOpen} onClose={() => setIsTopupModalOpen(false)} />
-        <TransferFundsModal isOpen={isTransferFundsModalOpen} onClose={() => setIsTransferFundsModalOpen(false)} />
+      <TransferFundsModal isOpen={isTransferFundsModalOpen} onClose={() => setIsTransferFundsModalOpen(false)} />
 
     </SellerLayout>
-    
+
   );
 }

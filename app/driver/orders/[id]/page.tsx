@@ -4,6 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { Card, CardHeader, CardContent } from '@/components/shared/Card';
 import { Button } from '@/components/shared/Button';
+import { secureFetch } from '@/lib/secure-fetch';
+
 import { StatusBadge } from '@/components/shared/Badge';
 import { StatusUpdateModal } from '@/components/driver/StatusUpdateModal';
 import { 
@@ -40,7 +42,7 @@ export default function OrderDetailPage() {
   const driverId = user?.jobId;
       try {
         setIsLoading(true);
-        const response = await fetch(`/api/shipments/${shipmentId}?driverId=${driverId}`);
+        const response = await secureFetch(`/api/shipments/${shipmentId}?driverId=${driverId}`);
         if (!response.ok) throw new Error('Failed to fetch shipment');
         const data = await response.json();
         setShipment(data);
@@ -101,7 +103,7 @@ export default function OrderDetailPage() {
   const handleStatusChange = async (newStatus: any) => {
     setIsUpdating(true);
    try {
-     await fetch(`/api/driver/delivery?shipmentId=${shipmentId}&status=${newStatus}&canceledBy=driver`, {
+     await secureFetch(`/api/driver/delivery?shipmentId=${shipmentId}&status=${newStatus}&canceledBy=driver`, {
        method: 'PATCH',
        headers: { 'Content-Type': 'application/json' },
      });

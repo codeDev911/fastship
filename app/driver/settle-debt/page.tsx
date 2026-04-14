@@ -7,6 +7,7 @@ import { Button } from '@/components/shared/Button';
 import { AlertCircle, QrCode, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import DeptFundReleaseModal from '@/components/driver/DeptFundReleaseModal';
+import { secureFetch } from '@/lib/secure-fetch';
 
 export default function SettleDebtPage() {
   const [debt, setDebt] = useState({
@@ -24,7 +25,7 @@ export default function SettleDebtPage() {
     const fetchDebt = async () => {
       try {
         setIsLoading(true);
-        const response = await fetch(`/api/drivers/debt?driverId=${driverId}`);
+        const response = await secureFetch(`/api/drivers/debt?driverId=${driverId}`);
         if (!response.ok) throw new Error('Failed to fetch debt');
         const data = await response.json();
         setDebt(data);

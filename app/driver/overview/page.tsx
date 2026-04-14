@@ -8,6 +8,7 @@ import { Card, CardHeader, CardContent } from '@/components/shared/Card';
 import { Button } from '@/components/shared/Button';
 import { AlertCircle, Wallet } from 'lucide-react';
 import Link from 'next/link';
+import { secureFetch } from '@/lib/secure-fetch';
 
 export default function DriverOverviewPage() {
   const [currentDriver, setCurrentDriver] = useState<any>(null);
@@ -25,8 +26,8 @@ export default function DriverOverviewPage() {
       
       try {
         const [driverRes, debtRes] = await Promise.all([
-          fetch(`/api/driver/${driverId}`),
-          fetch(`/api/drivers/debt?driverId=${driverId}`),
+          secureFetch(`/api/driver/${driverId}`),
+          secureFetch(`/api/drivers/debt?driverId=${driverId}`),
         ]);
         
         if (driverRes.ok) {

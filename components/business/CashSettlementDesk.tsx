@@ -2,10 +2,9 @@
 
 import React, { useEffect, useState } from 'react';
 import { Card, CardHeader, CardContent } from '@/components/shared/Card';
-import { Button } from '@/components/shared/Button';
-import { mockFleetDriverCODDebts } from '@/lib/mock-data';
-import { QrCode, Camera, Send, CheckCircle, AlertCircle } from 'lucide-react';
-import { financialService } from '@/lib/services/financial.service';
+import { Button } from '@/components/shared/Button'; 
+import { QrCode, Camera, Send, CheckCircle, AlertCircle } from 'lucide-react'; 
+import { secureFetch } from '@/lib/secure-fetch';
 
 interface SettlementFormState {
   selectedDriver: string;
@@ -38,7 +37,7 @@ export function CashSettlementDesk() {
     const user = JSON.parse(localStorage.getItem('user') || '{}');
     const businessId = user?.jobId;
     try {
-      const response = await fetch(`/api/business/driver-depts?businessId=${businessId}`);
+      const response = await secureFetch(`/api/business/driver-depts?businessId=${businessId}`);
       const data = await response.json();
       
       setDriverDepts(data.data);
@@ -92,7 +91,7 @@ export function CashSettlementDesk() {
         setIsProcessing(true);
               setUniqueId(new Date().toISOString()) // just to avoid duplicate clicks
 
-        await fetch('/api/business/driver-depts', {
+        await secureFetch('/api/business/driver-depts', {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

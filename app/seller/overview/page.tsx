@@ -1,13 +1,13 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { SellerLayout } from '@/components/seller/SellerLayout';
-import { SellerMetrics } from '@/components/seller/SellerMetrics';
+import { SellerLayout } from '@/components/seller/SellerLayout'; 
 import { RecentOrdersTable } from '@/components/seller/RecentOrdersTable';
 import { BiddingModal } from '@/components/seller/BiddingModal';
 import { Card, CardHeader, CardContent } from '@/components/shared/Card';
 import { Button } from '@/components/shared/Button';
 import { TrendingUp, AlertCircle } from 'lucide-react';
+import { secureFetch } from '@/lib/secure-fetch';
 
 export default function SellerDashboardPage() {
   const [sellerId] = useState<string>('seller-1');
@@ -23,8 +23,8 @@ export default function SellerDashboardPage() {
       try {
         setIsLoading(true);
         const [ordersRes, walletRes] = await Promise.all([
-          fetch(`/api/sellers/orders?sellerId=${sellerId}`),
-          fetch(`/api/wallets?sellerId=${sellerId}`),
+          secureFetch(`/api/sellers/orders?sellerId=${sellerId}`),
+          secureFetch(`/api/wallets?sellerId=${sellerId}`),
         ]);
 
         if (ordersRes.ok) {
@@ -63,7 +63,7 @@ export default function SellerDashboardPage() {
   const handleAcceptBid = async (bid: any) => {
     if (selectedOrderForBidding) {
       try {
-        const response = await fetch(`/api/shipments/${selectedOrderForBidding.id}`, {
+        const response = await secureFetch(`/api/shipments/${selectedOrderForBidding.id}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

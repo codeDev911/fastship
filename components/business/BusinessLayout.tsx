@@ -18,6 +18,7 @@ import {
   Gavel,
   CreditCard,
   Banknote,
+  Key,
 } from 'lucide-react';
 import { useAuth } from '@/lib/context/AuthContext';
 
@@ -90,6 +91,11 @@ export function BusinessLayout({
       label: 'Billing',
       href: '/business/billing',
       icon: <CreditCard className="h-5 w-5" />,
+    },
+    {
+      label: 'API Keys',
+      href: '/business/api-keys',
+      icon: <Key className="h-5 w-5" />,
     },
     {
       label: 'Settings',

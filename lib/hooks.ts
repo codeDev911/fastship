@@ -1,4 +1,5 @@
 'use client';
+import { secureFetch } from '@/lib/secure-fetch';
 
 import { useState, useCallback, useEffect } from 'react';
 
@@ -19,7 +20,7 @@ export function useShipments(sellerId?: string, status?: string) {
         if (user.role === "DRIVER" && businessId) params.append('driverId', businessId); // For driver view, filter by assigned shipments
         if (status) params.append('status', status);
 
-        const response = await fetch(`/api/business/shipments?${params}`);
+        const response = await secureFetch(`/api/business/shipments?${params}`);
         if (!response.ok) throw new Error('Failed to fetch shipments');
         const data = await response.json();
         setShipments(data.data);
@@ -38,7 +39,7 @@ export function useShipments(sellerId?: string, status?: string) {
     async (shipmentId: string, newStatus: string) => {
       try {
         setIsLoading(true);
-        const response = await fetch(`/api/shipments/${shipmentId}`, {
+        const response = await secureFetch(`/api/shipments/${shipmentId}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ status: newStatus }),
@@ -61,7 +62,7 @@ export function useShipments(sellerId?: string, status?: string) {
     async (shipmentId: string, driverId: string, businessId: string) => {
       try {
         setIsLoading(true);
-        const response = await fetch('/api/assignments', {
+        const response = await secureFetch('/api/assignments', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ shipmentId, driverId, businessId }),
@@ -85,7 +86,7 @@ export function useShipments(sellerId?: string, status?: string) {
     async (newShipment: any) => {
       try {
         setIsLoading(true);
-        const response = await fetch('/api/shipments', {
+        const response = await secureFetch('/api/shipments', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(newShipment),
@@ -108,7 +109,7 @@ export function useShipments(sellerId?: string, status?: string) {
     async (shipmentId: string) => {
       try {
         setIsLoading(true);
-        const response = await fetch(`/api/shipments/${shipmentId}`, {
+        const response = await secureFetch(`/api/shipments/${shipmentId}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ status: 'CANCELLED' }),
@@ -145,7 +146,7 @@ export function useNotifications(userId?: string) {
       try {
         if (!userId) return;
         setIsLoading(true);
-        const response = await fetch(`/api/notifications?userId=${userId}`);
+        const response = await secureFetch(`/api/notifications?userId=${userId}`);
         if (!response.ok) throw new Error('Failed to fetch');
         const data = await response.json();
         setNotifications(data.data);
@@ -160,7 +161,7 @@ export function useNotifications(userId?: string) {
   const markAsRead = useCallback(
     async (notificationId: string) => {
       try {
-        await fetch(`/api/notifications/${notificationId}`, {
+        await secureFetch(`/api/notifications/${notificationId}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ isRead: true }),
@@ -178,7 +179,7 @@ export function useNotifications(userId?: string) {
   const deleteNotification = useCallback(
     async (notificationId: string) => {
       try {
-        await fetch(`/api/notifications/${notificationId}`, { method: 'DELETE' });
+        await secureFetch(`/api/notifications/${notificationId}`, { method: 'DELETE' });
         setNotifications((prev) => prev.filter((n) => n.id !== notificationId));
       } catch (err) {
         console.error('Failed to delete:', err);
@@ -213,7 +214,7 @@ export function useDrivers(businessId?: string) {
         const params = new URLSearchParams({ isActive: 'true' });
         if (businessId) params.append('businessId', businessId);
 
-        const response = await fetch(`/api/drivers?${params}`);
+        const response = await secureFetch(`/api/drivers?${params}`);
         if (!response.ok) throw new Error('Failed to fetch');
         const data = await response.json();
         setDrivers(data.data);
@@ -231,7 +232,7 @@ export function useDrivers(businessId?: string) {
   const addEarnings = useCallback(
     async (driverId: string, amount: number, shipmentId?: string) => {
       try {
-        const response = await fetch('/api/earnings', {
+        const response = await secureFetch('/api/earnings', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ driverId, amount, shipmentId }),

@@ -8,6 +8,7 @@ import { Card, CardContent } from '@/components/shared/Card';
 import { Button } from '@/components/shared/Button';
 import { Input } from '@/components/ui/input';
 import { Search, Plus } from 'lucide-react';
+import { secureFetch } from '@/lib/secure-fetch';
 
 export default function BusinessDriversPage() {
   const [drivers, setDrivers] = useState<any[]>([]);
@@ -27,7 +28,7 @@ export default function BusinessDriversPage() {
       const businessId = user?.jobId
       try {
         setIsLoading(true);
-        const response = await fetch(`/api/business/drivers?businessId=${businessId}`);
+        const response = await secureFetch(`/api/business/drivers?businessId=${businessId}`);
         if (response.ok) {
           const data = await response.json();
           setDrivers(data.data);
@@ -52,7 +53,7 @@ export default function BusinessDriversPage() {
 
     try {
       setIsSearching(true);
-      const response = await fetch(
+      const response = await secureFetch(
         `/api/drivers/search?q=${encodeURIComponent(query)}&type=all&limit=10`
       );
       if (response.ok) {
@@ -69,7 +70,7 @@ export default function BusinessDriversPage() {
   // Add driver to business
   const handleAddDriver = async (driverId: string) => {
     try {
-      const response = await fetch('/api/business/drivers', {
+      const response = await secureFetch('/api/business/drivers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ businessId, driverId }),

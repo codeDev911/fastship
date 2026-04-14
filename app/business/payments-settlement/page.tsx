@@ -2,16 +2,8 @@
 import { BusinessLayout } from '@/components/business/BusinessLayout';
 import { CashSettlementDesk } from '@/components/business/CashSettlementDesk';
 import React, { useEffect, useState } from 'react';
-import { 
-  Hash, 
-  Calendar, 
-  CreditCard, 
-  Wallet, 
-  Receipt, 
-  Clock,
-  ArrowRightLeft
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { secureFetch } from '@/lib/secure-fetch';
+
 import Link from 'next/link';
 export default function CashSettlementPage() {
 
@@ -21,7 +13,7 @@ export default function CashSettlementPage() {
     const user = JSON.parse(localStorage.getItem('user') || '{}');
     const businessId = user?.jobId
     try {
-      let res = await fetch(`/api/payments?businessId=${businessId}`)
+      let res = await secureFetch(`/api/payments?businessId=${businessId}`)
       let data = await res.json()
       console.log(data);
       setPayments(data.payments)

@@ -6,6 +6,7 @@ import { AnalyticsCharts } from '@/components/business/AnalyticsCharts';
 import { useNotifications } from '@/lib/hooks';
 import { Card, CardContent } from '@/components/shared/Card';
 import { Package, TrendingUp, Users, DollarSign } from 'lucide-react';
+import { secureFetch } from '@/lib/secure-fetch';
 
 export default function BusinessAnalyticsPage() {
   const [stats, setStats] = useState({
@@ -27,7 +28,7 @@ export default function BusinessAnalyticsPage() {
       const businessId = user?.jobId;
       try {
         setIsLoading(true);
-        const response = await fetch(`/api/business/analytics?businessId=${businessId}`);
+        const response = await secureFetch(`/api/business/analytics?businessId=${businessId}`);
         if (response.ok) {
           const data = await response.json();
           setStats(data.stats);
