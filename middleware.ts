@@ -1,9 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { jwtVerify } from 'jose';
 import { validateCSRFMiddleware } from '@/lib/csrf-middleware';
+import { corsMiddleware, applyCORSHeaders } from '@/lib/cors-middleware';
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  // Handle CORS preflight requests first (before any other checks)
+  const corsResponse = corsMiddleware(request);
+  if (corsResponse) {
+    return corsResponse;
+  }
 
   // Public routes that don't require authentication
   const publicRoutes = ['/api/auth/login', '/login', '/register/driver', '/register/seller', '/register/business', '/'];
@@ -93,6 +100,11 @@ export async function middleware(request: NextRequest) {
   // Add CSRF token to response header for frontend to cache
   // Frontend will automatically include this in subsequent requests
   response.headers.set('x-csrf-token-refreshed', 'true');
+
+  // Apply CORS headers to API responses
+  if (pathname.startsWith('/api/')) {
+    applyCORSHeaders(response, request);
+  }
 
   return response;
 }
