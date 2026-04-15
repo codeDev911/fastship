@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { financialService } from '@/lib/services/financial.service';
 
 export async function GET(request: NextRequest) {
   try {
@@ -18,6 +19,8 @@ export async function GET(request: NextRequest) {
       );
     }
 
+
+  
     const where: any = { sellerId };
     if (status) where.status = status;
 
@@ -42,6 +45,11 @@ export async function GET(request: NextRequest) {
          seller:{
           select:{
             id:true,
+            wallet:{
+              select:{
+                id:true
+              }
+            }
           }
          },
          assignment:{
@@ -76,10 +84,6 @@ export async function GET(request: NextRequest) {
       take: limit,
       skip: offset,
     });
-
-   
-
-
     return NextResponse.json({
       data: shipments,
       total:shipments.length,

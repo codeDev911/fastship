@@ -219,7 +219,7 @@ export interface RateCard {
   businessId: string;
   name: string;
   description?: string;
-  baseWeight: number;
+  minWeight: number;
   baseRate: number;
   incrementalPrice: number;
   zoneMultipliers: ZoneMultiplier[];

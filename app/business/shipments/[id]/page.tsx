@@ -9,13 +9,13 @@ import { DriverAssignmentModal } from '@/components/business/DriverAssignmentMod
 import {
   MapPin,
   Phone,
-  User, 
+  User,
   ArrowLeft,
   AlertCircle,
-  Truck, 
+  Truck,
   FileText,
-  Motorbike, 
-  Clock10, 
+  Motorbike,
+  Clock10,
   CheckCircle,
   XCircle,
   InfoIcon,
@@ -25,50 +25,51 @@ import {
 } from 'lucide-react';
 import { BusinessLayout } from '@/components/business/BusinessLayout';
 import { secureFetch } from '@/lib/secure-fetch';
+import ReleaseCODPaymentModal from '@/components/business/ReleaseCODPaymentModal';
 
-function formatDuration(date1:any, date2:any) {
-     // Ensure start is the earlier date
-    let start:any = new Date(Math.min(date1, date2));
-    let end:any = new Date(Math.max(date1, date2));
+function formatDuration(date1: any, date2: any) {
+  // Ensure start is the earlier date
+  let start: any = new Date(Math.min(date1, date2));
+  let end: any = new Date(Math.max(date1, date2));
 
-    const totalMinutes = (end - start) / 60000;
+  const totalMinutes = (end - start) / 60000;
 
-    // Rule 1: Only show decimal minutes if under 1 hour
-    if (totalMinutes < 60) {
-        return totalMinutes.toFixed(1) + "mins";
-    }
+  // Rule 1: Only show decimal minutes if under 1 hour
+  if (totalMinutes < 60) {
+    return totalMinutes.toFixed(1) + "mins";
+  }
 
-    let years = end.getFullYear() - start.getFullYear();
-    let months = end.getMonth() - start.getMonth();
-    let days = end.getDate() - start.getDate();
-    let hours = end.getHours() - start.getHours();
-    let mins = end.getMinutes() - start.getMinutes();
+  let years = end.getFullYear() - start.getFullYear();
+  let months = end.getMonth() - start.getMonth();
+  let days = end.getDate() - start.getDate();
+  let hours = end.getHours() - start.getHours();
+  let mins = end.getMinutes() - start.getMinutes();
 
-    // Adjust for negative values (borrowing from larger units)
-    if (mins < 0) { mins += 60; hours--; }
-    if (hours < 0) { hours += 24; days--; }
-    if (days < 0) {
-        // Get days in the previous month
-        const prevMonth = new Date(end.getFullYear(), end.getMonth(), 0).getDate();
-        days += prevMonth;
-        months--;
-    }
-    if (months < 0) { months += 12; years--; }
+  // Adjust for negative values (borrowing from larger units)
+  if (mins < 0) { mins += 60; hours--; }
+  if (hours < 0) { hours += 24; days--; }
+  if (days < 0) {
+    // Get days in the previous month
+    const prevMonth = new Date(end.getFullYear(), end.getMonth(), 0).getDate();
+    days += prevMonth;
+    months--;
+  }
+  if (months < 0) { months += 12; years--; }
 
-    // Calculate weeks and remaining days
-    const weeks = Math.floor(days / 7);
-    const remainingDays = days % 7;
+  // Calculate weeks and remaining days
+  const weeks = Math.floor(days / 7);
+  const remainingDays = days % 7;
 
-    // Build output string
-    let parts = [];
-    if (years > 0) parts.push(years + "yrs");
-    if (months > 0) parts.push(months + "mos");
-    if (weeks > 0) parts.push(weeks + "wks");
-    if (remainingDays > 0) parts.push(remainingDays + "days");
-    if (hours > 0) parts.push(hours + "hrs");
-    if (mins > 0) parts.push(mins + "mins");
+  // Build output string
+  let parts = [];
+  if (years > 0) parts.push(years + "yrs");
+  if (months > 0) parts.push(months + "mos");
+  if (weeks > 0) parts.push(weeks + "wks");
+  if (remainingDays > 0) parts.push(remainingDays + "days");
+  if (hours > 0) parts.push(hours + "hrs");
+  if (mins > 0) parts.push(mins + "mins");
 
-    return parts.join(" ");
+  return parts.join(" ");
 }
 
 
@@ -83,7 +84,8 @@ export default function ShipmentDetailPage() {
   const [isUpdating, setIsUpdating] = useState(false);
   const [selectedDriver, setSelectedDriver] = useState<string>('');
   const [isAssignmentModalOpen, setIsAssignmentModalOpen] = useState(false);
-  const [timeTaken,setTimeTaken] = useState("")
+  const [isCODPaymentModalOpen, setIsCODPaymentModalOpen] = useState(false);
+  const [timeTaken, setTimeTaken] = useState("")
 
 
 
@@ -354,7 +356,8 @@ export default function ShipmentDetailPage() {
 
             <Card>
               <CardHeader title="Payments" />
-              <CardContent>
+              <CardContent className="space-y-4">
+
                 <div className="grid md:grid-cols-5 grid-cols-2 gap-3">
                   <div className="flex flex-col ">
                     <h3 className="text-sm font-medium">
@@ -417,6 +420,16 @@ export default function ShipmentDetailPage() {
                     <p className="text-sm ">{shipment?.payment?.notes || "-"}</p>
                   </div>
                 </div>
+                <br />
+                <p className="text-sm">You can transfter the pending amounts from your wallet to the seller</p>
+                {shipment?.payment?.paymentMethod === "COD" && shipment?.payment?.paymentStatus === "PENDING" && (
+                  <Button
+                    onClick={() => setIsCODPaymentModalOpen(true)}
+                    className="w-full py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all"
+                  >
+                    Release COD to Seller
+                  </Button>
+                )}
 
               </CardContent>
             </Card>
@@ -482,9 +495,9 @@ export default function ShipmentDetailPage() {
               </CardContent>
             </Card>
 
-           
+
             {
-             assignedDriver &&  <Card>
+              assignedDriver && <Card>
                 <CardHeader title="Assigned Driver" />
                 <CardContent className="space-y-4">
                   <div className="flex gap-3">
@@ -513,8 +526,8 @@ export default function ShipmentDetailPage() {
                 </CardContent>
               </Card>
             }
-             {/* Driver Assignment */}
-            {!shipment?.assignment?.driverId  && (
+            {/* Driver Assignment */}
+            {!shipment?.assignment?.driverId && (
               <Card>
                 <CardHeader title="Assign Driver" />
                 <CardContent className="space-y-4">
@@ -530,47 +543,47 @@ export default function ShipmentDetailPage() {
                   </Button>
                 </CardContent>
               </Card>
-            ) }
+            )}
 
             {/* Timeline */}
             <Card>
               <CardHeader title="Status Timeline" />
               <CardContent className="space-y-4">
-                {shipment?.activities?.map((step:any, idx:any) => {
+                {shipment?.activities?.map((step: any, idx: any) => {
                   const isActive =
-                    shipment.status === step.status 
+                    shipment.status === step.status
 
-                  const getIcon = (status:any) =>{
+                  const getIcon = (status: any) => {
                     let icon: any
-                  switch (status) {
-                    case "PENDING":
-                      icon = <Clock10 className='h-4 w-4' />
-                      break;
-                    case "ASSIGNED":
-                      icon = <UserCircle className='h-4 w-4' />
-                      break;
-                    case "PICKED_UP":
-                      icon = <BoxIcon className='h-4 w-4' />
-                      break;
-                    case "IN_TRANSIT":
-                      icon = <Truck className='h-4 w-4' />
-                      break;
-                    case "DELIVERED":
-                      icon = <CheckCircle className='h-4 w-4' />
-                      break;
-                    case "CANCELLED":
-                      icon = <XCircle className='h-4 w-4' />
-                      break;
-                    case "FAILED":
-                      icon = <InfoIcon className='h-4 w-4' />
-                      break;
-                    case "RETURNED":
-                      icon = <ArrowBigDownDash className='h-4 w-4' />
-                      break;
-                    default:
-                      break;
-                  }
-                  return icon
+                    switch (status) {
+                      case "PENDING":
+                        icon = <Clock10 className='h-4 w-4' />
+                        break;
+                      case "ASSIGNED":
+                        icon = <UserCircle className='h-4 w-4' />
+                        break;
+                      case "PICKED_UP":
+                        icon = <BoxIcon className='h-4 w-4' />
+                        break;
+                      case "IN_TRANSIT":
+                        icon = <Truck className='h-4 w-4' />
+                        break;
+                      case "DELIVERED":
+                        icon = <CheckCircle className='h-4 w-4' />
+                        break;
+                      case "CANCELLED":
+                        icon = <XCircle className='h-4 w-4' />
+                        break;
+                      case "FAILED":
+                        icon = <InfoIcon className='h-4 w-4' />
+                        break;
+                      case "RETURNED":
+                        icon = <ArrowBigDownDash className='h-4 w-4' />
+                        break;
+                      default:
+                        break;
+                    }
+                    return icon
                   }
 
                   return (
@@ -598,7 +611,7 @@ export default function ShipmentDetailPage() {
                             hour12: true
                           })}
                         </p>
-                          <p className="text-sm text-foreground">{step?.description}</p>
+                        <p className="text-sm text-foreground">{step?.description}</p>
                       </div>
                     </div>
                   );
@@ -620,6 +633,27 @@ export default function ShipmentDetailPage() {
             setIsUpdating(false);
           }}
           isLoading={isUpdating}
+        />
+
+        <ReleaseCODPaymentModal
+          isOpen={isCODPaymentModalOpen}
+          onClose={() => {
+            setIsCODPaymentModalOpen(false);
+            // Refetch shipment to see updated payment status
+            setTimeout(() => {
+              const fetchUpdated = async () => {
+                const user = JSON.parse(localStorage.getItem('user') || '{}');
+                const businessId = user?.jobId;
+                const res = await secureFetch(`/api/shipments/${shipmentId}?businessId=${businessId}`);
+                if (res.ok) {
+                  const data = await res.json();
+                  setShipment(data);
+                }
+              };
+              fetchUpdated();
+            }, 500);
+          }}
+          shipment={shipment}
         />
       </div>
     </BusinessLayout>

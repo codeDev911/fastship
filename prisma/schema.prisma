@@ -67,6 +67,14 @@ enum SettlementStatus {
   FAILED
 }
 
+enum BidStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  EXPIRED
+  WITHDRAWN
+}
+
 enum NotificationType {
   ORDER_CREATED
   ORDER_ASSIGNED
@@ -194,12 +202,13 @@ model Business {
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
-  user        User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  rateCards   RateCard[]
-  drivers     DriverAssignment[]
-  wallet      Wallet?
-  settlements Settlement[]
-  bids        Bid[]
+  user         User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  rateCards    RateCard[]
+  drivers      DriverAssignment[]
+  wallet       Wallet?
+  settlements  Settlement[]
+  bids         Bid[]
+  serviceAreas BusinessServiceArea[]
 
   @@index([userId])
   @@index([companyName])
@@ -283,6 +292,8 @@ model RateCard {
   maximumDistance Float    @default(999999)
   minWeight       Float    @default(0)
   maxWeight       Float    @default(100)
+  weightSurcharge Float    @default(0)  // Extra charge per kg above minWeight
+  serviceStates   String[] @default([]) // States/regions served: ["Sindh", "Punjab"]
   isActive        Boolean  @default(true)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
@@ -474,21 +485,46 @@ model Settlement {
 model Bid {
   id          String    @id @default(cuid())
   sellerId    String
+  shipmentId  String?
+  businessId  String?
   amount      Float
-  description String?
+  description String?   // Custom terms or special notes
+  distance    Float?    // Calculated distance for this bid
+  estimatedPickupTime DateTime? // Estimated when business can pickup
+  bidStatus   BidStatus @default(PENDING)
   isAccepted  Boolean   @default(false)
   acceptedAt  DateTime?
   expiresAt   DateTime
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
-  shipmentId  String?
+
   shipment    Shipment? @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
   seller      Seller    @relation(fields: [sellerId], references: [id], onDelete: Cascade)
   business    Business? @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  businessId  String?
 
   @@index([sellerId])
-  @@index([isAccepted])
+  @@index([shipmentId])
+  @@index([bidStatus])
+  @@index([expiresAt])
+}
+
+model BusinessServiceArea {
+  id            String   @id @default(cuid())
+  businessId    String
+  state         String   // State/province name
+  city          String   // City/region name
+  activeDrivers Int      @default(0)
+  capacity      Int      @default(10)
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@unique([businessId, state, city])
+  @@index([businessId])
+  @@index([state])
+  @@index([city])
 }
 
 model Integration {

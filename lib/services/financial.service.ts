@@ -485,6 +485,9 @@ export const financialService = {
               ? { businessId: fromId }
               : { driverId: fromId };
 
+              console.log(to);
+              console.log(toId);
+              
         const receiverWhere =
           to === "seller"
             ? { sellerId: toId }
@@ -499,6 +502,8 @@ export const financialService = {
         const receiverWallet = await tx.wallet.findFirst({
           where: receiverWhere,
         });
+
+
 
         if (!senderWallet || !receiverWallet) {
           throw new Error("Wallet not found");

@@ -65,7 +65,7 @@ export function RateCardList({
                     </div>
                     <div>
                       <p className="text-xs text-muted-foreground">Base Weight</p>
-                      <p className="text-sm font-semibold text-foreground">{card.baseWeight} kg</p>
+                      <p className="text-sm font-semibold text-foreground">{card.minWeight} kg</p>
                     </div>
                   </div>
                 </div>

@@ -73,7 +73,7 @@ export function RecentOrdersTable({
                     </td>
                     <td className="px-4 py-4 text-sm">
                       <div className="flex gap-2">
-                        {order.status === 'PENDING' && (
+                        {order.status ==='PENDING' && (
                           <button
                             onClick={() => onFindCourier?.(order)}
                             className="inline-flex items-center gap-1 rounded-full bg-accent px-3 py-1.5 text-xs font-medium text-accent-foreground hover:opacity-90 transition-opacity"

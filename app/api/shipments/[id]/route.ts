@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { financialService } from "@/lib/services/financial.service";
+import { bidService } from "@/lib/services/bid.service";
 
 export async function GET(
   request: NextRequest,
@@ -17,7 +18,18 @@ export async function GET(
     const shipment = await prisma.shipment.findUnique({
       where: where,
       include: {
-        seller: true,
+        seller: {
+          include:{
+            user:{
+              select:{
+                id:true,
+                name:true,
+                email:true,
+                phone:true,
+              }
+            }
+          }
+        },
         assignment: {
           include: {
             driver: true,
@@ -58,12 +70,36 @@ export async function PATCH(
   try {
     const body = await request.json();
     const validated = body;
+    const shipmentId = (await params).id;
     const lockEscrow = request.nextUrl.searchParams.get("lockEscrow") == "true";
-    const { amount, driverId, ...rest } = validated;
+    const { amount, driverId, businessId, ...rest } = validated;
+
+    // ==========================================
+    // STEP 1: Validate bid acceptance (if business assignment)
+    // ==========================================
+    // if (lockEscrow && businessId && amount) {
+    //   const bidValidation = await bidService.validateBidAcceptance(
+    //     shipmentId,
+    //     amount,
+    //     businessId
+    //   );
+
+    //   if (!bidValidation.isValid) {
+    //     return NextResponse.json(
+    //       { error: bidValidation.errors.join("; ") },
+    //       { status: 400 }
+    //     );
+    //   }
+
+    //   if (bidValidation.warnings.length > 0) {
+    //     console.warn("Bid acceptance warnings:", bidValidation.warnings);
+    //   }
+    // }
+
+    // ==========================================
+    // STEP 2: Prepare shipment data
+    // ==========================================
     let data: any;
-
-
-
 
     if (driverId) {
       data = {
@@ -71,11 +107,11 @@ export async function PATCH(
         assignment: {
           connectOrCreate: {
             where: {
-              shipmentId: (await params).id,
+              shipmentId: shipmentId,
             },
             create: {
               driverId: driverId || "",
-              businessId: validated.businessId || "",
+              businessId: businessId || "",
               assignedAt: new Date(),
               assignmentStatus: "ASSIGNED",
             },
@@ -83,25 +119,26 @@ export async function PATCH(
         },
       };
     } else {
-      amount
-        ? (data = {
+      data = amount
+        ? {
             ...rest,
             actualRate: amount,
-          })
-        : (data = {
+          }
+        : {
             ...rest,
-          });
+          };
     }
 
+    // ==========================================
+    // STEP 3: Process transaction
+    // ==========================================
     return await prisma.$transaction(
       async (tx) => {
-
-
-
         const shipment = await tx.shipment.update({
-          where: { id: (await params).id },
+          where: { id: shipmentId },
           data: {
             ...data,
+            businessId,
             updatedAt: new Date(),
           },
 
@@ -138,56 +175,98 @@ export async function PATCH(
 
         let businessWallet = await tx.wallet.findUnique({
           where: {
-            businessId: shipment?.businessId || "",
+            businessId:businessId || "",
           },
           select: {
             id: true,
           },
         });
 
-        // lockEscrow of the seller and the business
-        // the seller escrow will be distributed amoung driver and business
-        // and the business escrow will be cuts due to 10% platform fee
+        console.log(businessId);
+        
+
+        // ==========================================
+        // STEP 4: Lock escrow if assigning to business
+        // ==========================================
         if (lockEscrow) {
-          
-         await financialService.lockEscrow(
+          if (!shipment.seller.wallet) {
+            throw new Error("Seller wallet not found");
+          }
+
+          if (!businessWallet) {
+            throw new Error("Business wallet not found");
+          }
+
+          // Lock seller escrow for shipping fee
+          await financialService.lockEscrow(
             tx,
-            shipment?.seller?.wallet?.id,
+            shipment.seller.wallet.id,
             amount || 0,
             "Shipping fee locked",
-            shipment.id,
+            shipment.id
           );
 
-         await financialService.lockEscrow(
+          // Lock business escrow for 10% platform fee
+          await financialService.lockEscrow(
             tx,
-            businessWallet?.id,
+            businessWallet.id,
             Number(amount) * 0.1 || 10,
             "Platform fee locked 10%",
-            shipment.id,
-          ); 
-        }
-        
-        // Create activity log
+            shipment.id
+          );
 
+          // ==========================================
+          // STEP 5: Update bid status
+          // ==========================================
+          if (businessId) {
+            await tx.bid.updateMany({
+              where: {
+                shipmentId,
+                businessId,
+              },
+              data: {
+                bidStatus: "ACCEPTED",
+                isAccepted: true,
+                acceptedAt: new Date(),
+              },
+            });
+
+            // Mark other bids as rejected
+            await tx.bid.updateMany({
+              where: {
+                shipmentId,
+                businessId: { not: businessId },
+              },
+              data: {
+                bidStatus: "REJECTED",
+              },
+            });
+          }
+        }
+
+        // Create activity log
         await tx.shipmentActivity.create({
           data: {
-            shipmentId: (await params).id,
-            status: validated.status,
-            description: `Shipment status updated to ${validated.status}`,
+            shipmentId: shipmentId,
+            status: validated.status || shipment.status,
+            description: businessId
+              ? `Shipment assigned to business`
+              : `Shipment status updated to ${validated.status}`,
           },
-
         });
 
-        return NextResponse.json(shipment);
+       return NextResponse.json( shipment)
       },
-      { timeout: 200000 },
+      { timeout: 200000 }
     );
-
   } catch (error) {
     console.error("Update shipment error:", error);
     return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
+      {
+        error:
+          error instanceof Error ? error.message : "Internal server error",
+      },
+      { status: 500 }
     );
   }
 }

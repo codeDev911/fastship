@@ -58,7 +58,7 @@ const DeptFundReleaseModal = ({ isOpen, onClose, currentDebt }: any) => {
             const uniqueId = new Date().toISOString()
             const res = await secureFetch('/api/transactions/transfer-funds', {
                 method: "POST",
-                body: JSON.stringify({ from: "driver", to: "business", fromId: driverId, toId: business?.user?.id, amount, description: "COD debt released",uniqueId })
+                body: JSON.stringify({ from: "driver", to: "business", fromId: driverId, toId: business?.id, amount, description: "COD debt released",uniqueId })
             })
             const data = await res.json()
 
@@ -74,7 +74,7 @@ const DeptFundReleaseModal = ({ isOpen, onClose, currentDebt }: any) => {
                 if (!r2.ok) {
                     await secureFetch('/api/transactions/transfer-funds', {
                         method: "POST",
-                        body: JSON.stringify({ from: "business", to: "driver", toId: user.id, fromId: business?.id, amount, description: "Refunded back",uniqueId })
+                        body: JSON.stringify({ from: "business", to: "driver", toId: driverId, fromId: business?.id, amount, description: "Refunded back",uniqueId })
                     })
                     setStep(3)
                     setError({ isError: true, message: "Error occure while clearing Debt" })

@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
     })
       .setProtectedHeader({ alg: "HS256" })
       .setIssuedAt()
-      .setExpirationTime("24m")
+      .setExpirationTime("24h")
       .sign(secret);
 
     // Set secure HTTP-only cookie

@@ -43,13 +43,25 @@ export default function SellerOrdersPage() {
 
   const handleFindCourier = async (order: any) => {
     try {
-      const response = await secureFetch(`/api/bids/business-rates?limit=10`);
+      setIsLoading(true);
+      // Use new smart quote calculation API with order context
+      const response = await secureFetch(
+        `/api/bids/calculate-quotes?shipmentId=${order.id}&limit=10`
+      );
       if (response.ok) {
         const data = await response.json();
         setBids(data.data);
+      } else {
+        const error = await response.json();
+        console.error("Error fetching quotes:", error);
+        // Fallback message for seller
+        alert(error.error || "No businesses available for this shipment");
       }
     } catch (error) {
-      console.error('Error fetching bids:', error);
+      console.error("Error fetching quotes:", error);
+      alert("Failed to find couriers. Please try again.");
+    } finally {
+      setIsLoading(false);
     }
     setSelectedOrderForBidding(order);
     setIsBiddingModalOpen(true);
@@ -58,22 +70,37 @@ export default function SellerOrdersPage() {
   const handleAcceptBid = async (bid: any) => {
     if (selectedOrderForBidding) {
       try {
-        const response = await secureFetch(`/api/shipments/${selectedOrderForBidding.id}?lockEscrow=true`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            status: 'PENDING',
-            businessId: bid.id,
-            amount: bid.baseRate,
-          }),
-        });
+        setIsLoading(true);
+        // Accept bid with validated amount (not just baseRate)
+        const response = await secureFetch(
+          `/api/shipments/${selectedOrderForBidding.id}?lockEscrow=true`,
+          {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              status: "PENDING",
+              businessId: bid.id,
+              amount: bid.totalRate, // Use calculated totalRate, not baseRate
+            }),
+          }
+        );
 
-        if (!response.ok) throw new Error('Failed to assign');
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || "Failed to assign shipment");
+        }
+
         const updated = await response.json();
         setOrders(orders.map((o) => (o.id === selectedOrderForBidding.id ? updated : o)));
         setIsBiddingModalOpen(false);
+        alert("Shipment assigned successfully!");
       } catch (error) {
-        console.error('Error accepting bid:', error);
+        console.error("Error accepting bid:", error);
+        alert(
+          error instanceof Error ? error.message : "Failed to accept bid"
+        );
+      } finally {
+        setIsLoading(false);
       }
     }
   };
