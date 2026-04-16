@@ -5,6 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { Card, CardHeader, CardContent } from '@/components/shared/Card';
 import { Button } from '@/components/shared/Button';
 import { StatusBadge } from '@/components/shared/Badge';
+import { ShipmentTimeline, ServiceTierBadge, InfoCard } from '@/components/shipment';
 import { DriverAssignmentModal } from '@/components/business/DriverAssignmentModal';
 import {
   MapPin,
@@ -15,13 +16,15 @@ import {
   Truck,
   FileText,
   Motorbike,
-  Clock10,
+  Clock,
   CheckCircle,
   XCircle,
   InfoIcon,
-  ArrowBigDownDash,
+  ArrowDown,
   UserCircle,
   BoxIcon,
+  DollarSign,
+  Zap,
 } from 'lucide-react';
 import { BusinessLayout } from '@/components/business/BusinessLayout';
 import { secureFetch } from '@/lib/secure-fetch';
@@ -185,26 +188,63 @@ export default function ShipmentDetailPage() {
   return (
     <BusinessLayout currentPage="shipments" unreadNotifications={0}>
       <div className="space-y-6 pb-8">
-        {/* Header */}
-        <div className="flex items-center gap-4">
-          <button
-            onClick={() => router.back()}
-            className="rounded-full p-2 hover:bg-secondary transition-colors"
-            aria-label="Go back"
-          >
-            <ArrowLeft className="h-5 w-5 text-foreground" />
-          </button>
-          <div>
-            <h1 className="text-3xl font-bold text-foreground">{shipment.id}</h1>
-            <p className="text-sm text-muted-foreground">
-              Order placed {new Date(shipment?.createdAt || Date.now())?.toLocaleDateString()}
-            </p>
+        {/* Header with Status Indicator */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => router.back()}
+              className="rounded-full p-2 hover:bg-secondary transition-colors"
+              aria-label="Go back"
+            >
+              <ArrowLeft className="h-5 w-5 text-foreground" />
+            </button>
+            <div>
+              <h1 className="text-3xl font-bold text-foreground">{shipment.id}</h1>
+              <p className="text-sm text-muted-foreground">
+                Order placed {new Date(shipment?.createdAt || Date.now())?.toLocaleDateString()}
+              </p>
+            </div>
           </div>
+          <StatusBadge status={shipment.status} />
         </div>
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
           {/* Main Content */}
           <div className="space-y-6 lg:col-span-2">
+            {/* Shipment Logistics Overview */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <InfoCard 
+                icon={<MapPin className="h-5 w-5" />}
+                label="Distance"
+                value={`${shipment.distance?.toFixed(1) || 'N/A'} km`}
+                variant="default"
+              />
+              <InfoCard 
+                icon={<Clock className="h-5 w-5" />}
+                label="Duration"
+                value={`${Math.ceil((shipment.duration || 0) / 60) || 'N/A'} mins`}
+              />
+              <InfoCard 
+                icon={<Truck className="h-5 w-5" />}
+                label="Status"
+                value={shipment.status?.replace(/_/g, ' ') || 'UNKNOWN'}
+              />
+              <InfoCard 
+                icon={<Zap className="h-5 w-5" />}
+                label="Service Tier"
+                value={shipment.rateCard?.name || 'Standard'}
+              />
+            </div>
+
+            {/* Service Tier Badge */}
+            <div className="flex items-center gap-3">
+              <p className="text-xs font-medium text-muted-foreground uppercase">SERVICE TIER</p>
+              <ServiceTierBadge 
+                rateCardName={shipment.rateCard?.name}
+                baseRate={shipment.baseRate}
+                size="lg"
+              />
+            </div>
             {/* Status Card */}
             <Card>
               <CardContent className="pt-6">
@@ -216,20 +256,20 @@ export default function ShipmentDetailPage() {
                   <div className="text-right">
                     <p className="text-sm text-muted-foreground mb-2">Order Value</p>
                     <p className="text-2xl font-bold text-accent">
-                      PKR {(shipment?.codAmount + shipment?.actualRate)?.toFixed(2)}
+                      PKR {((shipment?.codAmount || 0) + (shipment?.actualRate || 0))?.toFixed(2)}
                     </p>
                   </div>
                 </div>
 
                 {shipment?.payment?.paymentMethod === "COD" && shipment?.payment?.paymentStatus === "PENDING" && (
                   <div className='rounded-2xl border border-yellow-500 p-3 mt-2 bg-yellow-100'>
-                    <h3 className="text-base font-bold text-yellow-600">Attention</h3>
-                    <p className="text-xs text-muted-foreground">The payment of this shipment in up-paid, the payments recieved by your driver from customer, you need to collect the COD payments from driver and hand over to the seller. The pending COD payments reduce your visibility and trust on our platform</p>
+                    <h3 className="text-base font-bold text-yellow-600">⚠️ Attention</h3>
+                    <p className="text-xs text-yellow-800 mt-1">Pending COD payment. Collect from driver and remit to seller.</p>
                   </div>
                 )}
 
                 {shipment.status === 'PENDING' && (
-                  <div className="space-y-3">
+                  <div className="space-y-3 mt-4">
                     <p className="text-sm text-muted-foreground">
                       This shipment needs a driver assignment to proceed.
                     </p>
@@ -238,13 +278,14 @@ export default function ShipmentDetailPage() {
               </CardContent>
             </Card>
 
+
             {/* Customer Information */}
             <Card>
               <CardHeader title="Customer Information" />
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <div className="flex gap-3">
-                    <User className="h-5 w-5 text-accent flex-shrink-0 mt-1" />
+                    <User className="h-5 w-5 text-accent shrink-0 mt-1" />
                     <div>
                       <p className="text-xs font-medium text-muted-foreground uppercase">Name</p>
                       <p className="text-lg font-semibold text-foreground">{shipment.deliveryName}</p>
@@ -252,7 +293,7 @@ export default function ShipmentDetailPage() {
                   </div>
 
                   <div className="flex gap-3">
-                    <Phone className="h-5 w-5 text-accent flex-shrink-0 mt-1" />
+                    <Phone className="h-5 w-5 text-accent shrink-0 mt-1" />
                     <div>
                       <p className="text-xs font-medium text-muted-foreground uppercase">Phone</p>
                       <p className="text-lg font-semibold text-foreground">{shipment.deliveryPhone}</p>
@@ -274,7 +315,7 @@ export default function ShipmentDetailPage() {
                 <CardHeader title="Delivery Address" />
                 <CardContent>
                   <div className="flex gap-3">
-                    <MapPin className="h-5 w-5 text-accent flex-shrink-0 mt-1" />
+                    <MapPin className="h-5 w-5 text-accent shrink-0 mt-1" />
                     <div className="flex-1">
                       <p className="text-lg font-semibold text-foreground">
                         {shipment.deliveryAddress}
@@ -296,7 +337,7 @@ export default function ShipmentDetailPage() {
                 <CardHeader title="Pickup Address" />
                 <CardContent>
                   <div className="flex gap-3">
-                    <MapPin className="h-5 w-5 text-accent flex-shrink-0 mt-1" />
+                    <MapPin className="h-5 w-5 text-accent shrink-0 mt-1" />
                     <div className="flex-1">
                       <p className="text-lg font-semibold text-foreground">
                         {shipment.pickupAddress}
@@ -341,7 +382,7 @@ export default function ShipmentDetailPage() {
               <CardHeader title="Order Source" />
               <CardContent>
                 <div className="flex gap-3">
-                  <FileText className="h-5 w-5 text-accent flex-shrink-0 mt-0.5" />
+                  <FileText className="h-5 w-5 text-accent shrink-0 mt-0.5" />
                   <div>
                     <p className="font-semibold text-foreground capitalize">{shipment.source}</p>
                     <p className="text-sm text-muted-foreground">
@@ -439,55 +480,31 @@ export default function ShipmentDetailPage() {
           <div className="space-y-6">
             {/* Financial Information */}
             <Card>
-              <CardHeader title="Financial Information" />
+              <CardHeader title="💰 Revenue Breakdown" />
               <CardContent className="space-y-4">
                 <div className="space-y-3">
-                  <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">Payment method</span>
-                    <span className="font-medium text-foreground">
-                      PKR {shipment?.paymentMethod}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">Subtotal (seller)</span>
-                    <span className="font-medium text-foreground">
-                      PKR {shipment?.codAmount?.toFixed(2)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">Delivery Fee (total)</span>
-                    <span className="font-medium text-accent">
-                      PKR {shipment?.actualRate?.toFixed(2)}
-                    </span>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">Delivery Fee (Total)</span>
+                    <span className="text-lg font-bold">PKR {shipment?.actualRate?.toFixed(2)}</span>
                   </div>
 
-                  <div className="flex justify-between border-t border-border pt-3">
-                    <span className="font-semibold text-foreground">Total</span>
-                    <span className="font-bold text-accent">
-                      PKR {(shipment?.codAmount + shipment?.actualRate)?.toFixed(2)}
-                    </span>
-                  </div>
-
-                  <div className="p-3 space-y-1 rounded-2xl border ">
-                    <h2 className="text-sm  font-medium">
-                      Delivery fee distribution
-                    </h2>
-                    <div className="flex justify-between">
-                      <span className="text-xs text-muted-foreground">Business Commission (10%)</span>
-                      <span className="text-xs text-muted-foreground">
-                        PKR {shipment?.actualRate * 0.1}
+                  <div className="pl-4 space-y-2 border-l-2 border-accent">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Your Commission (10%)</span>
+                      <span className="font-medium text-accent">
+                        PKR {((shipment?.actualRate || 0) * 0.1)?.toFixed(2)}
                       </span>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-xs text-muted-foreground">Platform Commission (10%)</span>
-                      <span className="text-xs text-muted-foreground">
-                        PKR {shipment?.actualRate * 0.1}
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Driver Payout (80%)</span>
+                      <span className="font-medium">
+                        PKR {((shipment?.actualRate || 0) * 0.8)?.toFixed(2)}
                       </span>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-xs text-muted-foreground">Driver Commission (80%)</span>
-                      <span className="text-xs text-muted-foreground">
-                        PKR {shipment?.actualRate * 0.8}
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Platform Fee (10%)</span>
+                      <span className="font-medium">
+                        PKR {((shipment?.actualRate || 0) * 0.1)?.toFixed(2)}
                       </span>
                     </div>
                   </div>
@@ -495,13 +512,16 @@ export default function ShipmentDetailPage() {
               </CardContent>
             </Card>
 
+          
+
+      
 
             {
               assignedDriver && <Card>
                 <CardHeader title="Assigned Driver" />
                 <CardContent className="space-y-4">
                   <div className="flex gap-3">
-                    <Motorbike className="h-5 w-5 text-accent flex-shrink-0 mt-1" />
+                    <Motorbike className="h-5 w-5 text-accent shrink-0 mt-1" />
                     <div className="flex-1">
                       <h4 className="font-semibold text-foreground">{assignedDriver?.user.name}</h4>
                       <p className="text-sm text-muted-foreground">
@@ -557,7 +577,7 @@ export default function ShipmentDetailPage() {
                     let icon: any
                     switch (status) {
                       case "PENDING":
-                        icon = <Clock10 className='h-4 w-4' />
+                        icon = <Clock className='h-4 w-4' />
                         break;
                       case "ASSIGNED":
                         icon = <UserCircle className='h-4 w-4' />
@@ -578,7 +598,7 @@ export default function ShipmentDetailPage() {
                         icon = <InfoIcon className='h-4 w-4' />
                         break;
                       case "RETURNED":
-                        icon = <ArrowBigDownDash className='h-4 w-4' />
+                        icon = <ArrowDown className='h-4 w-4' />
                         break;
                       default:
                         break;

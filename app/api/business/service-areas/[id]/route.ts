@@ -18,7 +18,7 @@ export async function GET(
 ) {
   try {
     const serviceArea = await prisma.businessServiceArea.findUnique({
-      where: { id: params.id },
+      where: { id: (await params).id },
       include: {
         business: {
           select: {
@@ -71,7 +71,7 @@ export async function PATCH(
 
     // Check if service area exists
     const existing = await prisma.businessServiceArea.findUnique({
-      where: { id: params.id },
+      where: { id: (await params).id },
     });
 
     if (!existing) {
@@ -97,7 +97,7 @@ export async function PATCH(
           },
         });
 
-        if (conflict && conflict.id !== params.id) {
+        if (conflict && conflict.id !== (await params).id) {
           return NextResponse.json(
             { error: `Service area already exists for ${newState}, ${newCity}` },
             { status: 409 }
@@ -108,7 +108,7 @@ export async function PATCH(
 
     // Update service area
     const updated = await prisma.businessServiceArea.update({
-      where: { id: params.id },
+      where: { id: (await params).id },
       data: validationResult.data,
       include: {
         business: {
@@ -141,7 +141,7 @@ export async function DELETE(
 ) {
   try {
     const serviceArea = await prisma.businessServiceArea.findUnique({
-      where: { id: params.id },
+      where: { id: (await params).id },
     });
 
     if (!serviceArea) {
@@ -153,7 +153,7 @@ export async function DELETE(
 
     // Soft delete - mark as inactive
     const deleted = await prisma.businessServiceArea.update({
-      where: { id: params.id },
+      where: { id: (await params).id },
       data: { isActive: false },
     });
 

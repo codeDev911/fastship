@@ -13,7 +13,7 @@ interface RateCardFormProps {
 }
 
 const STATES = [
-  'Sindh', 'Punjab', 'KPK', 'Balochistan', 'Gilgit-Baltistan', 
+  'Sindh', 'Punjab', 'Khyber Pakhtunkhwa', 'Balochistan', 'Gilgit-Baltistan', 
   'AJK', 'FATA', 'Islamabad'
 ];
 

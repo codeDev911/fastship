@@ -181,8 +181,7 @@ export async function PATCH(
             id: true,
           },
         });
-
-        console.log(businessId);
+ 
         
 
         // ==========================================
@@ -251,7 +250,7 @@ export async function PATCH(
             status: validated.status || shipment.status,
             description: businessId
               ? `Shipment assigned to business`
-              : `Shipment status updated to ${validated.status}`,
+              :driverId?"Driver assigned": `Shipment status updated to ${validated.status}`,
           },
         });
 

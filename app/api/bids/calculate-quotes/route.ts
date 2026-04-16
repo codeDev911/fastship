@@ -8,10 +8,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { bidService } from "@/lib/services/bid.service";
-import {
-  calculateDistanceByCities,
-  estimatePickupTime,
-} from "@/lib/utils/distance";
+import { calculateDistanceByCities, estimatePickupTime } from "@/lib/utils/distance";
 
 export async function GET(request: NextRequest) {
   try {
@@ -40,25 +37,21 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Calculate distance
-    const distance = calculateDistanceByCities(
-      shipment.pickupCity,
-      shipment.pickupState,
-      shipment.deliveryCity,
-      shipment.deliveryState
-    );
-
-    
+    // Use pre-calculated distance from shipment (calculated at shipment creation)
+    let distance = shipment.distance;
+    let distanceMethod = 'saved';
+    let distanceDuration = 0;
 
     if (!distance) {
-      return NextResponse.json(
-        {
-          error: "Could not calculate distance between cities",
-          data: [],
-        },
-        { status: 400 }
-      );
+      // Fallback if distance wasn't calculated at creation time
+      console.warn(`[calculate-quotes] No distance found for shipment ${shipmentId}, defaulting to 0`);
+      let ress = await calculateDistanceByCities(shipment.pickupCity,shipment.pickupState,shipment.deliveryCity,shipment.deliveryState)
+      distanceMethod = "calculated again"
+      distance = ress?.distance || 0;
+    }else{
+      console.log("used saved distance");
     }
+ 
 
     // Find matching businesses
     const businesses = await bidService.findMatchingBusinesses(
@@ -68,8 +61,6 @@ export async function GET(request: NextRequest) {
       shipment.deliveryState
     );
 
-    
-
     if (businesses.length === 0) {
       return NextResponse.json({
         data: [],
@@ -78,55 +69,59 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Calculate quotes for each business and sort by quality
-    const quotesPromises = businesses.map((business) =>
-      bidService.calculateQuote({
-        businessId: business.id,
-        weight: shipment.weight,
-        distance,
-        pickupCity: shipment.pickupCity,
-        pickupState: shipment.pickupState,
-        deliveryCity: shipment.deliveryCity,
-        deliveryState: shipment.deliveryState,
-      })
-    );
+    // Get all rate cards from all businesses and calculate quotes for each
+    const allQuotes: any[] = [];
 
-    const quotes = await Promise.all(quotesPromises);
+    for (const business of businesses) {
+      // Get all rate cards for this business
+      const rateCards = business.rateCards || [];
+      
+      for (const rateCard of rateCards) {
+        // Calculate quote for each rate card
+        const quote = await bidService.calculateQuote({
+          businessId: business.id,
+          rateCardId: rateCard.id, // Pass specific rate card ID
+          weight: shipment.weight,
+          distance,
+          pickupCity: shipment.pickupCity,
+          pickupState: shipment.pickupState,
+          deliveryCity: shipment.deliveryCity,
+          deliveryState: shipment.deliveryState,
+        });
 
-    // Filter valid quotes only
-    const validQuotes = quotes.filter((q) => q.isValid);
+        if (quote.isValid) {
+          const serviceArea = business.serviceAreas[0];
+          
+          allQuotes.push({
+            id: business.id,
+            rateCardId: rateCard.id,
+            rateCardName: rateCard.name || 'Standard Service',
+            companyName: business.companyName,
+            businessType: business.businessType,
+            rating: business.rating,
+            baseRate: quote.baseRate,
+            distanceCharge: quote.distanceCharge,
+            weightCharge: quote.weightCharge,
+            totalRate: quote.totalRate,
+            distance: quote.distanceKm,
+            commission: business.commissionRate,
+            // Why recommended
+            driverCount: serviceArea?.activeDrivers || 0,
+            estimatedPickupHours: estimatePickupTime(distance),
+            reasonRecommended: getReason(business.rating, quote.totalRate),
+            // For database storage
+            pickupTime: new Date(Date.now() + estimatePickupTime(distance) * 60 * 60 * 1000),
+          });
+        }
+      }
+    }
 
-    // Sort by: (1) Has drivers, (2) Rating, (3) Price
-    const businessQuotes = validQuotes
-      .map((quote) => {
-        const business = businesses.find((b) => b.id === quote.businessId)!;
-        const serviceArea = business.serviceAreas[0];
-
-        return {
-          id: business.id,
-          companyName: business.companyName,
-          businessType: business.businessType,
-          rating: business.rating,
-          baseRate: quote.baseRate,
-          distanceCharge: quote.distanceCharge,
-          weightCharge: quote.weightCharge,
-          totalRate: quote.totalRate,
-          distance: quote.distanceKm,
-          commission: business.commissionRate,
-          // Why recommended
-          driverCount: serviceArea?.activeDrivers || 0,
-          estimatedPickupHours: estimatePickupTime(distance),
-          reasonRecommended: getReason(business.rating, quote.totalRate),
-          // For database storage
-          pickupTime: new Date(Date.now() + estimatePickupTime(distance) * 60 * 60 * 1000),
-        };
-      })
+    // Sort all quotes by total rate (ascending - lowest price first)
+    const sortedQuotes = allQuotes
       .sort((a, b) => {
-        // Primary: Has drivers (at least 1)
-        const aHasDrivers = a.driverCount > 0 ? 1 : 0;
-        const bHasDrivers = b.driverCount > 0 ? 1 : 0;
-        if (aHasDrivers !== bHasDrivers) {
-          return bHasDrivers - aHasDrivers;
+        // Primary: By rate (lower is better)
+        if (a.totalRate !== b.totalRate) {
+          return a.totalRate - b.totalRate;
         }
 
         // Secondary: By rating (higher is better)
@@ -134,44 +129,23 @@ export async function GET(request: NextRequest) {
           return b.rating - a.rating;
         }
 
-        // Tertiary: By price (lower is better)
-        return a.totalRate - b.totalRate;
+        // Tertiary: Has drivers (at least 1)
+        const aHasDrivers = a.driverCount > 0 ? 1 : 0;
+        const bHasDrivers = b.driverCount > 0 ? 1 : 0;
+        return bHasDrivers - aHasDrivers;
       })
       .slice(0, limit);
 
-    // Create bids in database for tracking
-    const bidPromises = businessQuotes.map((quote) =>
-      prisma.bid.upsert({
-        where: {
-          id: `${shipmentId}-${quote.id}`, // Composite ID pattern
-        },
-        create: {
-          shipmentId,
-          businessId: quote.id,
-          sellerId: shipment.sellerId,
-          amount: quote.totalRate,
-          distance: quote.distance,
-          estimatedPickupTime: quote.pickupTime,
-          description: `${quote.distanceCharge > 0 ? `Distance: ${quote.distance}km × ${quote.baseRate / quote.distance} per km; ` : ""}${quote.weightCharge > 0 ? `Weight surcharge: ${quote.weightCharge} PKR` : ""}`.trim(),
-          expiresAt: new Date(Date.now() + 3600000), // 1 hour expiry
-        },
-        update: {
-          amount: quote.totalRate,
-          distance: quote.distance,
-          estimatedPickupTime: quote.pickupTime,
-          updatedAt: new Date(),
-        },
-      })
-    );
-
-    await Promise.all(bidPromises);
-
     return NextResponse.json({
-      data: businessQuotes,
-      count: businessQuotes.length,
+      data: sortedQuotes,
+      count: sortedQuotes.length,
+      totalAvailable: allQuotes.length,
       shipmentDetails: {
         weight: shipment.weight,
-        distance,
+        distance: distance.toFixed(2),
+        duration: Math.round(distanceDuration / 60), // Convert to minutes
+        method: distanceMethod,
+        isEstimate: distance === 0,
         pickupCity: shipment.pickupCity,
         deliveryCity: shipment.deliveryCity,
       },

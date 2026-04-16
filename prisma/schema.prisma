@@ -215,36 +215,41 @@ model Business {
 }
 
 model Shipment {
-  id              String         @id @default(cuid())
-  sellerId        String
-  businessId      String?
-  pickupName      String
-  pickupPhone     String
-  pickupAddress   String
-  pickupCity      String
-  pickupState     String
-  pickupZipCode   String
-  deliveryName    String
-  deliveryPhone   String
-  deliveryAddress String
-  deliveryCity    String
-  deliveryState   String
-  deliveryZipCode String
-  weight          Float
-  dimensions      String?
-  packageType     String
-  description     String
-  paymentMethod   PaymentMethod  @default(PREPAID)
-  codAmount       Float?
-  expectedRate    Float?
-  actualRate      Float?
-  status          ShipmentStatus @default(PENDING)
-  priority        String         @default("STANDARD")
-  notes           String?
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
-  pickedUpAt      DateTime?
-  deliveredAt     DateTime?
+  id                   String         @id @default(cuid())
+  sellerId             String
+  businessId           String?
+  pickupName           String
+  pickupPhone          String
+  pickupAddress        String
+  pickupCity           String
+  pickupState          String
+  pickupZipCode        String
+  pickupLatitude       Float?
+  pickupLongitude      Float?
+  deliveryName         String
+  deliveryPhone        String
+  deliveryAddress      String
+  deliveryCity         String
+  deliveryState        String
+  deliveryZipCode      String
+  deliveryLatitude     Float?
+  deliveryLongitude    Float?
+  weight               Float
+  distance             Float?          // Distance in kilometers (calculated at creation time)
+  dimensions           String?
+  packageType          String
+  description          String
+  paymentMethod        PaymentMethod  @default(PREPAID)
+  codAmount            Float?
+  expectedRate         Float?
+  actualRate           Float?
+  status               ShipmentStatus @default(PENDING)
+  priority             String         @default("STANDARD")
+  notes                String?
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+  pickedUpAt           DateTime?
+  deliveredAt          DateTime?
 
   seller     Seller             @relation(fields: [sellerId], references: [id], onDelete: Cascade)
   assignment DriverAssignment?

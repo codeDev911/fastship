@@ -4,12 +4,16 @@ import {
   CreditCard, Clock, ShieldCheck, Scale, Hash, Plus,
   SquareArrowOutUpRight,
   Banknote,
-  SkullIcon
+  SkullIcon,
+  DollarSign,
+  Zap,
+  AlertCircle,
 } from 'lucide-react';
 import AssignmentDetailsModal from './AssignmentDetailsModal';
 import { Button } from '../shared/Button';
 import PaymentReceivedModal from './PaymentRecievedModal';
 import CancelShipmentModal from './CancelShipmentModal';
+import { ServiceTierBadge, InfoCard } from '@/components/shipment';
 
 const FullScreenOrderModal = ({ isOpen, onClose, data }: any) => {
 
@@ -57,55 +61,43 @@ const FullScreenOrderModal = ({ isOpen, onClose, data }: any) => {
         <div className="flex-1 p-8 space-y-8">
           <div className="max-w-7xl mx-auto space-y-8">
 
-            {/* Top Metric Cards Section */}
-            <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-              {/* Status Card */}
-              <div className="bg-white rounded-2xl overflow-hidden border-none shadow-none">
-                <div className="h-1 bg-red-600" />
-                <div className="p-6">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="rounded-lg bg-red-50 p-3">
-                      <Package className="h-6 w-6 text-red-600" />
-                    </div>
-                    <p className="text-sm font-medium text-slate-500 uppercase tracking-wide text-[10px]">Current Status</p>
-                  </div>
-                  <p className="text-3xl font-bold text-red-600">{data?.status || "PENDING"}</p>
-                  <p className="mt-2 text-xs text-slate-400 font-medium tracking-tight">Priority: {data?.priority}</p>
-                </div>
-              </div>
-
-              {/* Financial Card */}
-              <div className="bg-white rounded-2xl overflow-hidden border-none shadow-none">
-                <div className="h-1 bg-green-500" />
-                <div className="p-6">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="rounded-lg bg-green-50 p-3">
-                      <CreditCard className="h-6 w-6 text-green-600" />
-                    </div>
-                    <p className="text-sm font-medium text-slate-500 uppercase tracking-wide text-[10px]">COD Amount</p>
-                  </div>
-                  <p className="text-3xl font-bold text-green-600">
-                    {data?.codAmount?.toLocaleString() || "0"} <span className="text-lg font-normal">PKR</span>
-                  </p>
-                  <p className="mt-2 text-xs text-slate-400 font-medium">Payment: {data?.paymentMethod}</p>
-                </div>
-              </div>
-
-              {/* Logistics Card */}
-              <div className="bg-white rounded-2xl overflow-hidden border-none shadow-none">
-                <div className="h-1 bg-slate-800" />
-                <div className="p-6">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="rounded-lg bg-slate-100 p-3">
-                      <Scale className="h-6 w-6 text-slate-700" />
-                    </div>
-                    <p className="text-sm font-medium text-slate-500 uppercase tracking-wide text-[10px]">Package Weight</p>
-                  </div>
-                  <p className="text-3xl font-bold text-slate-800">{data?.weight} <span className="text-lg font-normal text-slate-400">kg</span></p>
-                  <p className="mt-2 text-xs text-slate-400 font-medium">Type: {data?.packageType || "Standard"}</p>
-                </div>
-              </div>
+            {/* Quick Overview Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              <InfoCard 
+                icon={<Package className="h-5 w-5" />}
+                label="Weight"
+                value={`${data?.weight} kg`}
+                subtext={data?.packageType || 'Standard'}
+              />
+              <InfoCard 
+                icon={<MapPin className="h-5 w-5" />}
+                label="Distance"
+                value={`${data?.distance?.toFixed(0) || 'N/A'} km`}
+              />
+              <InfoCard 
+                icon={<Clock className="h-5 w-5" />}
+                label="Status"
+                value={data?.status?.replace(/_/g, ' ') || 'PENDING'}
+              />
+              <InfoCard 
+                icon={<CreditCard className="h-5 w-5" />}
+                label="Payment"
+                value={data?.paymentMethod || 'N/A'}
+                subtext={data?.payment?.paymentStatus}
+              />
             </div>
+
+            {/* Service Tier Badge */}
+            <div className="flex items-center gap-3">
+              <p className="text-xs font-medium text-muted-foreground">SERVICE TIER</p>
+              <ServiceTierBadge 
+                rateCardName={data?.rateCard?.name}
+                baseRate={data?.baseRate}
+                size="lg"
+              />
+            </div>
+
+         
 
             {/* Details Table - Built like your Recent Transactions */}
             <div className="bg-white rounded-2xl overflow-hidden">
@@ -216,57 +208,57 @@ const FullScreenOrderModal = ({ isOpen, onClose, data }: any) => {
               </div>
             </div>
 
-            {/* Seller Profile Section */}
+            {/* Payments Section - Improved */}
             <div className="bg-white rounded-2xl p-8 border border-slate-100">
               <div className="flex items-center gap-3 mb-6">
                 <div className="bg-red-50 p-2 rounded-lg">
                   <Banknote className="h-5 w-5 text-red-600" />
                 </div>
-                <h3 className="text-lg font-bold text-slate-800 tracking-tight">Payments </h3>
+                <h3 className="text-lg font-bold text-slate-800 tracking-tight">Payment Status</h3>
               </div>
-              <div className="grid grid-cols-2 md:grid-cols-7 gap-8">
-                <div>
-                  <p className="text-xs text-slate-400 mb-1 font-medium">Amount</p>
-                  <p className="font-semibold text-slate-900">Rs. {data?.payment?.amount?.toFixed(2) || "-"}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-slate-400 mb-1 font-medium">Commission</p>
-                  <p className="text-slate-700">Rs. {data?.payment?.commission?.toFixed(2) || "-"}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-slate-400 mb-1 font-medium">Tax </p>
-                  <p className="text-slate-700 font-mono text-sm tracking-tighter">Rs {data?.payment?.tax?.toFixed(2) || "-"}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-slate-400 mb-1 font-medium">Method </p>
-                  <p className="text-slate-700 font-mono text-sm tracking-tighter">{data?.payment?.paymentMethod || "-"}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-slate-400 mb-1 font-medium">Transaction Id</p>
-                  <p className="text-slate-700 text-sm">{data?.payment?.transactionId || "Null"}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-slate-400 mb-1 font-medium">Paid At</p>
-                  <p className="text-slate-700 text-sm">{data?.payment?.paidAt ? new Date(data?.payment?.paidAt).toLocaleDateString() : "Not-Paid"}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-slate-400 mb-1 font-medium">Status</p>
-                  <span className={`inline-block px-3 py-0.5 rounded-full text-[10px] font-black uppercase ${data?.payment?.paymentStatus == "COMPLETED" ? 'bg-green-50 text-green-700' : 'bg-yellow-50 text-yellow-600'}`}>
-                    {data?.payment?.paymentStatus || "-"}
-                  </span>
-                </div>
-                {data?.payment?.paymentMethod === "COD" && data?.payment?.paymentStatus === "PENDING" ? <div className='col-span-2 md:col-span-6'>
-                  <p className="text-xs text-slate-400 mb-1 font-medium">Payment Recieved?</p>
-                  <p className="text-slate-700 text-sm ">If you have recieved COD payments, please update the status to avoid conflicts</p>
-                  <br />
-                  <Button onClick={() => setPaymentRecievedModal({ isOpen: true, data: data?.payment })} className='cursor-pointer'>Confirm Payment Recieved</Button>
-                </div>
-                  : data?.payment?.paymentMethod === "COD" && data?.payment?.paymentStatus === "COMPLETED" &&
-                  <div className='col-span-2 md:col-span-6'>
-                    <p className="text-xs text-slate-400 mb-1 font-medium">Payment Recieved</p>
-                    <p className="text-slate-700 text-sm ">The Payment Rs {data?.payment?.amount} has been recieved</p></div>
-                }
+
+              {/* Payment Status Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mb-6">
+                <InfoCard 
+                  icon={<DollarSign className="h-5 w-5" />}
+                  label="Amount"
+                  value={`PKR ${(data?.payment?.amount || 0)?.toFixed(2)}`}
+                />
+                <InfoCard 
+                  icon={<CreditCard className="h-5 w-5" />}
+                  label="Method"
+                  value={data?.payment?.paymentMethod || 'N/A'}
+                />
+                <InfoCard 
+                  icon={<Clock className="h-5 w-5" />}
+                  label="Status"
+                  value={data?.payment?.paymentStatus || 'PENDING'}
+                  variant={data?.payment?.paymentStatus === 'COMPLETED' ? 'success' : 'warning'}
+                />
               </div>
+
+              {/* Payment Status Workflow */}
+              {data?.payment?.paymentMethod === "COD" && data?.payment?.paymentStatus === "PENDING" ? (
+                <div className='p-4 rounded-xl bg-yellow-50 border-2 border-yellow-200'>
+                  <div className="flex items-start gap-3">
+                  <AlertCircle className="h-5 w-5 text-yellow-600 shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                      <p className="font-semibold text-yellow-900">Payment Pending</p>
+                      <p className="text-sm text-yellow-800 mt-1">Confirm payment received to avoid disputes</p>
+                      <Button onClick={() => setPaymentRecievedModal({ isOpen: true, data: data?.payment })} className='mt-3'>
+                        ✓ Confirm Payment Received
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ) : data?.payment?.paymentMethod === "COD" && data?.payment?.paymentStatus === "COMPLETED" ? (
+                <div className='p-4 rounded-xl bg-green-50 border-2 border-green-200'>
+                  <p className="font-semibold text-green-900">✓ Payment Received</p>
+                  <p className="text-sm text-green-700 mt-2">
+                    PKR {data?.payment?.amount?.toFixed(2)} was collected on {new Date(data?.payment?.paidAt).toLocaleDateString()}
+                  </p>
+                </div>
+              ) : null}
             </div>
 
             <div className="bg-white rounded-2xl p-8 border border-slate-100">

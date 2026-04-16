@@ -21,20 +21,11 @@ interface ServiceAreasManagerProps {
 }
 
 const STATES = [
-  'Sindh', 'Punjab', 'KPK', 'Balochistan', 'Gilgit-Baltistan',
-  'AJK', 'FATA', 'Islamabad'
+  'Sindh', 'Punjab', 'Khyber Pakhtunkhwa', 'Balochistan', 'Gilgit-Baltistan',
+  'AJK', 'FATA', 'Islamabad','Azad Kashmir'
 ];
 
-const CITIES_BY_STATE: Record<string, string[]> = {
-  'Sindh': ['Karachi', 'Hyderabad', 'Sukkur', 'Larkana'],
-  'Punjab': ['Lahore', 'Faisalabad', 'Multan', 'Gujranwala', 'Sialkot', 'Rawalpindi'],
-  'KPK': ['Peshawar', 'Abbottabad', 'Mardan', 'Swat'],
-  'Balochistan': ['Quetta', 'Gwadar'],
-  'Gilgit-Baltistan': ['Gilgit', 'Skardu'],
-  'AJK': ['Muzaffarabad', 'Rawalakot'],
-  'FATA': ['Tirah', 'Waziristan'],
-  'Islamabad': ['Islamabad']
-};
+
 
 export function ServiceAreasManager({ businessId }: ServiceAreasManagerProps) {
   const [serviceAreas, setServiceAreas] = useState<ServiceArea[]>([]);
@@ -44,7 +35,7 @@ export function ServiceAreasManager({ businessId }: ServiceAreasManagerProps) {
   const [savingId, setSavingId] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState('');
   const { toast } = useToast();
-
+  const [availableCities,setAvailableCities] = useState([])
   // Form state
   const [formData, setFormData] = useState({
     state: '',
@@ -188,7 +179,6 @@ export function ServiceAreasManager({ businessId }: ServiceAreasManagerProps) {
     }
   };
 
-  const availableCities = formData.state ? CITIES_BY_STATE[formData.state] || [] : [];
 
   return (
     <div className="space-y-4">
@@ -226,8 +216,18 @@ export function ServiceAreasManager({ businessId }: ServiceAreasManagerProps) {
               </label>
               <select
                 value={formData.state}
-                onChange={(e) => {
+                onChange={async(e) => {
                   setFormData({ ...formData, state: e.target.value, city: '' });
+
+                  try {
+                    let res= await fetch(`/api/locations/cities?state=${e.target.value}`)
+                    let data= await res.json()
+                    if(res.ok){
+                      setAvailableCities(data.cities ||[])
+                    }
+                  } catch (error) {
+                    alert("Failed to load cities")
+                  }
                 }}
                 disabled={savingId !== null}
                 className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent"
@@ -251,8 +251,8 @@ export function ServiceAreasManager({ businessId }: ServiceAreasManagerProps) {
                 className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent disabled:opacity-50"
               >
                 <option value="">Select City</option>
-                {availableCities.map(city => (
-                  <option key={city} value={city}>{city}</option>
+                {availableCities.map((city:any,ind:any) => (
+                  <option key={ind} value={city?.name}>{city?.name}</option>
                 ))}
               </select>
             </div>

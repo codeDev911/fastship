@@ -2,8 +2,7 @@
  * Bid Service - Validates and manages bids
  */
 
-import { prisma } from "@/lib/prisma";
-import { calculateDistanceByCities } from "@/lib/utils/distance";
+import { prisma } from "@/lib/prisma"; 
 
 interface BidValidationResult {
   isValid: boolean;
@@ -13,6 +12,7 @@ interface BidValidationResult {
 
 interface QuoteCalculationParams {
   businessId: string;
+  rateCardId?: string; // Optional: if provided, use this specific rate card
   weight: number;
   distance: number;
   pickupCity: string;
@@ -38,7 +38,7 @@ export const bidService = {
    */
   async calculateQuote(params: QuoteCalculationParams): Promise<Quote> {
     try {
-      const { businessId, weight, distance, deliveryCity, deliveryState } =
+      const { businessId, rateCardId, weight, distance, deliveryCity, deliveryState } =
         params;
 
       // Fetch business and rate cards
@@ -46,8 +46,11 @@ export const bidService = {
         where: { id: businessId },
         include: {
           rateCards: {
-            where: { isActive: true },
-            take: 1,
+            where: { 
+              isActive: true,
+              // If rateCardId provided, fetch only that card; otherwise fetch all
+              ...(rateCardId ? { id: rateCardId } : {})
+            },
           },
           serviceAreas: {
             where: {
@@ -187,8 +190,8 @@ export const bidService = {
         },
         include: {
           rateCards: {
-            where: { isActive: true },
-            take: 1,
+            where: { isActive: true, },
+
           },
           serviceAreas: {
             where: {
@@ -199,7 +202,7 @@ export const bidService = {
           },
         },
       });
-      
+        
       return businesses;
     } catch (error) {
       console.error("Error finding matching businesses:", error);

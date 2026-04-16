@@ -1,0 +1,167 @@
+{
+  "Pabbi_Khyber Pakhtunkhwa__Kohat_Khyber Pakhtunkhwa": {
+    "pickupCity": "Pabbi",
+    "pickupState": "Khyber Pakhtunkhwa",
+    "deliveryCity": "Kohat",
+    "deliveryState": "Khyber Pakhtunkhwa",
+    "distance": 85.29,
+    "duration": 5382.82,
+    "method": "openroute",
+    "savedAt": 1776361713100,
+    "updatedAt": 1776361713100
+  },
+  "Pabbi_Khyber Pakhtunkhwa__Baffa_Khyber Pakhtunkhwa": {
+    "pickupCity": "Pabbi",
+    "pickupState": "Khyber Pakhtunkhwa",
+    "deliveryCity": "Baffa",
+    "deliveryState": "Khyber Pakhtunkhwa",
+    "distance": 213.68,
+    "duration": 7617.94,
+    "method": "openroute",
+    "savedAt": 1776361760264,
+    "updatedAt": 1776361760264
+  },
+  "Kulāchi_Khyber Pakhtunkhwa__Kohat_Khyber Pakhtunkhwa": {
+    "pickupCity": "Kulāchi",
+    "pickupState": "Khyber Pakhtunkhwa",
+    "deliveryCity": "Kohat",
+    "deliveryState": "Khyber Pakhtunkhwa",
+    "distance": 241.01,
+    "duration": 12741.88,
+    "method": "openroute",
+    "savedAt": 1776361950391,
+    "updatedAt": 1776361950391
+  },
+  "Adilpur_Sindh__Ahmadpur East_Punjab": {
+    "pickupCity": "Adilpur",
+    "pickupState": "Sindh",
+    "deliveryCity": "Ahmadpur East",
+    "deliveryState": "Punjab",
+    "distance": 272.04,
+    "duration": 10812.09,
+    "method": "openroute",
+    "savedAt": 1776362738576,
+    "updatedAt": 1776362738576
+  },
+  "Islamabad_Islamabad__Hangu_Khyber Pakhtunkhwa": {
+    "pickupCity": "Islamabad",
+    "pickupState": "Islamabad",
+    "deliveryCity": "Hangu",
+    "deliveryState": "Khyber Pakhtunkhwa",
+    "distance": 288.52,
+    "duration": 12530.63,
+    "method": "openroute",
+    "savedAt": 1776362778298,
+    "updatedAt": 1776362778298
+  },
+  "Abbottābād_Khyber Pakhtunkhwa__Kohat_Khyber Pakhtunkhwa": {
+    "pickupCity": "Abbottābād",
+    "pickupState": "Khyber Pakhtunkhwa",
+    "deliveryCity": "Kohat",
+    "deliveryState": "Khyber Pakhtunkhwa",
+    "distance": 252.08,
+    "duration": 10887.67,
+    "method": "openroute",
+    "savedAt": 1776363812322,
+    "updatedAt": 1776363812322
+  },
+  "Abbottābād_Khyber Pakhtunkhwa__Upper Dir_Khyber Pakhtunkhwa": {
+    "pickupCity": "Abbottābād",
+    "pickupState": "Khyber Pakhtunkhwa",
+    "deliveryCity": "Upper Dir",
+    "deliveryState": "Khyber Pakhtunkhwa",
+    "distance": 314.39,
+    "duration": 11884.8,
+    "method": "openroute",
+    "savedAt": 1776363814977,
+    "updatedAt": 1776363814977
+  },
+  "Alik Ghund_Balochistan__Upper Dir_Khyber Pakhtunkhwa": {
+    "pickupCity": "Alik Ghund",
+    "pickupState": "Balochistan",
+    "deliveryCity": "Upper Dir",
+    "deliveryState": "Khyber Pakhtunkhwa",
+    "distance": null,
+    "duration": null,
+    "method": "openroute",
+    "savedAt": 1776364204874,
+    "updatedAt": 1776364204874
+  },
+  "Alik Ghund_Balochistan__Sarai Naurang_Khyber Pakhtunkhwa": {
+    "pickupCity": "Alik Ghund",
+    "pickupState": "Balochistan",
+    "deliveryCity": "Sarai Naurang",
+    "deliveryState": "Khyber Pakhtunkhwa",
+    "distance": null,
+    "duration": null,
+    "method": "openroute",
+    "savedAt": 1776364228351,
+    "updatedAt": 1776364228351
+  },
+  "Awaran_Balochistan__Sarai Naurang_Khyber Pakhtunkhwa": {
+    "pickupCity": "Awaran",
+    "pickupState": "Balochistan",
+    "deliveryCity": "Sarai Naurang",
+    "deliveryState": "Khyber Pakhtunkhwa",
+    "distance": 1145.1,
+    "duration": 55049.48,
+    "method": "openroute",
+    "savedAt": 1776364280070,
+    "updatedAt": 1776364280070
+  },
+  "Awaran_Balochistan__Mingora_Khyber Pakhtunkhwa": {
+    "pickupCity": "Awaran",
+    "pickupState": "Balochistan",
+    "deliveryCity": "Mingora",
+    "deliveryState": "Khyber Pakhtunkhwa",
+    "distance": 1560.28,
+    "duration": 71546.21,
+    "method": "openroute",
+    "savedAt": 1776364281880,
+    "updatedAt": 1776364281880
+  },
+  "Abbottābād_Khyber Pakhtunkhwa__Mingora_Khyber Pakhtunkhwa": {
+    "pickupCity": "Abbottābād",
+    "pickupState": "Khyber Pakhtunkhwa",
+    "deliveryCity": "Mingora",
+    "deliveryState": "Khyber Pakhtunkhwa",
+    "distance": 242.91,
+    "duration": 9637.28,
+    "method": "openroute",
+    "savedAt": 1776364344389,
+    "updatedAt": 1776364344389
+  },
+  "Mardan_Khyber Pakhtunkhwa__Mingora_Khyber Pakhtunkhwa": {
+    "pickupCity": "Mardan",
+    "pickupState": "Khyber Pakhtunkhwa",
+    "deliveryCity": "Mingora",
+    "deliveryState": "Khyber Pakhtunkhwa",
+    "distance": 103.61,
+    "duration": 5135.34,
+    "method": "openroute",
+    "savedAt": 1776364350549,
+    "updatedAt": 1776364350549
+  },
+  "Charsadda_Khyber Pakhtunkhwa__Mingora_Khyber Pakhtunkhwa": {
+    "pickupCity": "Charsadda",
+    "pickupState": "Khyber Pakhtunkhwa",
+    "deliveryCity": "Mingora",
+    "deliveryState": "Khyber Pakhtunkhwa",
+    "distance": 119.25,
+    "duration": 6037.8,
+    "method": "openroute",
+    "savedAt": 1776364384446,
+    "updatedAt": 1776364384446
+  },
+  "Hangu_Khyber Pakhtunkhwa__Islamabad_Islamabad": {
+    "pickupCity": "Hangu",
+    "pickupState": "Khyber Pakhtunkhwa",
+    "deliveryCity": "Islamabad",
+    "deliveryState": "Islamabad",
+    "distance": 219.03,
+    "duration": 9993.74,
+    "method": "openroute",
+    "savedAt": 1776367208360,
+    "updatedAt": 1776367208360
+  }
+}
