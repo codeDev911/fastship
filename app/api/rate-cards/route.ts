@@ -17,6 +17,8 @@ const createRateCardSchema = z.object({
   maxWeight: z.number().positive("Max weight must be positive").default(100),
   weightSurcharge: z.number().nonnegative("Weight surcharge cannot be negative").default(0),
   serviceStates: z.array(z.string()).default([]),
+  inCityDelivery: z.boolean().default(false),
+  serviceCities: z.array(z.string()).default([]),
 });
 
 /**

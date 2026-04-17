@@ -163,5 +163,16 @@
     "method": "openroute",
     "savedAt": 1776367208360,
     "updatedAt": 1776367208360
+  },
+  "Peshawar_Khyber Pakhtunkhwa__Peshawar_Khyber Pakhtunkhwa": {
+    "pickupCity": "Peshawar",
+    "pickupState": "Khyber Pakhtunkhwa",
+    "deliveryCity": "Peshawar",
+    "deliveryState": "Khyber Pakhtunkhwa",
+    "distance": 0,
+    "duration": 0,
+    "method": "openroute",
+    "savedAt": 1776428813512,
+    "updatedAt": 1776428813512
   }
 }

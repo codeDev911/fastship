@@ -3,7 +3,9 @@
 import { SellerLayout } from '@/components/seller/SellerLayout';
 import React, { useState, useEffect } from 'react';
 import { secureFetch } from '@/lib/secure-fetch';
-import { Loader } from 'lucide-react';
+import { Loader, MapPin, AlertCircle, ArrowLeft } from 'lucide-react';
+import { useSearchParams, useRouter } from 'next/navigation';
+import InCityLocationPicker from '@/components/seller/InCityLocationPicker';
 
 interface City {
   name: string;
@@ -11,19 +13,43 @@ interface City {
   longitude?: number;
 }
 
+interface Location {
+  name: string;
+  latitude: number;
+  longitude: number;
+    state: string;
+    city: string;
+    zipCode: any 
+  address: any;
+}
+
 const CreateOrderForm = () => {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const isEdit = searchParams.get('isEdit') === 'true';
+  const shipmentId = searchParams.get('shipmentId');
+  
   const [loading, setLoading] = useState(false);
+  const [fetchingShipment, setFetchingShipment] = useState(isEdit);
   const [states, setStates] = useState<string[]>([]);
   const [pickupCities, setPickupCities] = useState<City[]>([]);
   const [deliveryCities, setDeliveryCities] = useState<City[]>([]);
   const [loadingPickupCities, setLoadingPickupCities] = useState(false);
   const [loadingDeliveryCities, setLoadingDeliveryCities] = useState(false);
+  const [shipmentStatus, setShipmentStatus] = useState<string | null>(null);
+  
+  // In-city delivery state
+  const [isInCityDelivery, setIsInCityDelivery] = useState(false);
+  const [showLocationPicker, setShowLocationPicker] = useState(false);
+  const [inCityDistance, setInCityDistance] = useState<number | null>(null);
+  const [inCityPickupLocation, setInCityPickupLocation] = useState<Location | null>(null);
+  const [inCityDeliveryLocation, setInCityDeliveryLocation] = useState<Location | null>(null);
 
   const [formData, setFormData] = useState({
     pickupName: "", pickupPhone: "", pickupAddress: "", pickupCity: "", pickupState: "", pickupZipCode: "",
     deliveryName: "", deliveryPhone: "", deliveryAddress: "", deliveryCity: "", deliveryState: "", deliveryZipCode: "",
     weight: "", dimensions: "", packageType: "", description: "",
-    paymentMethod: "PREPAID", codAmount: 0, expectedRate: "", actualRate: "",
+    paymentMethod: "PREPAID", codAmount: 0, 
     status: "PENDING", priority: "STANDARD", notes: ""
   });
 
@@ -38,6 +64,7 @@ const CreateOrderForm = () => {
           // Set default states
           if (data.states.length > 0) {
             setFormData(prev => ({ ...prev, pickupState: data.states[0] }));
+            
           }
         }
       } catch (error) {
@@ -46,6 +73,95 @@ const CreateOrderForm = () => {
     };
     fetchStates();
   }, []);
+
+  // Fetch shipment data if in edit mode
+  useEffect(() => {
+    if (!isEdit || !shipmentId) return;
+
+    const fetchShipment = async () => {
+      setFetchingShipment(true);
+      try {
+        const response = await secureFetch(`/api/sellers/orders/${shipmentId}`, {
+          method: 'GET',
+        });
+
+        if (response.ok) {
+          const shipment = await response.json();
+          
+          // Check if shipment can be edited
+          if (shipment.status !== 'PENDING' && shipment.status !== 'ASSIGNED') {
+            alert(`Cannot edit shipment in ${shipment.status} status. Only PENDING and ASSIGNED orders can be edited.`);
+            router.back();
+            return;
+          }
+          console.log(shipment);
+          
+          setShipmentStatus(shipment.status);
+          
+          // Populate form data
+          setFormData({
+            pickupName: shipment.pickupName || "",
+            pickupPhone: shipment.pickupPhone || "",
+            pickupAddress: shipment.pickupAddress || "",
+            pickupCity: shipment.pickupCity || "",
+            pickupState: shipment.pickupState || "",
+            pickupZipCode: shipment.pickupZipCode || "",
+            deliveryName: shipment.deliveryName || "",
+            deliveryPhone: shipment.deliveryPhone || "",
+            deliveryAddress: shipment.deliveryAddress || "",
+            deliveryCity: shipment.deliveryCity || "",
+            deliveryState: shipment.deliveryState || "",
+            deliveryZipCode: shipment.deliveryZipCode || "",
+            weight: shipment.weight?.toString() || "",
+            dimensions: shipment.dimensions || "",
+            packageType: shipment.packageType || "",
+            description: shipment.description || "",
+            paymentMethod: shipment.paymentMethod || "PREPAID",
+            codAmount: shipment.codAmount || 0,
+            status: shipment.status || "PENDING",
+            priority: shipment.priority || "STANDARD",
+            notes: shipment.notes || ""
+          });
+
+          // Populate in-city delivery data
+          setIsInCityDelivery(shipment.isInCityDelivery || false);
+          if (shipment.isInCityDelivery) {
+            setInCityDistance(shipment.distance || null);
+            setInCityPickupLocation({
+              name: shipment.pickupName,
+              latitude: shipment.pickupLatitude,
+              longitude: shipment.pickupLongitude,
+               address: shipment.pickupAddress,
+              city:shipment.pickupCity,
+              state:shipment.pickupState,
+              zipCode:shipment.deliveryZipCOde,
+            });
+            setInCityDeliveryLocation({
+              name: shipment.deliveryName,
+              latitude: shipment.deliveryLatitude,
+              longitude: shipment.deliveryLongitude,
+               address: shipment.pickupAddress,
+              city:shipment.pickupCity,
+              state:shipment.pickupState,
+              zipCode:shipment.deliveryZipCOde,
+            });
+          }
+        } else {
+          const errorData = await response.json();
+          alert(errorData.message || 'Error fetching shipment');
+          router.back();
+        }
+      } catch (error) {
+        console.error('Error fetching shipment:', error);
+        alert('Error fetching shipment');
+        router.back();
+      } finally {
+        setFetchingShipment(false);
+      }
+    };
+
+    fetchShipment();
+  }, [isEdit, shipmentId, router]);
 
   // Fetch pickup cities when pickup state changes
   useEffect(() => {
@@ -102,11 +218,68 @@ const CreateOrderForm = () => {
   const handleChange = (e: any) => {
     const { name, value } = e.target;
     // if the input is number type, we should convert the value to number before setting it in state
-    if (name === "weight" || name === "codAmount" || name === "expectedRate" || name === "actualRate") {
+    if (name === "weight" || name === "codAmount" ) {
       setFormData(prev => ({ ...prev, [name]: Number(value) }));
     } else {
       setFormData(prev => ({ ...prev, [name]: value }));
     }
+  };
+
+  const handleInCityToggle = (e: any) => {
+    const checked = e.target.checked;
+    setIsInCityDelivery(checked);
+    
+    if (checked) {
+      // When enabling in-city, set delivery state to pickup state
+      setFormData(prev => ({ 
+        ...prev, 
+        deliveryState: prev.pickupState 
+      }));
+      // Reset location picker data
+      setInCityDistance(null);
+      setInCityPickupLocation(null);
+      setInCityDeliveryLocation(null);
+    } else {
+      // When disabling, reset in-city data
+      setInCityDistance(null);
+      setInCityPickupLocation(null);
+      setInCityDeliveryLocation(null);
+      setShowLocationPicker(false);
+    }
+  };
+
+  const handleOpenLocationPicker = () => {
+    if (formData.pickupCity && formData.pickupCity === formData.deliveryCity) {
+      setShowLocationPicker(true);
+    } else {
+      alert('Please select the same city for both pickup and delivery');
+    }
+  };
+
+  const handleLocationsSelected = (
+    pickup: Location,
+    delivery: Location,
+    distance: number
+  ) => {
+    setInCityPickupLocation(pickup);
+    setInCityDeliveryLocation(delivery);
+    setInCityDistance(distance);
+    setShowLocationPicker(false);
+    
+    // Update form data with in-city location details
+    setFormData(prev => ({
+      ...prev,
+      pickupName: pickup.name,
+      pickupAddress: pickup?.address,
+      pickupCity: pickup?.city,
+      pickupState: pickup?.state,
+      pickupZipCode: pickup?.zipCode,
+      deliveryName: delivery.name,
+      deliveryAddress: delivery?.address,
+      deliveryCity: delivery?.city,
+      deliveryState: delivery?.state,
+      deliveryZipCode: delivery?.zipCode,
+    }));
   };
 
   const handleSubmit = async (e: any) => {
@@ -114,28 +287,61 @@ const CreateOrderForm = () => {
     setLoading(true);
     const user = JSON.parse(localStorage.getItem('user') || '{}');
     const sellerId = user?.jobId;
+    
     try {
-      const response = await secureFetch('/api/sellers/orders/create', {
-        method: 'POST',
+      const submitData: any = { sellerId, ...formData };
+      
+      // Add in-city delivery data if enabled
+      if (isInCityDelivery && inCityPickupLocation && inCityDeliveryLocation && inCityDistance) {
+        submitData.isInCityDelivery = true;
+        submitData.pickupLatitude = inCityPickupLocation.latitude;
+        submitData.pickupLongitude = inCityPickupLocation.longitude;
+        submitData.deliveryLatitude = inCityDeliveryLocation.latitude;
+        submitData.deliveryLongitude = inCityDeliveryLocation.longitude;
+        submitData.inCityDistance = inCityDistance
+      }
+      
+      const endpoint = isEdit && shipmentId 
+        ? `/api/sellers/orders/${shipmentId}`
+        : '/api/sellers/orders/create';
+      const method = isEdit ? 'PATCH' : 'POST';
+      
+      const response = await secureFetch(endpoint, {
+        method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(
-          { sellerId, ...formData }
-        ),
+        body: JSON.stringify(submitData),
       });
+      
       if (response.ok) {
-        alert("Shipment Registered. Distance calculated and saved with shipment.");
-        // Reset form
-        setFormData({
-          pickupName: "", pickupPhone: "", pickupAddress: "", pickupCity: "", pickupState: states[0] || "", pickupZipCode: "",
-          deliveryName: "", deliveryPhone: "", deliveryAddress: "", deliveryCity: "", deliveryState: "", deliveryZipCode: "",
-          weight: "", dimensions: "", packageType: "", description: "",
-          paymentMethod: "PREPAID", codAmount: 0, expectedRate: "", actualRate: "",
-          status: "PENDING", priority: "STANDARD", notes: ""
-        });
+        const responseData = await response.json();
+        const message = isEdit 
+          ? "Shipment updated successfully."
+          : "Shipment Registered. Distance calculated and saved with shipment.";
+        alert(message);
+        
+        // Reset form and redirect
+        if (isEdit) {
+          router.push('/seller/orders');
+        } else {
+          setFormData({
+            pickupName: "", pickupPhone: "", pickupAddress: "", pickupCity: "", pickupState: states[0] || "", pickupZipCode: "",
+            deliveryName: "", deliveryPhone: "", deliveryAddress: "", deliveryCity: "", deliveryState: "", deliveryZipCode: "",
+            weight: "", dimensions: "", packageType: "", description: "",
+            paymentMethod: "PREPAID", codAmount: 0, expectedRate: "", actualRate: "",
+            status: "PENDING", priority: "STANDARD", notes: ""
+          });
+          setIsInCityDelivery(false);
+          setInCityDistance(null);
+          setInCityPickupLocation(null);
+          setInCityDeliveryLocation(null);
+        }
+      } else {
+        const errorData = await response.json();
+        alert(errorData.message || 'Error processing shipment');
       }
     } catch (err) {
       console.error(err);
-      alert('Error creating shipment');
+      alert('Error processing shipment');
     } finally {
       setLoading(false);
     }
@@ -149,14 +355,59 @@ const CreateOrderForm = () => {
     <SellerLayout currentPage="orders" walletBalance={0} currency="PKR">
       <div className="max-w-6xl mx-auto">
         
+        {/* Back Button for Edit Mode */}
+        {isEdit && (
+          <button
+            onClick={() => router.back()}
+            className="mb-4 flex items-center gap-2 text-slate-600 hover:text-slate-800 text-sm font-medium"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back to Orders
+          </button>
+        )}
+
         <header className="mb-8 ml-2">
-          <h1 className="text-2xl text-slate-800 font-semibold">New Order</h1>
-          <p className="text-sm text-slate-500">Fill in the details to create a new delivery order. Distance will be calculated automatically.</p>
+          <h1 className="text-2xl text-slate-800 font-semibold">
+            {isEdit ? `Edit Order (${shipmentStatus})` : 'New Order'}
+          </h1>
+          <p className="text-sm text-slate-500">
+            {isEdit 
+              ? 'Update the details of your delivery order. Distance will be recalculated automatically.'
+              : 'Fill in the details to create a new delivery order. Distance will be calculated automatically.'}
+          </p>
         </header>
 
+        {/* Loading State */}
+        {fetchingShipment && (
+          <div className="bg-white rounded-2xl p-10 shadow-none border-none flex items-center justify-center min-h-96">
+            <div className="flex flex-col items-center gap-4">
+              <Loader className="w-8 h-8 animate-spin text-red-600" />
+              <p className="text-slate-600">Loading shipment details...</p>
+            </div>
+          </div>
+        )}
+
         {/* Main White 2xl Rounded Div */}
+        {!fetchingShipment && (
         <div className="bg-white rounded-2xl p-10 shadow-none border-none">
           <form onSubmit={handleSubmit} className="space-y-12">
+            
+            {/* Delivery Type Toggle */}
+            <section className="border-b border-slate-200 pb-8">
+              <h2 className="text-xs uppercase tracking-widest text-red-600 font-bold mb-6">Delivery Type</h2>
+              <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-lg">
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    checked={isInCityDelivery} 
+                    onChange={handleInCityToggle}
+                    className="w-5 h-5 rounded border-slate-300 text-red-600 cursor-pointer"
+                  />
+                  <span className="text-sm font-medium text-slate-700">In-City Delivery</span>
+                  <span className="text-xs text-slate-500">(Pickup and delivery in the same city)</span>
+                </label>
+              </div>
+            </section>
             
             {/* Pickup Section */}
             <section>
@@ -246,6 +497,61 @@ const CreateOrderForm = () => {
                   </div>
                 </div>
               </div>
+              
+              {/* In-City Location Picker Button */}
+              {isInCityDelivery && (
+                <div className="mt-6">
+                  <button
+                    type="button"
+                    onClick={handleOpenLocationPicker}
+                    className="flex items-center gap-2 px-6 py-3 bg-blue-50 border border-blue-300 text-blue-700 rounded-full hover:bg-blue-100 transition-all font-medium text-sm"
+                  >
+                    <MapPin className="w-4 h-4" />
+                    {inCityDistance ? `Edit Locations (${inCityDistance.toFixed(2)} km)` : 'Select Exact Locations on Map'}
+                  </button>
+                </div>
+              )}
+              
+              {/* In-City Distance Display */}
+              {isInCityDelivery && inCityDistance && (
+                <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg flex items-center gap-3">
+                  <MapPin className="w-5 h-5 text-green-600" />
+                  <div>
+                    <p className="text-sm text-green-900 font-medium">In-City Distance Calculated</p>
+                    <p className="text-lg font-bold text-green-600">{inCityDistance.toFixed(2)} km</p>
+                  </div>
+                </div>
+              )}
+              
+              {/* In-City Pickup Location Display */}
+              {isInCityDelivery && inCityPickupLocation && (
+                <div className="mt-4 p-3 bg-slate-50 rounded-lg border border-slate-200">
+                  <p className="text-xs text-slate-500 font-medium mb-2">Pickup: {inCityPickupLocation.name}</p>
+                  <p className="text-sm text-slate-700">{inCityPickupLocation.address}</p>
+                  <p className="text-xs text-slate-400 mt-1">
+                    {inCityPickupLocation.latitude.toFixed(4)}, {inCityPickupLocation.longitude.toFixed(4)}
+                  </p>
+                </div>
+              )}
+              
+              {/* In-City Delivery Location Display */}
+              {isInCityDelivery && inCityDeliveryLocation && (
+                <div className="mt-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
+                  <p className="text-xs text-slate-500 font-medium mb-2">Delivery: {inCityDeliveryLocation.name}</p>
+                  <p className="text-sm text-slate-700">{inCityDeliveryLocation.address}</p>
+                  <p className="text-xs text-slate-400 mt-1">
+                    {inCityDeliveryLocation.latitude.toFixed(4)}, {inCityDeliveryLocation.longitude.toFixed(4)}
+                  </p>
+                </div>
+              )}
+              
+              {/* Warning for in-city delivery */}
+              {isInCityDelivery && !inCityDistance && (
+                <div className="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-lg flex gap-3">
+                  <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                  <p className="text-sm text-amber-800">Please select exact pickup and delivery locations to calculate the distance.</p>
+                </div>
+              )}
             </section>
 
             {/* Shipment & Logistics */}
@@ -283,14 +589,7 @@ const CreateOrderForm = () => {
                   <label className="block text-xs text-slate-400 mb-2 ml-4">COD Amount</label>
                   <input type="number" name="codAmount" value={formData.codAmount} onChange={handleChange} placeholder="0.00" className={inputStyle} />
                 </div>
-                <div>
-                  <label className="block text-xs text-slate-400 mb-2 ml-4">Expected Rate</label>
-                  <input type="number" name="expectedRate" value={formData.expectedRate} onChange={handleChange} placeholder="Rate" className={inputStyle} />
-                </div>
-                <div>
-                  <label className="block text-xs text-slate-400 mb-2 ml-4">Actual Rate</label>
-                  <input type="number" name="actualRate" value={formData.actualRate} onChange={handleChange} placeholder="Actual" className={inputStyle} />
-                </div>
+              
 
                 <div className="lg:col-span-2">
                   <label className="block text-xs text-slate-400 mb-2 ml-4">Description</label>
@@ -303,20 +602,43 @@ const CreateOrderForm = () => {
               </div>
             </section>
 
-            <div className="pt-6 border-t border-slate-50 flex justify-end">
+            <div className="pt-6 border-t border-slate-50 flex justify-end gap-4">
+              {isEdit && (
+                <button 
+                  type="button"
+                  onClick={() => router.back()}
+                  className="px-12 py-4 rounded-full text-sm font-semibold transition-all border border-slate-300 text-slate-700 hover:bg-slate-50"
+                >
+                  Cancel
+                </button>
+              )}
               <button 
                 type="submit" 
-                disabled={loading}
+                disabled={loading || (isInCityDelivery && !inCityDistance)}
                 className="bg-red-600 hover:bg-red-700 text-white px-12 py-4 rounded-full text-sm font-semibold transition-all active:scale-95 disabled:opacity-50 flex items-center gap-2"
               >
                 {loading && <Loader className="w-4 h-4 animate-spin" />}
-                {loading ? 'Creating...' : 'Create Shipment'}
+                {loading ? (isEdit ? 'Updating...' : 'Creating...') : (isEdit ? 'Update Shipment' : 'Create Shipment')}
               </button>
             </div>
 
           </form>
         </div>
+        )}
       </div>
+      
+      {/* In-City Location Picker Modal */}
+      {showLocationPicker && (
+        <InCityLocationPicker
+          city={formData.pickupCity}
+          state={formData.pickupState}
+          onLocationsSelected={handleLocationsSelected}
+          onCancel={() => setShowLocationPicker(false)}
+          initialPickupLocation={inCityPickupLocation}
+          initialDeliveryLocation={inCityDeliveryLocation}
+          initialDistance={inCityDistance}
+        />
+      )}
       </SellerLayout>
   );
 };

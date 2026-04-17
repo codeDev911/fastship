@@ -9,9 +9,11 @@ import { Filter, Download, Plus } from 'lucide-react';
 import { Button } from '@/components/shared/Button';
 import OrderDetailsSheet from '@/components/seller/OrderDetails';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { secureFetch } from '@/lib/secure-fetch';
 
 export default function SellerOrdersPage() {
+  const router = useRouter();
   const [orders, setOrders] = useState<any[]>([]);
   const [bids, setBids] = useState<any[]>([]);
   const [walletBalance, setWalletBalance] = useState(0);
@@ -105,6 +107,10 @@ export default function SellerOrdersPage() {
     }
   };
 
+  const handleEdit = (order: any) => {
+    router.push(`/seller/orders/create?isEdit=true&shipmentId=${order.id}`);
+  };
+
   const filteredOrders =
     filterStatus === 'all' ? orders : orders.filter((order) => order.status === filterStatus);
 
@@ -162,10 +168,10 @@ export default function SellerOrdersPage() {
         <RecentOrdersTable
           orders={filteredOrders}
           onFindCourier={handleFindCourier}
-          onViewDetails={(order) => setShowOrderDetails({isActive:true,order:order})}
+          onEdit={handleEdit}
+          onViewDetails={(order) => location.assign(`/seller/orders/${order.id}`)}
         />
 
-        <OrderDetailsSheet isOpen={showOrderDetails.isActive} data={showOrderDetails.order} onClose={() => setShowOrderDetails({isActive:false,order:{}})} />
 
         {/* Bidding Modal */}
         {selectedOrderForBidding && (

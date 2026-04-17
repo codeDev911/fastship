@@ -2,12 +2,13 @@
 
 import { Card, CardHeader, CardContent } from '@/components/shared/Card';
 import { SellerOrder } from '@/lib/types';
-import { Eye, Search } from 'lucide-react';
+import { Eye, Search, Pencil } from 'lucide-react';
 
 interface RecentOrdersTableProps {
   orders: SellerOrder[];
   onViewDetails?: (order: SellerOrder) => void;
   onFindCourier?: (order: SellerOrder) => void;
+  onEdit?: (order: SellerOrder) => void;
 }
 
 const statusConfig = {
@@ -38,6 +39,7 @@ export function RecentOrdersTable({
   orders,
   onViewDetails,
   onFindCourier,
+  onEdit,
 }: RecentOrdersTableProps) {
   return (
     <Card>
@@ -65,7 +67,7 @@ export function RecentOrdersTable({
                     <td className="px-4 py-4 text-sm text-foreground">{order.weight} kg</td>
                     <td className="px-4 py-4 text-sm">
                       <span className={`inline-block rounded-full px-3 py-1 text-xs font-medium border ${statusStyle?.bg} ${statusStyle?.text} ${statusStyle?.border}`}>
-                        {statusLabel[order?.status]}
+                        {order.status === "PENDING" && order?.businessId ?"SELECTED":statusLabel[order?.status]}
                       </span>
                     </td>
                     <td className="px-4 py-4 text-sm font-medium text-foreground">
@@ -73,6 +75,15 @@ export function RecentOrdersTable({
                     </td>
                     <td className="px-4 py-4 text-sm">
                       <div className="flex gap-2">
+                        {(order.status === 'PENDING' || order.status === 'ASSIGNED') && (
+                          <button
+                            onClick={() => onEdit?.(order)}
+                            className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-700 hover:bg-blue-100 transition-colors border border-blue-200"
+                          >
+                            <Pencil className="h-3 w-3" />
+                            Edit
+                          </button>
+                        )}
                         {order.status ==='PENDING' && (
                           <button
                             onClick={() => onFindCourier?.(order)}

@@ -16,6 +16,8 @@ const updateRateCardSchema = z.object({
   maxWeight: z.number().positive("Max weight must be positive").optional(),
   weightSurcharge: z.number().nonnegative("Weight surcharge cannot be negative").optional(),
   serviceStates: z.array(z.string()).optional(),
+  inCityDelivery: z.boolean().optional(),
+  serviceCities: z.array(z.string()).optional(),
   isActive: z.boolean().optional(),
 });
 
@@ -132,6 +134,8 @@ export async function PATCH(
     return NextResponse.json(rateCard);
   } catch (error) {
     if (error instanceof z.ZodError) {
+      console.log("error");
+      
       return NextResponse.json(
         { error: 'Validation error', details: error.errors },
         { status: 400 }

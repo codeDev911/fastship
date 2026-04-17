@@ -34,6 +34,8 @@ export function RateCardFormNew({
     minWeight: rateCard?.minWeight || 0,
     weightSurcharge: rateCard?.weightSurcharge || 0,
     serviceStates: rateCard?.serviceStates || [],
+    inCityDelivery: rateCard?.inCityDelivery || false,
+    serviceCities: rateCard?.serviceCities || [],
     isActive: rateCard?.isActive ?? true,
   });
 
@@ -41,6 +43,7 @@ export function RateCardFormNew({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [successMessage, setSuccessMessage] = useState('');
   const [saving, setSaving] = useState(false);
+  const [cityInput, setCityInput] = useState('');
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target as any;
@@ -61,6 +64,28 @@ export function RateCardFormNew({
         ? prev.serviceStates.filter(s => s !== state)
         : [...prev.serviceStates, state],
     }));
+  };
+
+  const addServiceCity = () => {
+    const city = cityInput.trim();
+    if (!city) return;
+
+    setFormData((prev) => ({
+      ...prev,
+      serviceCities: prev.serviceCities.includes(city)
+        ? prev.serviceCities
+        : [...prev.serviceCities, city],
+    }));
+    setCityInput('');
+    setSuccessMessage('');
+  };
+
+  const removeServiceCity = (city: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      serviceCities: prev.serviceCities.filter((c) => c !== city),
+    }));
+    setSuccessMessage('');
   };
 
   const validateForm = (): boolean => {
@@ -98,6 +123,10 @@ export function RateCardFormNew({
       newErrors.serviceStates = 'Select at least one state';
     }
 
+    if (formData.inCityDelivery && formData.serviceCities.length === 0) {
+      newErrors.serviceCities = 'Add at least one city for in-city delivery';
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -116,14 +145,12 @@ export function RateCardFormNew({
       toast({
         title: 'Success',
         description: rateCard ? 'Rate card updated successfully' : 'Rate card created successfully',
-        type: 'success',
       });
     } catch (error: any) {
       const errorMsg = error?.message || 'Failed to save rate card';
       toast({
         title: 'Error',
         description: errorMsg,
-        type: 'error',
       });
     } finally {
       setSaving(false);
@@ -135,7 +162,7 @@ export function RateCardFormNew({
       {/* Success Message */}
       {successMessage && (
         <div className="flex items-center gap-3 p-4 bg-green-50 border border-green-200 rounded-lg">
-          <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0" />
+          <CheckCircle className="h-5 w-5 text-green-600 shrink-0" />
           <p className="text-sm font-medium text-green-800">{successMessage}</p>
         </div>
       )}
@@ -416,6 +443,84 @@ export function RateCardFormNew({
             Serving {formData.serviceStates.length} state{formData.serviceStates.length !== 1 ? 's' : ''}
           </p>
         )}
+
+        <div className="mt-6 p-4 rounded-lg border border-border bg-secondary/20">
+          <div className="flex items-center gap-3 mb-3">
+            <input
+              type="checkbox"
+              id="inCityDelivery"
+              name="inCityDelivery"
+              checked={formData.inCityDelivery}
+              onChange={handleChange}
+              className="rounded border-border w-4 h-4 cursor-pointer"
+              disabled={isLoading || saving}
+            />
+            <label htmlFor="inCityDelivery" className="text-sm font-medium text-foreground cursor-pointer">
+              Enable In-City Delivery
+            </label>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            If enabled, this rate card will apply to same-city deliveries with map-based route distance.
+          </p>
+
+          {formData.inCityDelivery && (
+            <div className="mt-4">
+              <label className="block text-sm font-medium text-foreground mb-2">
+                Service Cities
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={cityInput}
+                  onChange={(e) => setCityInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      addServiceCity();
+                    }
+                  }}
+                  placeholder="Type city and press Enter"
+                  className="flex-1 px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent"
+                  disabled={isLoading || saving}
+                />
+                <button
+                  type="button"
+                  onClick={addServiceCity}
+                  className="px-3 py-2 border border-border rounded-lg hover:bg-secondary"
+                  disabled={isLoading || saving}
+                >
+                  Add
+                </button>
+              </div>
+
+              {errors.serviceCities && (
+                <div className="flex items-center gap-1 mt-2">
+                  <AlertCircle className="h-4 w-4 text-red-600" />
+                  <p className="text-xs text-red-600">{errors.serviceCities}</p>
+                </div>
+              )}
+
+              <div className="flex flex-wrap gap-2 mt-3">
+                {formData.serviceCities.map((city) => (
+                  <span
+                    key={city}
+                    className="inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200"
+                  >
+                    {city}
+                    <button
+                      type="button"
+                      onClick={() => removeServiceCity(city)}
+                      className="text-blue-700 hover:text-blue-900"
+                      disabled={isLoading || saving}
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Status Section */}

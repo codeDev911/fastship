@@ -91,12 +91,12 @@ export function RateCardListNew({
                   <div className="flex items-center gap-2 flex-wrap">
                     <h3 className="font-semibold text-foreground truncate text-base">{card.name}</h3>
                     {card.isActive ? (
-                      <div className="flex-shrink-0 flex items-center gap-1 rounded-full bg-green-50 px-2 py-1">
+                      <div className="shrink-0 flex items-center gap-1 rounded-full bg-green-50 px-2 py-1">
                         <Check className="h-3 w-3 text-green-600" />
                         <span className="text-xs font-medium text-green-600">Active</span>
                       </div>
                     ) : (
-                      <div className="flex-shrink-0 flex items-center gap-1 rounded-full bg-gray-100 px-2 py-1">
+                      <div className="shrink-0 flex items-center gap-1 rounded-full bg-gray-100 px-2 py-1">
                         <span className="text-xs font-medium text-gray-600">Inactive</span>
                       </div>
                     )}
@@ -107,7 +107,7 @@ export function RateCardListNew({
                 </div>
 
                 {/* Action Buttons */}
-                <div className="flex-shrink-0 flex items-center gap-2">
+                <div className="shrink-0 flex items-center gap-2">
                   <button
                     onClick={(e) => handleEdit(card, e)}
                     className="rounded-lg p-2 hover:bg-blue-50 transition-colors text-muted-foreground hover:text-blue-600"
@@ -174,6 +174,23 @@ export function RateCardListNew({
                       <span key={state} className="inline-flex items-center gap-1 rounded-full bg-accent/10 px-2 py-1 text-xs font-medium text-accent">
                         <MapPin className="h-3 w-3" />
                         {state}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {card.inCityDelivery && (
+                <div className="py-2 border-t border-border">
+                  <p className="text-xs text-muted-foreground mb-2">In-City Delivery</p>
+                  <div className="flex flex-wrap gap-1">
+                    <span className="inline-flex items-center rounded-full bg-green-50 px-2 py-1 text-xs font-medium text-green-700 border border-green-200">
+                      Enabled
+                    </span>
+                    {(card.serviceCities || []).map((city) => (
+                      <span key={city} className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 border border-blue-200">
+                        <MapPin className="h-3 w-3" />
+                        {city}
                       </span>
                     ))}
                   </div>

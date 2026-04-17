@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card, CardHeader, CardContent } from '@/components/shared/Card';
 import { Button } from '@/components/shared/Button';
 import { StatusBadge } from '@/components/shared/Badge';
@@ -23,6 +23,7 @@ import {
   TrendingUp,
   ArrowBigDownDash,
 } from 'lucide-react';
+import { useSearchParams } from 'next/navigation';
 
 interface TrackingShipment {
   id: string;
@@ -99,9 +100,9 @@ export default function TrackPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [trackingMapData, setTrackingMapData] = useState<ShipmentMapData | null>(null);
-
+  const id =  useSearchParams().get('id') || null;
   // Fetch shipment details from API
-  const handleSearch = async () => {
+  const handleSearch = async (id?:string) => {
     setHasSearched(true);
     setIsLoading(true);
     setError(null);
@@ -109,13 +110,13 @@ export default function TrackPage() {
     setTrackingMapData(null);
 
     try {
-      if (!searchId.trim()) {
+      if (!searchId.trim() && !id?.trim()) {
         setError('Please enter a shipment ID');
         return;
       }
 
       // Fetch from API only - no mock data fallback
-      const response = await fetch(`/api/shipments/track/${searchId.trim()}`);
+      const response = await fetch(`/api/shipments/track/${searchId.trim()||id?.trim()}`);
       
       if (response.ok) {
         const data = await response.json();
@@ -211,6 +212,13 @@ export default function TrackPage() {
     return labelMap[status.toUpperCase()] || status;
   };
  
+
+  useEffect(()=>{
+    if(id){
+      setSearchId(id)
+      handleSearch(id)
+    }
+  },[])
 
   const driver = foundShipment ? getDriver(foundShipment.driverId) : null;
 

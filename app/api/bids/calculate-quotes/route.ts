@@ -58,7 +58,8 @@ export async function GET(request: NextRequest) {
       shipment.weight,
       distance,
       shipment.deliveryCity,
-      shipment.deliveryState
+      shipment.deliveryState,
+      shipment.isInCityDelivery,
     );
 
     if (businesses.length === 0) {

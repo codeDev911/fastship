@@ -44,10 +44,12 @@ const FullScreenOrderModal = ({ isOpen, onClose, data }: any) => {
             <p className="mt-1 text-sm text-slate-500">ID: {data?.id}</p>
           </div>
           <div className="flex items-center gap-4">
+            <a href={`/track?id=${data.id}`} target='_blank'>
             <button className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-6 py-2.5 rounded-full font-medium transition-all">
               <SquareArrowOutUpRight className="h-4 w-4" />
               Track shipment
             </button>
+            </a>
             <button
               onClick={onClose}
               className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-400"

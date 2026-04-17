@@ -122,6 +122,7 @@ export async function POST(request: NextRequest) {
         deliveryName: body.recipientName,
         deliveryPhone: body.recipientPhone,
         description: body.description,
+        
       },
       include: {
         seller: true,

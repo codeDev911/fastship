@@ -2,7 +2,7 @@
  * Bid Service - Validates and manages bids
  */
 
-import { prisma } from "@/lib/prisma"; 
+import { prisma } from "@/lib/prisma";
 
 interface BidValidationResult {
   isValid: boolean;
@@ -38,18 +38,24 @@ export const bidService = {
    */
   async calculateQuote(params: QuoteCalculationParams): Promise<Quote> {
     try {
-      const { businessId, rateCardId, weight, distance, deliveryCity, deliveryState } =
-        params;
+      const {
+        businessId,
+        rateCardId,
+        weight,
+        distance,
+        deliveryCity,
+        deliveryState,
+      } = params;
 
       // Fetch business and rate cards
       const business = await prisma.business.findUnique({
         where: { id: businessId },
         include: {
           rateCards: {
-            where: { 
+            where: {
               isActive: true,
               // If rateCardId provided, fetch only that card; otherwise fetch all
-              ...(rateCardId ? { id: rateCardId } : {})
+              ...(rateCardId ? { id: rateCardId } : {}),
             },
           },
           serviceAreas: {
@@ -162,21 +168,32 @@ export const bidService = {
     weight: number,
     distance: number,
     deliveryCity: string,
-    deliveryState: string
+    deliveryState: string,
+    isInCityDelivery?: boolean,
   ) {
     try {
       // Find businesses that meet basic criteria
-      
+      let where: any = {
+         isActive: true
+      };
+
+      if (isInCityDelivery) {
+        where = {
+         isActive: true,
+          inCityDelivery: isInCityDelivery,
+          serviceCities: { hasSome: [deliveryCity] },
+        };
+      }
       const businesses = await prisma.business.findMany({
         where: {
           isActive: true,
           rateCards: {
             some: {
-              isActive: true,
               minWeight: { lte: weight },
               maxWeight: { gte: weight },
               minimumDistance: { lte: distance },
               maximumDistance: { gte: distance },
+              ...where
             },
           },
           // Service area must exist for delivery city
@@ -190,9 +207,9 @@ export const bidService = {
         },
         include: {
           rateCards: {
-            where: { isActive: true, },
-
+            where: where
           },
+
           serviceAreas: {
             where: {
               city: deliveryCity,
@@ -202,7 +219,7 @@ export const bidService = {
           },
         },
       });
-        
+
       return businesses;
     } catch (error) {
       console.error("Error finding matching businesses:", error);
@@ -216,7 +233,7 @@ export const bidService = {
   async validateBidAcceptance(
     shipmentId: string,
     bidAmount: number,
-    businessId: string
+    businessId: string,
   ): Promise<BidValidationResult> {
     const errors: string[] = [];
     const warnings: string[] = [];
@@ -242,7 +259,7 @@ export const bidService = {
 
       if (Math.abs(bid.amount - bidAmount) > 0.01) {
         errors.push(
-          `Bid amount mismatch: expected ${bid.amount}, got ${bidAmount}`
+          `Bid amount mismatch: expected ${bid.amount}, got ${bidAmount}`,
         );
         return { isValid: false, errors, warnings };
       }
@@ -282,7 +299,7 @@ export const bidService = {
 
       if (shipment.seller.wallet.balance < bidAmount) {
         errors.push(
-          `Insufficient seller balance: ${shipment.seller.wallet.balance} < ${bidAmount}`
+          `Insufficient seller balance: ${shipment.seller.wallet.balance} < ${bidAmount}`,
         );
         return { isValid: false, errors, warnings };
       }
@@ -293,7 +310,9 @@ export const bidService = {
         business.serviceAreas[0].activeDrivers > 0;
 
       if (!hasDriversInRegion) {
-        warnings.push("Business has limited driver availability in this region");
+        warnings.push(
+          "Business has limited driver availability in this region",
+        );
       }
 
       return {

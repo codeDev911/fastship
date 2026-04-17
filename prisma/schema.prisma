@@ -238,6 +238,7 @@ model Shipment {
   distance             Float?          // Distance in kilometers (calculated at creation time)
   dimensions           String?
   packageType          String
+  isInCityDelivery     Boolean          @default(false) // True if pickup and delivery are in the same city
   description          String
   paymentMethod        PaymentMethod  @default(PREPAID)
   codAmount            Float?
@@ -299,6 +300,8 @@ model RateCard {
   maxWeight       Float    @default(100)
   weightSurcharge Float    @default(0)  // Extra charge per kg above minWeight
   serviceStates   String[] @default([]) // States/regions served: ["Sindh", "Punjab"]
+  inCityDelivery  Boolean  @default(false) // Support in-city delivery (same city, within distance)
+  serviceCities   String[] @default([]) // Specific cities supporting in-city: ["Peshawar", "Karachi"]
   isActive        Boolean  @default(true)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
