@@ -94,7 +94,6 @@ const CreateOrderForm = () => {
             router.back();
             return;
           }
-          console.log(shipment);
           
           setShipmentStatus(shipment.status);
           
@@ -560,7 +559,7 @@ const CreateOrderForm = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <div>
                   <label className="block text-xs text-slate-400 mb-2 ml-4">Weight (KG)</label>
-                  <input type="number" step="0.1" name="weight" value={formData.weight} onChange={handleChange} placeholder="2" className={inputStyle} required />
+                  <input type="number"  name="weight" value={formData.weight} onChange={handleChange} placeholder="2" className={inputStyle} required />
                 </div>
                 <div>
                   <label className="block text-xs text-slate-400 mb-2 ml-4">Dimensions</label>

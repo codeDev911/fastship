@@ -174,5 +174,38 @@
     "method": "openroute",
     "savedAt": 1776428813512,
     "updatedAt": 1776428813512
+  },
+  "Peshawar_Khyber Pakhtunkhwa__Hangu_Khyber Pakhtunkhwa": {
+    "pickupCity": "Peshawar",
+    "pickupState": "Khyber Pakhtunkhwa",
+    "deliveryCity": "Hangu",
+    "deliveryState": "Khyber Pakhtunkhwa",
+    "distance": 107.37,
+    "duration": 6128.3,
+    "method": "openroute",
+    "savedAt": 1776453885231,
+    "updatedAt": 1776453885231
+  },
+  "Islamabad_Islamabad__Peshawar_Khyber Pakhtunkhwa": {
+    "pickupCity": "Islamabad",
+    "pickupState": "Islamabad",
+    "deliveryCity": "Peshawar",
+    "deliveryState": "Khyber Pakhtunkhwa",
+    "distance": 184.52,
+    "duration": 6808.48,
+    "method": "openroute",
+    "savedAt": 1776459456888,
+    "updatedAt": 1776459456888
+  },
+  "Lahore_Punjab__Peshawar_Khyber Pakhtunkhwa": {
+    "pickupCity": "Lahore",
+    "pickupState": "Punjab",
+    "deliveryCity": "Peshawar",
+    "deliveryState": "Khyber Pakhtunkhwa",
+    "distance": 505.87,
+    "duration": 18250.57,
+    "method": "openroute",
+    "savedAt": 1776460975335,
+    "updatedAt": 1776460975335
   }
 }

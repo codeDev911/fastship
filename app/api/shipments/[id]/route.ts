@@ -132,7 +132,7 @@ export async function PATCH(
     // ==========================================
     // STEP 3: Process transaction
     // ==========================================
-    return await prisma.$transaction(
+    const updatedShipment = await prisma.$transaction(
       async (tx) => {
         const shipment = await tx.shipment.update({
           where: { id: shipmentId },
@@ -254,10 +254,19 @@ export async function PATCH(
           },
         });
 
-       return NextResponse.json( shipment)
+       return shipment;
       },
       { timeout: 200000 }
     );
+
+    // Update Shopify order status if shipment status changed
+    if (validated.status) {
+      updateShopifyOrderStatus(shipmentId, validated.status).catch(err => 
+        console.warn('Failed to update Shopify status:', err)
+      );
+    }
+
+    return NextResponse.json(updatedShipment);
   } catch (error) {
     console.error("Update shipment error:", error);
     return NextResponse.json(
@@ -267,5 +276,54 @@ export async function PATCH(
       },
       { status: 500 }
     );
+  }
+}
+
+/**
+ * Helper function to update Shopify order status
+ * Called after shipment status changes
+ */
+async function updateShopifyOrderStatus(shipmentId: string, newStatus: string) {
+  try {
+    // Get the shipment with related Shopify order
+    const shipment = await prisma.shipment.findUnique({
+      where: { id: shipmentId },
+      include: {
+        shopifyOrders: {
+          include: {
+            integration: true,
+          },
+        },
+      },
+    });
+    
+    if (!shipment || !shipment.shopifyOrders || shipment.shopifyOrders.length === 0) {
+      return; // No Shopify order to update
+    }
+
+    // Update Shopify status for each associated order
+    for (const shopifyOrder of shipment.shopifyOrders) {
+      try {
+        await fetch(
+          `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/integrations/shopify/update-status`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              shipmentId,
+              integrationId: shopifyOrder.integrationId,
+              status: newStatus,
+            }),
+          }
+        ).catch(err => console.warn('Failed to update Shopify status:', err));
+      } catch (error) {
+        console.warn(`Failed to update Shopify order status for integration ${shopifyOrder.integrationId}:`, error);
+      }
+    }
+  } catch (error) {
+    console.warn('Error in updateShopifyOrderStatus:', error);
+    // Don't throw - this is a secondary operation
   }
 }

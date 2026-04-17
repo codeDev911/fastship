@@ -139,8 +139,8 @@ export const financialService = {
       "releaseEscrow",
       async () => {
         const wallet = await tx.wallet.findUnique({ where: { id: walletId } });
-
-        if (!wallet || wallet.escrowBalance < amount) {
+        
+        if (!wallet || Number(wallet.escrowBalance?.toFixed(2)) < Number(amount.toFixed(2))) {
           throw new Error("Insufficient escrow balance");
         }
 
@@ -159,6 +159,8 @@ export const financialService = {
               escrowBalance: { decrement: amount },
             },
           });
+          console.log("done.");
+          
 
           return tx.transaction.create({
             data: {
@@ -599,7 +601,6 @@ export const financialService = {
       `cod-settle:${driverId}:${amount}:${referenceId}`,
       "cod_debt_settlement",
       async () => {
-        console.log("here it has");
         
         const driver = await tx.driver.findUnique({
           where: { id: driverId },
@@ -610,10 +611,9 @@ export const financialService = {
           throw new Error("Driver or wallet not found");
         }
 
-        if (driver.currentDebt < amount) {
+        if (driver?.currentDebt?.toFixed() < amount) {
           throw new Error("Amount exceeds current debt");
         }
-        console.log("working...");
 
         // 🔒 lock driver wallet to prevent concurrent debt modifications
         await withWalletLock(tx, driver.wallet.id, async () => {

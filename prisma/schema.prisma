@@ -92,6 +92,20 @@ enum DriverStatus {
   ON_DELIVERY
 }
 
+enum IntegrationType {
+  SHOPIFY
+  WOOCOMMERCE
+  BIGCOMMERCE
+  SQUARE
+}
+
+enum IntegrationSyncStatus {
+  IDLE
+  SYNCING
+  SUCCESS
+  FAILED
+}
+
 // ============ MODELS ============
 
 model User {
@@ -252,12 +266,13 @@ model Shipment {
   pickedUpAt           DateTime?
   deliveredAt          DateTime?
 
-  seller     Seller             @relation(fields: [sellerId], references: [id], onDelete: Cascade)
-  assignment DriverAssignment?
-  payment    Payment?
-  tracking   Tracking?
-  activities ShipmentActivity[]
-  bids       Bid[]
+  seller        Seller             @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  assignment    DriverAssignment?
+  payment       Payment?
+  tracking      Tracking?
+  activities    ShipmentActivity[]
+  bids          Bid[]
+  shopifyOrders ShopifyOrder[]
 
   @@index([sellerId])
   @@index([status])
@@ -536,21 +551,61 @@ model BusinessServiceArea {
 }
 
 model Integration {
-  id              String   @id @default(cuid())
-  sellerId        String
-  integrationType String
-  apiKey          String?
-  apiSecret       String?
-  webhookUrl      String?
-  isActive        Boolean  @default(true)
-  metadata        String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id                  String                @id @default(cuid())
+  sellerId            String
+  integrationType     IntegrationType
+  
+  // OAuth & Credentials (encrypted at rest)
+  accessToken         String?
+  refreshToken        String?
+  apiKey              String?
+  apiSecret           String?
+  
+  // Shopify-specific fields
+  shopifyStoreUrl     String?               // e.g., "mystore.myshopify.com"
+  
+  // Sync metadata
+  lastSyncedAt        DateTime?
+  syncStatus          IntegrationSyncStatus @default(IDLE)
+  lastSyncErrorMsg    String?
+  webhookUrl          String?
+  
+  // Status
+  isActive            Boolean               @default(true)
+  metadata            String?               // JSON for future extensibility
+  
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
 
-  seller Seller @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  seller              Seller                @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  shopifyOrders       ShopifyOrder[]
 
+  @@unique([sellerId, integrationType])
   @@index([sellerId])
   @@index([integrationType])
+  @@index([isActive])
+}
+
+model ShopifyOrder {
+  id                  String   @id @default(cuid())
+  integrationId       String
+  shopifyOrderId      String   // Shopify's order ID
+  shopifyOrderNumber  String   // Human-readable order number
+  shipmentId          String?
+  
+  syncedAt            DateTime @default(now())
+  lastStatusSyncAt    DateTime?
+  
+  metadata            String?  // JSON: original Shopify order data
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  integration         Integration @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+  shipment            Shipment?   @relation(fields: [shipmentId], references: [id], onDelete: SetNull)
+
+  @@unique([integrationId, shopifyOrderId])
+  @@index([integrationId])
+  @@index([shipmentId])
 }
 
 model Notification {
