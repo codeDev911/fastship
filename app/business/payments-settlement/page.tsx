@@ -60,18 +60,18 @@ const headers = ["ID", "Tax","Date", "Method", "Commission", "Driver", "Status",
       <div className='rounded-2xl space-y-2 bg-white md:p-6 p-6'>
         <p className="text-sm text-muted-foreground">Total payments</p>
         <h4 className="text-2xl font-bold">
-          Rs. {stats?.totalPayments||"-"}
+          Rs. {stats?.totalPayments||"-"}j
         </h4>
         <p className="text-xs text-muted-foreground">Total payments you have made </p>
       </div>
       <div className='rounded-2xl space-y-2 bg-white md:p-6 p-6'>
         <p className="text-sm text-muted-foreground">Amount ratio</p>
         <h4 className="text-2xl font-bold">
-          {stats?.amountRatio?.toFixed(2)||"-"} %
+          {stats?.amountRatio||"-"} %
         </h4>
         <p className="text-xs text-muted-foreground">Pending payments vs Completed payments </p>
       </div>
-    </div>
+    </div>  
 
     <div className="w-full bg-white  max-h-[80vh] overflow-auto rounded-2xl border border-slate-100 overflow-hidden">
       <div className="overflow-x-auto">

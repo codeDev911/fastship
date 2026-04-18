@@ -7,6 +7,7 @@ import { Button } from '@/components/shared/Button';
 import { secureFetch } from '@/lib/secure-fetch';
 
 import { StatusBadge } from '@/components/shared/Badge';
+import { ReportDisputeModal } from '@/components/shared/ReportDisputeModal';
 import { StatusUpdateModal } from '@/components/driver/StatusUpdateModal';
 import { 
   MapPin,
@@ -35,6 +36,7 @@ export default function OrderDetailPage() {
   const [isUpdating, setIsUpdating] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState<string>('');
   const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
+  const [isDisputeModalOpen, setIsDisputeModalOpen] = useState(false);
 
   useEffect(() => {
     const fetchShipment = async () => {
@@ -164,6 +166,15 @@ export default function OrderDetailPage() {
                   className="mt-4"
                 >
                   Update Status
+                </Button>
+
+                <Button
+                  onClick={() => setIsDisputeModalOpen(true)}
+                  variant="outline"
+                  fullWidth
+                  className="mt-2"
+                >
+                  Report Issue
                 </Button>
               </CardContent>
             </Card>
@@ -346,6 +357,17 @@ export default function OrderDetailPage() {
           onClose={() => setIsStatusModalOpen(false)}
           onStatusChange={handleStatusChange}
           isLoading={isUpdating}
+        />
+
+        <ReportDisputeModal
+          shipmentId={shipmentId}
+          isOpen={isDisputeModalOpen}
+          onClose={() => setIsDisputeModalOpen(false)}
+          onSuccess={() => {
+            setIsDisputeModalOpen(false);
+            // Optionally refresh shipment data
+          }}
+          userRole="DRIVER"
         />
       </div>
     </DriverLayout>

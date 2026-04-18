@@ -19,14 +19,12 @@ const createSellerSchema = z.object({
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
-    const userId = searchParams.get("userId");
-    const limit = parseInt(searchParams.get("limit") || "50");
-    const skip = parseInt(searchParams.get("skip") || "0");
+    const sellerId = searchParams.get("sellerId"); 
 
     const where: any = {};
-    if (userId) where.userId = userId;
+    if (sellerId) where.id = sellerId;
 
-    const sellers = await prisma.seller.findMany({
+    const seller = await prisma.seller.findUnique({
       where,
       include: {
         user: {
@@ -39,22 +37,13 @@ export async function GET(request: NextRequest) {
         },
         wallet: true,
       },
-      orderBy: {
-        createdAt: "desc",
-      },
-      take: limit,
-      skip,
+     
     });
 
-    const total = await prisma.seller.count({ where });
 
     return NextResponse.json({
-      data: sellers,
-      pagination: {
-        total,
-        skip,
-        limit,
-      },
+      seller,
+
     });
   } catch (error) {
     console.error("Get sellers error:", error);

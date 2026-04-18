@@ -15,7 +15,7 @@ import PaymentReceivedModal from './PaymentRecievedModal';
 import CancelShipmentModal from './CancelShipmentModal';
 import { ServiceTierBadge, InfoCard } from '@/components/shipment';
 
-const FullScreenOrderModal = ({ isOpen, onClose, data }: any) => {
+const FullScreenOrderModal = ({ isOpen, onClose, data, onReportIssue }: any) => {
 
   const [paymentRecievedModal, setPaymentRecievedModal] = useState({ isOpen: false, data: {} })
 
@@ -313,6 +313,14 @@ const FullScreenOrderModal = ({ isOpen, onClose, data }: any) => {
 
         {/* Persistent Action Bar at bottom */}
         <div className="p-6 flex justify-center gap-4">
+          {onReportIssue && (
+            <button 
+              onClick={onReportIssue} 
+              className="px-10 py-3 rounded-full text-sm font-medium bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
+            >
+              Report Issue
+            </button>
+          )}
           <button onClick={onClose} className="px-10 py-3 rounded-full text-sm font-medium text-slate-500 hover:bg-slate-100 transition-colors">
             Close Window
           </button>

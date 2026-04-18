@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
       select: {
         drivers: {
           select: {
-            driverId: true,
+            id: true,
           },
         },
       },
@@ -28,17 +28,14 @@ export async function GET(request: NextRequest) {
 
     // get unique driverIds
 
-    const uniqueDriverIds = [
-      ...new Set(business?.drivers.map((d) => d.driverId)),
-    ];
-
+  
     const driverDebts = [];
 
-    for (const driver of uniqueDriverIds || []) {
+    for (const driver of business?.drivers || []) {
       const debt = await prisma.driver.findMany({
         where: {
           AND: [
-            { id: driver.driverId },
+            { id: driver.id },
             {
               OR:[
                 {debts: {
@@ -51,7 +48,7 @@ export async function GET(request: NextRequest) {
               {
                 currentDebt:{
                     not:{
-                        equals:0
+                        equals:0.0000
                     }
                 }
               }

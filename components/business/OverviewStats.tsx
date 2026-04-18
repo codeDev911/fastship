@@ -53,6 +53,7 @@ interface OverviewStatsProps {
   stats?: {
     totalShipments: number;
     activeShipments: number;
+    deliveredShipments?: number;
     totalDrivers: number;
     revenue: number;
   };
@@ -63,6 +64,7 @@ export function OverviewStats({
   stats = {
     totalShipments: 1248,
     activeShipments: 23,
+    deliveredShipments: 1225,
     totalDrivers: 12,
     revenue: 45230.5,
   },
@@ -80,16 +82,16 @@ export function OverviewStats({
       <StatCard
         title="Active Shipments"
         value={stats.activeShipments}
-        subtitle="This week"
+        subtitle="Pending & in transit"
         icon={<Truck className="h-6 w-6" />}
         trend={{ value: 8, direction: 'up' }}
       />
       <StatCard
-        title="Active Drivers"
-        value={stats.totalDrivers}
-        subtitle="All drivers"
-        icon={<Truck className="h-6 w-6" />}
-        trend={{ value: 3, direction: 'down' }}
+        title="Delivered"
+        value={stats.deliveredShipments || 0}
+        subtitle="Completed today"
+        icon={<TrendingUp className="h-6 w-6" />}
+        trend={{ value: 5, direction: 'up' }}
       />
       <StatCard
         title="Total Revenue"

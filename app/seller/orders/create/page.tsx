@@ -45,6 +45,9 @@ const CreateOrderForm = () => {
   const [inCityPickupLocation, setInCityPickupLocation] = useState<Location | null>(null);
   const [inCityDeliveryLocation, setInCityDeliveryLocation] = useState<Location | null>(null);
 
+  // Warehouse location state
+  const [warehouseLocation, setWarehouseLocation] = useState<any>(null);
+
   const [formData, setFormData] = useState({
     pickupName: "", pickupPhone: "", pickupAddress: "", pickupCity: "", pickupState: "", pickupZipCode: "",
     deliveryName: "", deliveryPhone: "", deliveryAddress: "", deliveryCity: "", deliveryState: "", deliveryZipCode: "",
@@ -74,6 +77,59 @@ const CreateOrderForm = () => {
     fetchStates();
   }, []);
 
+  // Fetch seller's warehouse location on mount
+  useEffect(() => {
+    const fetchWarehouse = async () => {
+      try {
+
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        const sellerId = user?.jobId;
+        
+        if (!sellerId) return;
+
+                // Now fetch warehouse data using the new endpoint
+        const warehouseResponse = await fetch(`/api/sellers/${sellerId}/warehouse`);
+        if (warehouseResponse.ok) {
+          const warehouseData = await warehouseResponse.json();
+          const warehouseInfo = warehouseData.seller;
+          
+          if (warehouseInfo?.warehouseAddress) {
+            setWarehouseLocation({
+              name: warehouseInfo.warehouseName,
+              address: warehouseInfo.warehouseAddress,
+              state: warehouseInfo.warehouseState,
+              city: warehouseInfo.warehouseCity,
+              zipCode: warehouseInfo.warehouseZipCode,
+              latitude: warehouseInfo.warehouseLatitude,
+              longitude: warehouseInfo.warehouseLongitude,
+              phone:warehouseInfo.warehousePhone
+            });
+
+            setFormData(prev => {
+              if (!prev.pickupAddress) {
+                return {
+                  ...prev,
+                  pickupName: warehouseInfo.warehouseName || '',
+                  pickupAddress: warehouseInfo.warehouseAddress || '',
+                  pickupState: warehouseInfo.warehouseState || '',
+                  pickupCity: warehouseInfo.warehouseCity || '',
+                  pickupZipCode: warehouseInfo.warehouseZipCode || '',
+                  pickupPhone:warehouseInfo.warehousePhone || ''
+                };
+              }
+              return prev;
+            });
+
+             
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching warehouse:', error);
+      }
+    };
+    fetchWarehouse();
+  }, []);
+
   // Fetch shipment data if in edit mode
   useEffect(() => {
     if (!isEdit || !shipmentId) return;
@@ -94,6 +150,7 @@ const CreateOrderForm = () => {
             router.back();
             return;
           }
+          
           
           setShipmentStatus(shipment.status);
           
@@ -121,6 +178,7 @@ const CreateOrderForm = () => {
             priority: shipment.priority || "STANDARD",
             notes: shipment.notes || ""
           });
+          setDeliveryCities([shipment.deliveryCity]);
 
           // Populate in-city delivery data
           setIsInCityDelivery(shipment.isInCityDelivery || false);
@@ -134,6 +192,7 @@ const CreateOrderForm = () => {
               city:shipment.pickupCity,
               state:shipment.pickupState,
               zipCode:shipment.deliveryZipCOde,
+              
             });
             setInCityDeliveryLocation({
               name: shipment.deliveryName,
@@ -176,7 +235,7 @@ const CreateOrderForm = () => {
         setPickupCities(data.cities || []);
         // Set first city as default
         if (data.cities && data.cities.length > 0) {
-          setFormData(prev => ({ ...prev, pickupCity: data.cities[0].name }));
+          setFormData(prev => ({ ...prev, pickupCity: formData.pickupCity || data.cities[0].name }));
         }
       } catch (error) {
         console.error('Error fetching pickup cities:', error);
@@ -202,7 +261,7 @@ const CreateOrderForm = () => {
         setDeliveryCities(data.cities || []);
         // Set first city as default
         if (data.cities && data.cities.length > 0) {
-          setFormData(prev => ({ ...prev, deliveryCity: data.cities[0].name }));
+          setFormData(prev => ({ ...prev, deliveryCity: formData.deliveryCity|| data.cities[0].name }));
         }
       } catch (error) {
         console.error('Error fetching delivery cities:', error);
@@ -411,6 +470,39 @@ const CreateOrderForm = () => {
             {/* Pickup Section */}
             <section>
               <h2 className="text-xs uppercase tracking-widest text-red-600 font-bold mb-6">1. Pickup Information</h2>
+              
+              {/* Warehouse Location Helper */}
+              {warehouseLocation && (
+                <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="text-xs font-medium text-blue-900 uppercase tracking-widest mb-2">Your Warehouse</p>
+                      <p className="text-sm font-medium text-blue-900">{warehouseLocation.name}</p>
+                      <p className="text-sm text-blue-800">{warehouseLocation.address}</p>
+                      <p className="text-xs text-blue-700">{warehouseLocation.city}, {warehouseLocation.state} {warehouseLocation.zipCode}</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFormData(prev => ({
+                          ...prev,
+                          pickupName: warehouseLocation.name || '',
+                          pickupAddress: warehouseLocation.address,
+                          pickupCity: warehouseLocation.city,
+                          pickupPhone:warehouseLocation.phone||'',
+                          pickupState: warehouseLocation.state,
+                          pickupZipCode: warehouseLocation.zipCode,
+                        }));
+                      }}
+                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors whitespace-nowrap"
+                    >
+                      <MapPin className="w-4 h-4 inline mr-2" />
+                      Use as Pickup
+                    </button>
+                  </div>
+                </div>
+              )}
+
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <div>
                   <label className="block text-xs text-slate-400 mb-2 ml-4">Pickup Name</label>
@@ -444,8 +536,8 @@ const CreateOrderForm = () => {
                       <option value="">
                         {loadingPickupCities ? 'Loading...' : 'Select City'}
                       </option>
-                      {pickupCities.map((city) => (
-                        <option key={city.name} value={city.name}>{city.name}</option>
+                      {pickupCities.map((city,ind) => (
+                        <option key={ind} value={city.name}>{city.name}</option>
                       ))}
                     </select>
                   </div>
@@ -489,8 +581,8 @@ const CreateOrderForm = () => {
                       <option value="">
                         {loadingDeliveryCities ? 'Loading...' : 'Select City'}
                       </option>
-                      {deliveryCities.map((city) => (
-                        <option key={city.name} value={city.name}>{city.name}</option>
+                      { deliveryCities.map((city,ind) => (
+                        <option key={ind} value={city.name}>{city.name}</option>
                       ))}
                     </select>
                   </div>

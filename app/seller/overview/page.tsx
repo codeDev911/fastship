@@ -1,12 +1,14 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { SellerLayout } from '@/components/seller/SellerLayout'; 
+import { SellerLayout } from '@/components/seller/SellerLayout';
 import { RecentOrdersTable } from '@/components/seller/RecentOrdersTable';
+import { RecentPaymentsTable } from '@/components/seller/RecentPaymentsTable';
+import { AnalyticsCharts } from '@/components/seller/AnalyticsCharts';
 import { BiddingModal } from '@/components/seller/BiddingModal';
 import { Card, CardHeader, CardContent } from '@/components/shared/Card';
 import { Button } from '@/components/shared/Button';
-import { TrendingUp, AlertCircle, Package, Truck, CheckCircle2 } from 'lucide-react';
+import { TrendingUp, AlertCircle, Package, Truck, CheckCircle2, Banknote, PercentCircle } from 'lucide-react';
 import { secureFetch } from '@/lib/secure-fetch';
 import { useRouter } from 'next/navigation';
 
@@ -15,11 +17,17 @@ export default function SellerDashboardPage() {
   const [user, setUser] = useState<any>(null);
   const [sellerId, setSellerId] = useState<string>('');
   const [orders, setOrders] = useState<any[]>([]);
+  const [payments, setPayments] = useState<any[]>([]);
   const [walletBalance, setWalletBalance] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedOrderForBidding, setSelectedOrderForBidding] = useState<any>(null);
   const [isBiddingModalOpen, setIsBiddingModalOpen] = useState(false);
-
+  const [paymentStats, setPaymentStats] = useState({
+    pendingAmount: 0,
+    amountRatio: 0,
+    totalPayments: 0,
+    completedAmount:0,
+  })
   // Get user from localStorage
   useEffect(() => {
     const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
@@ -33,9 +41,9 @@ export default function SellerDashboardPage() {
     const fetchData = async () => {
       try {
         setIsLoading(true);
-        const [ordersRes, walletRes] = await Promise.all([
+        const [ordersRes, paymentsRes] = await Promise.all([
           secureFetch(`/api/sellers/orders?sellerId=${sellerId}`),
-          secureFetch(`/api/wallets?sellerId=${sellerId}`),
+          secureFetch(`/api/payments?sellerId=${sellerId}&limit=5`),
         ]);
 
         if (ordersRes.ok) {
@@ -43,10 +51,18 @@ export default function SellerDashboardPage() {
           setOrders(ordersData.data || []);
         }
 
-        if (walletRes.ok) {
-          const walletData = await walletRes.json();
-          setWalletBalance(walletData.data?.balance || 0);
+        if (paymentsRes.ok) {
+          const paymentsData = await paymentsRes.json();
+          setPaymentStats({
+            pendingAmount: paymentsData.stats.pendingAmount,
+            amountRatio: paymentsData.stats.amountRatio,
+            totalPayments: paymentsData.stats.totalPayments,
+            completedAmount: paymentsData.stats.completedAmount,
+          })
+          setPayments(paymentsData.payments || []);
         }
+
+
       } catch (error) {
         console.error('Error fetching data:', error);
       } finally {
@@ -58,15 +74,8 @@ export default function SellerDashboardPage() {
   }, [sellerId]);
 
   // Calculate metrics
-  const totalOrders = orders.length;
   const pendingDispatch = orders.filter((o) => o.status === 'PENDING').length;
-  const assignedOrders = orders.filter((o) => o.status === 'ASSIGNED').length;
-  const inTransit = orders.filter((o) => o.status === 'IN_TRANSIT').length;
-  const deliveredOrders = orders.filter((o) => o.status === 'DELIVERED').length;
-  const failedOrders = orders.filter((o) => o.status === 'FAILED').length;
-  
-  // Calculate delivery rate
-  const deliveryRate = totalOrders > 0 ? ((deliveredOrders / totalOrders) * 100).toFixed(1) : 0;
+
 
   const handleFindCourier = async (order: any) => {
     try {
@@ -142,105 +151,68 @@ export default function SellerDashboardPage() {
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3 lg:grid-cols-4">
           {/* Total Orders Card */}
           <Card>
-            <CardContent className="space-y-3 p-6">
+            <CardContent className="space-y-3 ">
               <div className="flex items-center justify-between">
                 <div className="rounded-lg bg-blue-50 p-2.5">
-                  <Package className="h-5 w-5 text-blue-600" />
+                  <Banknote className="h-5 w-5 text-blue-600" />
                 </div>
-                <p className="text-2xl font-bold text-foreground">{totalOrders}</p>
+                <p className="text-2xl font-bold text-foreground">Rs {paymentStats.totalPayments}</p>
               </div>
-              <p className="text-sm text-muted-foreground">Total Orders</p>
+              <p className="text-sm text-muted-foreground">Total Payments</p>
             </CardContent>
           </Card>
 
           {/* Pending Card */}
           <Card>
-            <CardContent className="space-y-3 p-6">
+            <CardContent className="space-y-3 ">
               <div className="flex items-center justify-between">
                 <div className="rounded-lg bg-yellow-50 p-2.5">
                   <AlertCircle className="h-5 w-5 text-yellow-600" />
                 </div>
-                <p className="text-2xl font-bold text-yellow-600">{pendingDispatch}</p>
+                <p className="text-2xl font-bold text-yellow-600">Rs {paymentStats.pendingAmount}</p>
               </div>
-              <p className="text-sm text-muted-foreground">Pending</p>
+              <p className="text-sm text-muted-foreground">Pending payments</p>
             </CardContent>
           </Card>
 
           {/* In Transit Card */}
           <Card>
-            <CardContent className="space-y-3 p-6">
+            <CardContent className="space-y-3 ">
               <div className="flex items-center justify-between">
                 <div className="rounded-lg bg-purple-50 p-2.5">
-                  <Truck className="h-5 w-5 text-purple-600" />
+                  <PercentCircle className="h-5 w-5 text-purple-600" />
                 </div>
-                <p className="text-2xl font-bold text-purple-600">{inTransit}</p>
+                <p className="text-2xl font-bold text-purple-600">{paymentStats.amountRatio}%</p>
               </div>
-              <p className="text-sm text-muted-foreground">In Transit</p>
+              <p className="text-sm text-muted-foreground">Amount ratio</p>
             </CardContent>
           </Card>
 
           {/* Delivered Card */}
           <Card>
-            <CardContent className="space-y-3 p-6">
+            <CardContent className="space-y-3 ">
               <div className="flex items-center justify-between">
                 <div className="rounded-lg bg-green-50 p-2.5">
                   <CheckCircle2 className="h-5 w-5 text-green-600" />
                 </div>
-                <p className="text-2xl font-bold text-green-600">{deliveredOrders}</p>
+                <p className="text-2xl font-bold text-green-600">Rs {paymentStats.completedAmount}</p>
               </div>
-              <p className="text-sm text-muted-foreground">Delivered</p>
+              <p className="text-sm text-muted-foreground">Completed payments</p>
             </CardContent>
           </Card>
         </div>
 
-        {/* Performance & Active Shipments */}
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          {/* Performance Card */}
-          <Card>
-            <CardHeader title="Performance" />
-            <CardContent className="space-y-4 p-6">
-              <div className="flex items-start gap-3">
-                <TrendingUp className="h-5 w-5 shrink-0 text-green-600 mt-0.5" />
-                <div>
-                  <p className="font-medium text-foreground">Delivery Rate</p>
-                  <p className="text-2xl font-bold text-green-600">{deliveryRate}%</p>
-                  <p className="text-xs text-muted-foreground">{deliveredOrders} of {totalOrders} orders delivered</p>
-                </div>
-              </div>
-              <div className="h-2 w-full rounded-full bg-secondary">
-                <div 
-                  className="h-full rounded-full bg-green-600" 
-                  style={{ width: `${deliveryRate}%` }}
-                ></div>
-              </div>
-            </CardContent>
-          </Card>
+        {/* Analytics Charts Section */}
+        {sellerId && (
+          <div className="border-t border-slate-200 pt-8">
+            <div className="mb-6">
+              <h2 className="text-2xl font-bold text-foreground mb-2">Analytics & Insights</h2>
+              <p className="text-sm text-muted-foreground">Comprehensive overview of your shipment performance and order statistics</p>
+            </div>
+            <AnalyticsCharts sellerId={sellerId} />
+          </div>
+        )}
 
-          {/* Active Orders Card */}
-          <Card>
-            <CardHeader title="Order Summary" />
-            <CardContent className="space-y-4 p-6">
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <p className="text-sm text-muted-foreground">Processing (Pending)</p>
-                  <p className="text-lg font-bold text-yellow-600">{pendingDispatch}</p>
-                </div>
-                <div className="flex items-center justify-between">
-                  <p className="text-sm text-muted-foreground">Assigned</p>
-                  <p className="text-lg font-bold text-blue-600">{assignedOrders}</p>
-                </div>
-                <div className="flex items-center justify-between">
-                  <p className="text-sm text-muted-foreground">In Transit</p>
-                  <p className="text-lg font-bold text-purple-600">{inTransit}</p>
-                </div>
-                <div className="flex items-center justify-between">
-                  <p className="text-sm text-muted-foreground">Failed</p>
-                  <p className="text-lg font-bold text-red-600">{failedOrders}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
 
         {/* Alert */}
         {pendingDispatch > 0 && (
@@ -270,6 +242,27 @@ export default function SellerDashboardPage() {
             onFindCourier={handleFindCourier}
             onEdit={handleEdit}
             onViewDetails={(order) => router.push(`/seller/orders/${order.id}`)}
+          />
+        </div>
+
+        {/* Recent Payments */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-bold text-foreground">Recent Payments</h2>
+            <a href="/seller/payments" className="text-sm text-accent hover:underline font-medium">
+              View All
+            </a>
+          </div>
+          <RecentPaymentsTable
+            payments={payments}
+            onViewDetails={(payment) => {
+              // Handle view payment details
+              console.log('View payment details:', payment);
+            }}
+            onDownloadReceipt={(payment) => {
+              // Handle download receipt
+              console.log('Download receipt for:', payment);
+            }}
           />
         </div>
 

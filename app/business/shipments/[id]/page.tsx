@@ -5,6 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { Card, CardHeader, CardContent } from '@/components/shared/Card';
 import { Button } from '@/components/shared/Button';
 import { StatusBadge } from '@/components/shared/Badge';
+import { ReportDisputeModal } from '@/components/shared/ReportDisputeModal';
 import { ShipmentTimeline, ServiceTierBadge, InfoCard } from '@/components/shipment';
 import { DriverAssignmentModal } from '@/components/business/DriverAssignmentModal';
 import {
@@ -88,6 +89,7 @@ export default function ShipmentDetailPage() {
   const [selectedDriver, setSelectedDriver] = useState<string>('');
   const [isAssignmentModalOpen, setIsAssignmentModalOpen] = useState(false);
   const [isCODPaymentModalOpen, setIsCODPaymentModalOpen] = useState(false);
+  const [isDisputeModalOpen, setIsDisputeModalOpen] = useState(false);
   const [timeTaken, setTimeTaken] = useState("")
 
 
@@ -546,6 +548,23 @@ export default function ShipmentDetailPage() {
                 </CardContent>
               </Card>
             }
+
+            {/* Report Issue Card */}
+            <Card>
+              <CardHeader title="Report an Issue" />
+              <CardContent>
+                <p className="text-sm text-muted-foreground mb-4">
+                  If you encounter any issues with this shipment, report it here.
+                </p>
+                <Button
+                  onClick={() => setIsDisputeModalOpen(true)}
+                  variant="outline"
+                  fullWidth
+                >
+                  Report Issue
+                </Button>
+              </CardContent>
+            </Card>
             {/* Driver Assignment */}
             {!shipment?.assignment?.driverId && (
               <Card>
@@ -674,6 +693,17 @@ export default function ShipmentDetailPage() {
             }, 500);
           }}
           shipment={shipment}
+        />
+
+        <ReportDisputeModal
+          shipmentId={shipmentId}
+          isOpen={isDisputeModalOpen}
+          onClose={() => setIsDisputeModalOpen(false)}
+          onSuccess={() => {
+            setIsDisputeModalOpen(false);
+            // Optionally refresh shipment data
+          }}
+          userRole="BUSINESS"
         />
       </div>
     </BusinessLayout>

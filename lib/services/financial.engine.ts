@@ -33,104 +33,123 @@ export const addLedger = async (tx: any, data: any) => {
   });
 };
 
-// import { prisma } from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
 
-// export const reconciliationService = {
+export const reconciliationService = {
 
-//   async reconcileWallet(walletId: string) {
-//     return prisma.$transaction(async (tx) => {
+  async reconcileWallet(walletId: string) {
+    return prisma.$transaction(async (tx) => {
 
-//       const wallet = await tx.wallet.findUnique({
-//         where: { id: walletId },
-//       });
+      const wallet = await tx.wallet.findUnique({
+        where: { id: walletId },
+      });
 
-//       if (!wallet) throw new Error("Wallet not found");
+      if (!wallet) throw new Error("Wallet not found");
 
-//       const ledgerSumResult = await tx.ledgerEntry.aggregate({
-//         where: { walletId },
-//         _sum: { amount: true },
-//       });
+      const ledgerSumResult = await tx.ledgerEntry.aggregate({
+        where: { walletId },
+        _sum: { amount: true },
+      });
 
-//       const ledgerBalance = ledgerSumResult._sum.amount || 0;
-//       const actualBalance = wallet.balance;
-//       const diff = ledgerBalance - actualBalance;
+      const ledgerBalance = ledgerSumResult._sum.amount || 0;
+      const actualBalance = wallet.balance;
+      const diff = ledgerBalance - actualBalance;
 
-//       // ✅ No issue
-//       if (diff === 0) {
-//         await tx.reconciliationLog.create({
-//           data: {
-//             walletId,
-//             expected: ledgerBalance,
-//             actual: actualBalance,
-//             difference: 0,
-//             status: "OK",
-//           },
-//         });
+      // ✅ No issue
+      if (diff === 0) {
+        await tx.reconciliationLog.create({
+          data: {
+            walletId,
+            expected: ledgerBalance,
+            actual: actualBalance,
+            difference: 0,
+            status: "OK",
+          },
+        });
 
-//         return { status: "OK" };
-//       }
+        return { status: "OK" };
+      }
 
-//       // ⚠️ FIX mismatch
-//       await tx.wallet.update({
-//         where: { id: walletId },
-//         data: {
-//           balance: ledgerBalance,
-//         },
-//       });
+      // ⚠️ FIX mismatch
+      withWalletLock(tx, walletId, async () => {
+         await addLedger(tx, {
+              walletId: walletId,
+              amount: diff,
+              type: "RECONCILIATION_ADJUSTMENT",
+              category: "RECONCILIATION",
+              referenceId: "RECONCILIATION-"+Date.now(),
+            });
+        await tx.wallet.update({
+        where: { id: walletId },
+        data: {
+          balance: ledgerBalance,
+        },
+      });
 
-//       await tx.reconciliationLog.create({
-//         data: {
-//           walletId,
-//           expected: ledgerBalance,
-//           actual: actualBalance,
-//           difference: diff,
-//           status: "FIXED",
-//           message: "Balance auto-corrected from ledger",
-//         },
-//       });
+      await tx.transaction.create({
+        data:{
+          walletId,
+          amount:diff,
+          type:"SETTLEMENT",
+          description:"Auto-correction from reconciliation process",
+          referenceId:"RECONCILIATION-"+Date.now(),
+        }
+      })
+      })
 
-//       return {
-//         status: "FIXED",
-//         old: actualBalance,
-//         new: ledgerBalance,
-//       };
-//     });
-//   },
+      await tx.reconciliationLog.create({
+        data: {
+          walletId,
+          expected: ledgerBalance,
+          actual: actualBalance,
+          difference: diff,
+          status: "FIXED",
+          message: "Balance auto-corrected from ledger",
+        },
+      });
+
+      return {
+        status: "FIXED",
+        old: actualBalance,
+        new: ledgerBalance,
+      };
+    },{timeout:10000});
+  },
 
 //   // 🔥 Run for ALL wallets
-//   async reconcileAllWallets() {
-//     const wallets = await prisma.wallet.findMany({
-//       select: { id: true },
-//     });
+  async reconcileAllWallets() {
+    const wallets = await prisma.wallet.findMany({
+      select: { id: true },
+    });
 
-//     const results = [];
+    const results = [];
 
-//     for (const wallet of wallets) {
-//       try {
-//         const res = await this.reconcileWallet(wallet.id);
-//         results.push({ walletId: wallet.id, ...res });
-//       } catch (err: any) {
-//         await prisma.reconciliationLog.create({
-//           data: {
-//             walletId: wallet.id,
-//             expected: 0,
-//             actual: 0,
-//             difference: 0,
-//             status: "ERROR",
-//             message: err.message,
-//           },
-//         });
+    for (const wallet of wallets) {
+      try {
+        const res = await this.reconcileWallet(wallet.id);
+        results.push({ walletId: wallet.id, ...res });
+      } catch (err: any) {
+        await prisma.reconciliationLog.create({
+          data: {
+            walletId: wallet.id,
+            expected: 0,
+            actual: 0,
+            difference: 0,
+            status: "ERROR",
+            message: err.message,
+          },
+        });
 
-//         results.push({
-//           walletId: wallet.id,
-//           status: "ERROR",
-//           error: err.message,
-//         });
-//       }
-//     }
+        results.push({
+          walletId: wallet.id,
+          status: "ERROR",
+          error: err.message,
+        });
+      }
+    }
 
-//     return results;
-//   },
-// };
+    return results;
+  },
+};
 
 // Note: Apply this laterly

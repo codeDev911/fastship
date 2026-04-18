@@ -106,6 +106,19 @@ enum IntegrationSyncStatus {
   FAILED
 }
 
+enum ApplicationType {
+  SELLER
+  DRIVER
+  RATE_CHANGE
+  BUSINESS
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 // ============ MODELS ============
 
 model User {
@@ -127,37 +140,46 @@ model User {
   business      Business?
   notifications Notification[]
   auditLogs     AuditLog[]
-  apiKeys       ApiKey[]        @relation("apiKeys")
+  apiKeys       ApiKey[]       @relation("apiKeys")
 
   @@index([email])
   @@index([role])
 }
 
 model Seller {
-  id              String   @id @default(cuid())
-  userId          String   @unique
-  companyName     String
-  businessType    String
-  taxId           String   @unique
-  address         String
-  city            String
-  state           String
-  zipCode         String
-  bankAccount     String?
-  bankName        String?
-  accountHolder   String?
-  rating          Float    @default(5.0)
-  totalOrders     Int      @default(0)
-  cancelledOrders Int      @default(0)
-  isVerified      Boolean  @default(false)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id                 String   @id @default(cuid())
+  userId             String   @unique
+  companyName        String
+  businessType       String
+  taxId              String   @unique
+  address            String
+  city               String
+  state              String
+  zipCode            String
+  bankAccount        String?
+  bankName           String?
+  accountHolder      String?
+  warehouseName      String?
+  warehouseAddress   String?
+  warehouseCity      String?
+  warehouseState     String?
+  warehouseZipCode   String?
+  warehouseLatitude  Float?
+  warehouseLongitude Float?
+  warehousePhone     String?
+  rating             Float    @default(5.0)
+  totalOrders        Int      @default(0)
+  cancelledOrders    Int      @default(0)
+  isVerified         Boolean  @default(false)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
   user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   shipments    Shipment[]
   wallet       Wallet?
   bids         Bid[]
   integrations Integration[]
+  disputes     Dispute[]
 
   @@index([userId])
   @@index([companyName])
@@ -193,6 +215,10 @@ model Driver {
   wallet      Wallet?
   earnings    Earning[]
   debts       DriverDebt[]
+  approvals   Approval[]
+  disputes    Dispute[]
+  business    Business?          @relation(fields: [businessId], references: [id])
+  businessId  String?
 
   @@index([userId])
   @@index([licenseNumber])
@@ -216,55 +242,57 @@ model Business {
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
-  user         User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  rateCards    RateCard[]
-  drivers      DriverAssignment[]
-  wallet       Wallet?
-  settlements  Settlement[]
-  bids         Bid[]
-  serviceAreas BusinessServiceArea[]
+  user              User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  rateCards         RateCard[]
+  drivers           Driver[]
+  wallet            Wallet?
+  settlements       Settlement[]
+  bids              Bid[]
+  serviceAreas      BusinessServiceArea[]
+  approvals         Approval[]
+  driverAssignments DriverAssignment[]
 
   @@index([userId])
   @@index([companyName])
 }
 
 model Shipment {
-  id                   String         @id @default(cuid())
-  sellerId             String
-  businessId           String?
-  pickupName           String
-  pickupPhone          String
-  pickupAddress        String
-  pickupCity           String
-  pickupState          String
-  pickupZipCode        String
-  pickupLatitude       Float?
-  pickupLongitude      Float?
-  deliveryName         String
-  deliveryPhone        String
-  deliveryAddress      String
-  deliveryCity         String
-  deliveryState        String
-  deliveryZipCode      String
-  deliveryLatitude     Float?
-  deliveryLongitude    Float?
-  weight               Float
-  distance             Float?          // Distance in kilometers (calculated at creation time)
-  dimensions           String?
-  packageType          String
-  isInCityDelivery     Boolean          @default(false) // True if pickup and delivery are in the same city
-  description          String
-  paymentMethod        PaymentMethod  @default(PREPAID)
-  codAmount            Float?
-  expectedRate         Float?
-  actualRate           Float?
-  status               ShipmentStatus @default(PENDING)
-  priority             String         @default("STANDARD")
-  notes                String?
-  createdAt            DateTime       @default(now())
-  updatedAt            DateTime       @updatedAt
-  pickedUpAt           DateTime?
-  deliveredAt          DateTime?
+  id                String         @id @default(cuid())
+  sellerId          String
+  businessId        String?
+  pickupName        String
+  pickupPhone       String
+  pickupAddress     String
+  pickupCity        String
+  pickupState       String
+  pickupZipCode     String
+  pickupLatitude    Float?
+  pickupLongitude   Float?
+  deliveryName      String
+  deliveryPhone     String
+  deliveryAddress   String
+  deliveryCity      String
+  deliveryState     String
+  deliveryZipCode   String
+  deliveryLatitude  Float?
+  deliveryLongitude Float?
+  weight            Float
+  distance          Float? // Distance in kilometers (calculated at creation time)
+  dimensions        String?
+  packageType       String
+  isInCityDelivery  Boolean        @default(false) // True if pickup and delivery are in the same city
+  description       String
+  paymentMethod     PaymentMethod  @default(PREPAID)
+  codAmount         Float?
+  expectedRate      Float?
+  actualRate        Float?
+  status            ShipmentStatus @default(PENDING)
+  priority          String         @default("STANDARD")
+  notes             String?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  pickedUpAt        DateTime?
+  deliveredAt       DateTime?
 
   seller        Seller             @relation(fields: [sellerId], references: [id], onDelete: Cascade)
   assignment    DriverAssignment?
@@ -313,7 +341,7 @@ model RateCard {
   maximumDistance Float    @default(999999)
   minWeight       Float    @default(0)
   maxWeight       Float    @default(100)
-  weightSurcharge Float    @default(0)  // Extra charge per kg above minWeight
+  weightSurcharge Float    @default(0) // Extra charge per kg above minWeight
   serviceStates   String[] @default([]) // States/regions served: ["Sindh", "Punjab"]
   inCityDelivery  Boolean  @default(false) // Support in-city delivery (same city, within distance)
   serviceCities   String[] @default([]) // Specific cities supporting in-city: ["Peshawar", "Karachi"]
@@ -328,21 +356,24 @@ model RateCard {
 }
 
 model Wallet {
-  id            String   @id @default(cuid())
-  balance       Float    @default(0)
-  escrowBalance Float    @default(0)
-  lastUpdated   DateTime @updatedAt
-  createdAt     DateTime @default(now())
+  id               String   @id @default(cuid())
+  balance          Float    @default(0)
+  escrowBalance    Float    @default(0)
+  totalEarnings    Float    @default(0)
+  totalWithdrawals Float    @default(0)
+  lastUpdated      DateTime @updatedAt
+  createdAt        DateTime @default(now())
 
   sellerId   String? @unique
   driverId   String? @unique
   businessId String? @unique
 
-  seller        Seller?       @relation(fields: [sellerId], references: [id], onDelete: Cascade)
-  driver        Driver?       @relation(fields: [driverId], references: [id], onDelete: Cascade)
-  business      Business?     @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  transactions  Transaction[]
-  ledgerEntries LedgerEntry[]
+  seller                Seller?              @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  driver                Driver?              @relation(fields: [driverId], references: [id], onDelete: Cascade)
+  business              Business?            @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  transactions          Transaction[]
+  ledgerEntries         LedgerEntry[]
+  reconciliationLogs    ReconciliationLog[]
 
   @@index([sellerId])
   @@index([driverId])
@@ -403,6 +434,23 @@ model LedgerEntry {
 
   @@index([walletId])
   @@index([referenceId])
+}
+
+model ReconciliationLog {
+  id         String   @id @default(cuid())
+  walletId   String
+  expected   Float // Expected balance from ledger
+  actual     Float // Actual balance in wallet
+  difference Float // Difference (expected - actual)
+  status     String // OK, FIXED, ERROR
+  message    String? // Description of what happened
+  createdAt  DateTime @default(now())
+
+  wallet Wallet @relation(fields: [walletId], references: [id], onDelete: Cascade)
+
+  @@index([walletId])
+  @@index([status])
+  @@index([createdAt])
 }
 
 model IdempotencyKey {
@@ -506,24 +554,24 @@ model Settlement {
 }
 
 model Bid {
-  id          String    @id @default(cuid())
-  sellerId    String
-  shipmentId  String?
-  businessId  String?
-  amount      Float
-  description String?   // Custom terms or special notes
-  distance    Float?    // Calculated distance for this bid
+  id                  String    @id @default(cuid())
+  sellerId            String
+  shipmentId          String?
+  businessId          String?
+  amount              Float
+  description         String? // Custom terms or special notes
+  distance            Float? // Calculated distance for this bid
   estimatedPickupTime DateTime? // Estimated when business can pickup
-  bidStatus   BidStatus @default(PENDING)
-  isAccepted  Boolean   @default(false)
-  acceptedAt  DateTime?
-  expiresAt   DateTime
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  bidStatus           BidStatus @default(PENDING)
+  isAccepted          Boolean   @default(false)
+  acceptedAt          DateTime?
+  expiresAt           DateTime
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
 
-  shipment    Shipment? @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
-  seller      Seller    @relation(fields: [sellerId], references: [id], onDelete: Cascade)
-  business    Business? @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  shipment Shipment? @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  seller   Seller    @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  business Business? @relation(fields: [businessId], references: [id], onDelete: Cascade)
 
   @@index([sellerId])
   @@index([shipmentId])
@@ -534,8 +582,8 @@ model Bid {
 model BusinessServiceArea {
   id            String   @id @default(cuid())
   businessId    String
-  state         String   // State/province name
-  city          String   // City/region name
+  state         String // State/province name
+  city          String // City/region name
   activeDrivers Int      @default(0)
   capacity      Int      @default(10)
   isActive      Boolean  @default(true)
@@ -551,34 +599,34 @@ model BusinessServiceArea {
 }
 
 model Integration {
-  id                  String                @id @default(cuid())
-  sellerId            String
-  integrationType     IntegrationType
-  
-  // OAuth & Credentials (encrypted at rest)
-  accessToken         String?
-  refreshToken        String?
-  apiKey              String?
-  apiSecret           String?
-  
-  // Shopify-specific fields
-  shopifyStoreUrl     String?               // e.g., "mystore.myshopify.com"
-  
-  // Sync metadata
-  lastSyncedAt        DateTime?
-  syncStatus          IntegrationSyncStatus @default(IDLE)
-  lastSyncErrorMsg    String?
-  webhookUrl          String?
-  
-  // Status
-  isActive            Boolean               @default(true)
-  metadata            String?               // JSON for future extensibility
-  
-  createdAt           DateTime              @default(now())
-  updatedAt           DateTime              @updatedAt
+  id              String          @id @default(cuid())
+  sellerId        String
+  integrationType IntegrationType
 
-  seller              Seller                @relation(fields: [sellerId], references: [id], onDelete: Cascade)
-  shopifyOrders       ShopifyOrder[]
+  // OAuth & Credentials (encrypted at rest)
+  accessToken  String?
+  refreshToken String?
+  apiKey       String?
+  apiSecret    String?
+
+  // Shopify-specific fields
+  shopifyStoreUrl String? // e.g., "mystore.myshopify.com"
+
+  // Sync metadata
+  lastSyncedAt     DateTime?
+  syncStatus       IntegrationSyncStatus @default(IDLE)
+  lastSyncErrorMsg String?
+  webhookUrl       String?
+
+  // Status
+  isActive Boolean @default(true)
+  metadata String? // JSON for future extensibility
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  seller        Seller         @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  shopifyOrders ShopifyOrder[]
 
   @@unique([sellerId, integrationType])
   @@index([sellerId])
@@ -587,21 +635,21 @@ model Integration {
 }
 
 model ShopifyOrder {
-  id                  String   @id @default(cuid())
-  integrationId       String
-  shopifyOrderId      String   // Shopify's order ID
-  shopifyOrderNumber  String   // Human-readable order number
-  shipmentId          String?
-  
-  syncedAt            DateTime @default(now())
-  lastStatusSyncAt    DateTime?
-  
-  metadata            String?  // JSON: original Shopify order data
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
+  id                 String  @id @default(cuid())
+  integrationId      String
+  shopifyOrderId     String // Shopify's order ID
+  shopifyOrderNumber String // Human-readable order number
+  shipmentId         String?
 
-  integration         Integration @relation(fields: [integrationId], references: [id], onDelete: Cascade)
-  shipment            Shipment?   @relation(fields: [shipmentId], references: [id], onDelete: SetNull)
+  syncedAt         DateTime  @default(now())
+  lastStatusSyncAt DateTime?
+
+  metadata  String? // JSON: original Shopify order data
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  integration Integration @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+  shipment    Shipment?   @relation(fields: [shipmentId], references: [id], onDelete: SetNull)
 
   @@unique([integrationId, shopifyOrderId])
   @@index([integrationId])
@@ -667,4 +715,72 @@ model ApiKey {
   @@index([isActive])
   @@index([createdAt])
   @@index([keyHash])
+}
+
+model Approval {
+  id         String  @id @default(cuid())
+  driverId   String?
+  businessId String?
+
+  // Applicant info (before account creation)
+  email String
+  phone String
+  name  String
+
+  // Application-specific data
+  applicationType ApplicationType
+  status          ApprovalStatus  @default(PENDING)
+
+  // For drivers
+  licenseNumber String?
+  licenseExpiry DateTime?
+  vehicleType   String?
+  vehicleNumber String?
+
+  // For businesses
+  companyName     String?
+  businessType    String?
+  operatingRegion String?
+
+  // Admin workflow
+  submittedAt     DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  approvedAt      DateTime?
+  rejectionReason String?
+  reviewedBy      String? // Admin user ID who approved/rejected
+  metadata        String? // JSON for additional details
+
+  driver   Driver?   @relation(fields: [driverId], references: [id], onDelete: Cascade)
+  business Business? @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@unique([email, applicationType]) // Prevent duplicate applications
+  @@index([email])
+  @@index([driverId])
+  @@index([businessId])
+  @@index([applicationType])
+  @@index([status])
+  @@index([submittedAt])
+}
+
+model Dispute {
+  id          String    @id @default(cuid())
+  shipmentId  String
+  sellerId    String?
+  driverId    String?
+  reason      String
+  description String?
+  amount      Float
+  status      String    @default("OPEN") // OPEN, RESOLVED, REJECTED
+  createdAt   DateTime  @default(now())
+  resolvedAt  DateTime?
+  updatedAt   DateTime  @updatedAt
+
+  seller Seller? @relation(fields: [sellerId], references: [id], onDelete: SetNull)
+  driver Driver? @relation(fields: [driverId], references: [id], onDelete: SetNull)
+
+  @@index([shipmentId])
+  @@index([sellerId])
+  @@index([driverId])
+  @@index([status])
+  @@index([createdAt])
 }

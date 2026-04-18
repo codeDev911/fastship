@@ -79,6 +79,21 @@ export class OrderSyncService {
         throw new Error('Invalid integration');
       }
 
+      // Fetch seller's warehouse information
+      const seller = await prisma.seller.findUnique({
+        where: { id: sellerId },
+        select: {
+          warehouseName: true,
+          warehouseAddress: true,
+          warehouseCity: true,
+          warehouseState: true,
+          warehouseZipCode: true,
+          warehouseLatitude: true,
+          warehouseLongitude: true,
+          wherehousePhone:true,
+        },
+      });
+
       // Update sync status
       await prisma.integration.update({
         where: { id: integrationId },
@@ -143,7 +158,8 @@ export class OrderSyncService {
           // Transform Shopify order to shipment
           const shipmentData = this.transformShopifyOrderToShipment(
             shopifyOrder,
-            sellerId
+            sellerId,
+            seller
           );
 
           
@@ -237,7 +253,8 @@ export class OrderSyncService {
    */
   static transformShopifyOrderToShipment(
     shopifyOrder: ShopifyOrderData,
-    sellerId: string
+    sellerId: string,
+    seller?: any
   ): Prisma.ShipmentCreateInput {
     const shippingAddress = shopifyOrder.shipping_address;
     const customerInfo = shopifyOrder.customer || {
@@ -262,20 +279,32 @@ export class OrderSyncService {
       '0000000000'; // Fallback if no phone available
     const customerEmail = customerInfo.email || 'unknown@example.com';
 
+    // Use seller's warehouse if available, otherwise use placeholder
+    const pickupName = seller?.warehouseName || 'Store Pickup';
+    const pickupAddress = seller?.warehouseAddress || '123 Store St';
+    const pickupCity = seller?.warehouseCity || 'Lahore';
+    const pickupState = seller?.warehouseState || 'Punjab';
+    const pickupZipCode = seller?.warehouseZipCode || '42000';
+    const pickupLatitude = seller?.warehouseLatitude || undefined;
+    const pickupLongitude = seller?.warehouseLongitude || undefined;
+    const pickupPhone = seller?.warehousePhone || "00000";
+
     // Note: In a real scenario, you'd get pickup address from seller profile
-    // For now, using placeholder that should be configured per seller
+    // For now, using warehouse if available, otherwise placeholder
     const shipment: Prisma.ShipmentCreateInput = {
       seller: {
         connect: { id: sellerId },
       },
       
-      // Pickup (from seller's store - should be configured)
-      pickupName: 'Store Pickup',
-      pickupPhone: '03000000000',
-      pickupAddress: '123 Store St',
-      pickupCity: 'Lahore',
-      pickupState: 'Punjab',
-      pickupZipCode: '42000',
+      // Pickup (from seller's warehouse or placeholder)
+      pickupName,
+      pickupPhone,
+      pickupAddress,
+      pickupCity,
+      pickupState,
+      pickupZipCode,
+      ...(pickupLatitude && { pickupLatitude }),
+      ...(pickupLongitude && { pickupLongitude }),
 
       // Delivery (from customer address in Shopify order)
       deliveryName: `${customerInfo.first_name} ${customerInfo.last_name}`,

@@ -5,6 +5,7 @@ export async function GET(request: NextRequest) {
   try {
     const businessId = request.nextUrl.searchParams.get("businessId") || "";
     const sellerId = request.nextUrl.searchParams.get("sellerId") || "";
+    const limit = request.nextUrl.searchParams.get("limit") || 50;
 
     if (!businessId && !sellerId) {
       return NextResponse.json({ error: "Ids reqiured" }, { status: 400 });
@@ -30,17 +31,19 @@ export async function GET(request: NextRequest) {
       .filter((p) => p.paymentStatus === "PENDING")
       .reduce((sum, current) => sum + Number(current.amount), 0);
 
-    // 3. Calculate the ratio (Handling edge case to avoid division by zero)
-    const amountRatio =
-      completedAmount > 0 ? pendingAmount / completedAmount : 0;
-
+   
     const totalPayments = payments.reduce(
       (sum, current) => sum + Number(current.amount),
       0,
     );
 
+     // 3. Calculate the ratio (Handling edge case to avoid division by zero)
+    const amountRatio =
+      completedAmount > 0 ? completedAmount / totalPayments : 0;
+
+    let limited = payments.splice(0, Number(limit));
     return NextResponse.json(
-      { payments,stats:{ pendingAmount, amountRatio, totalPayments} },
+      { payments:limited,stats:{ pendingAmount, amountRatio:amountRatio?.toFixed(2)||0, totalPayments,completedAmount} },
       { status: 200 },
     );
   } catch (error) {

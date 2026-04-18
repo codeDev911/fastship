@@ -30,6 +30,21 @@ export async function GET(req: NextRequest) {
         email: true,
         role: true, // or whatever your type field is named
         profileImage: true,
+        driver:{
+          select:{
+            id:true
+          }
+        },
+        business:{
+          select:{
+            id:true
+          }
+        },
+        seller:{
+          select:{
+            id:true
+          }
+        }
       }
     });
 

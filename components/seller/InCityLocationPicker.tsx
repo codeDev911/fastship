@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import { MapPin, Loader2, AlertCircle, Route } from 'lucide-react';
 import { Button } from '@/components/shared/Button';
+import { parseAddress } from '@/lib/config/parse-address';
 
 const OpenRouteMapPicker = dynamic(() => import('@/components/seller/OpenRouteMapPicker'), {
     ssr: false,
@@ -150,29 +151,6 @@ export function InCityLocationPicker({
     }, [pickupLocation.latitude, pickupLocation.longitude, deliveryLocation.latitude, deliveryLocation.longitude]);
 
 
-    function parseAddress(addressString: any) {
-        const parts = addressString.split(",").map((p: any) => p.trim());
-
-        const country = parts[parts.length - 1];
-        const zipCode = parts[parts.length - 2];
-        const state = parts[parts.length - 3];
-
-        // find city dynamically
-        let city = null;
-        const cityPart = parts.find((p: any) => /city|town/i.test(p));
-        if (cityPart) {
-            city = cityPart.replace(/(city|town).*$/i, "").trim();
-        }
-
-        const address = parts.slice(0, 2).join(", ");
-
-        return {
-            address,
-            city,
-            state,
-            zipCode
-        };
-    }
 
 
     const handleMapClick = async (lat: number, lng: number) => {

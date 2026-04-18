@@ -13,13 +13,12 @@ export async function middleware(request: NextRequest) {
   }
 
   // Public routes that don't require authentication
-  const publicRoutes = ["/order-process","/rate-calculator","/privacy","/terms","/to-know", '/login', '/register/driver', '/register/seller', '/register/business', '/'];
 
   // API routes that return 401 instead of redirecting (don't require auth token)
   const apiPublicRoutes = ['/api/auth/login', '/api/auth/register','/api/auth/business','/api/auth/driver','/api/auth/seller','/api/locations','/api/rate-cards','/api/distance'];
 
   // Check if the current route is public
-  if (publicRoutes.includes(pathname)) {
+  if (!pathname.startsWith("/business") || !pathname.startsWith("/driver") || !pathname.startsWith("/seller") || pathname.startsWith("/admin")) {
     return NextResponse.next();
   }
 

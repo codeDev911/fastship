@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Sidebar } from '@/components/shared/Sidebar';
 import { Navbar } from '@/components/shared/Navbar';
 import { Button } from '@/components/shared/Button';
-import { BarChart3, Package, Gavel, Zap, CreditCard, Plus, Wallet, Banknote } from 'lucide-react';
+import { BarChart3, Package, Gavel, Zap, CreditCard, Plus, Wallet, Banknote, Settings } from 'lucide-react';
 import { useAuth } from '@/lib/context/AuthContext';
 
 interface SellerLayoutProps {
@@ -61,13 +61,7 @@ export function SellerLayout({
       href: '/seller/orders',
       children: [],
     },
-    {
-      id: 'bidding',
-      label: 'Bidding Marketplace',
-      icon: <Gavel className="h-5 w-5" />,
-      href: '/seller/bidding',
-      children: [],
-    },
+  
     {
       id: 'payments',
       label: 'Payments',
@@ -87,6 +81,13 @@ export function SellerLayout({
       label: 'Billing',
       icon: <CreditCard className="h-5 w-5" />,
       href: '/seller/billing',
+      children: [],
+    },
+    {
+      id: 'settings',
+      label: 'Settings',
+      icon: <Settings className="h-5 w-5" />,
+      href: '/seller/settings',
       children: [],
     },
   ];

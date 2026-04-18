@@ -53,7 +53,7 @@ export class OrderUpdateService {
         carrier: 'FastShip', // Could be more specific
         status: trackingStatus,
         eta: this.estimateDeliveryDate(shipment.status),
-        url: `${process.env.NEXT_PUBLIC_BASE_URL}/track/${shipmentId}`,
+        url: `${process.env.NEXT_PUBLIC_BASE_URL}/track?id=${shipmentId}`,
       };
 
       // Update Shopify order metafields

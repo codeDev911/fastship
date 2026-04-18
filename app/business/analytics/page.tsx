@@ -9,6 +9,7 @@ import { Package, TrendingUp, Users, DollarSign } from 'lucide-react';
 import { secureFetch } from '@/lib/secure-fetch';
 
 export default function BusinessAnalyticsPage() {
+  const [businessId, setBusinessId] = useState<string>('');
   const [stats, setStats] = useState({
     totalShipments: 0,
     pendingShipments: 0,
@@ -25,10 +26,11 @@ export default function BusinessAnalyticsPage() {
   useEffect(() => {
     const fetchAnalytics = async () => {
       const user = JSON.parse(localStorage.getItem('user') || '{}');
-      const businessId = user?.jobId;
+      const bId = user?.jobId;
+      setBusinessId(bId);
       try {
         setIsLoading(true);
-        const response = await secureFetch(`/api/business/analytics?businessId=${businessId}`);
+        const response = await secureFetch(`/api/business/analytics?businessId=${bId}`);
         if (response.ok) {
           const data = await response.json();
           setStats(data.stats);
@@ -104,7 +106,7 @@ export default function BusinessAnalyticsPage() {
         </div>
 
         {/* Charts */}
-        <AnalyticsCharts />
+        {businessId && <AnalyticsCharts businessId={businessId} isLoading={isLoading} />}
       </div>
     </BusinessLayout>
   );

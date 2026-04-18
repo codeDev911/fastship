@@ -44,6 +44,7 @@ const TransferFundsModal = ({ isOpen, onClose }: TransferModalProps) => {
         const response = await secureFetch(`/api/users?search=${searchQuery}&type=${selectedType}`);
         const data = await response.json();
         setUsers(data || []);
+        
       } catch (error) {
         console.error("Search failed:", error);
       } finally {
@@ -60,11 +61,12 @@ const TransferFundsModal = ({ isOpen, onClose }: TransferModalProps) => {
     const userId = user?.jobId;
     const userRole = user.role
     const uniqueId = new Date().toISOString()
+    const selectedUserId = selectedUser?.driver?.id || selectedUser?.business?.id || selectedUser?.seller?.id || selectedUser?.id;
     setIsLoading(true);
     try {
       const response = await secureFetch('/api/transactions/transfer-funds', {
         method: 'POST',
-        body: JSON.stringify({ from: userRole?.toLowerCase(), to: selectedUser.role?.toLowerCase(), fromId: userId, toId: selectedUser?.id, amount: Number(amount), uniqueId }),
+        body: JSON.stringify({ from: userRole?.toLowerCase(), to: selectedUser.role?.toLowerCase(), fromId: userId, toId: selectedUserId, amount: Number(amount), uniqueId }),
       });
 
       const result = await response.json();

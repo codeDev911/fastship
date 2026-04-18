@@ -55,7 +55,7 @@ export function Alert({
 
   return (
     <div
-      className={`rounded-lg border ${config.bg} ${config.border} ${config.text} p-4 ${className}`}
+      className={`rounded-lg border ${config?.bg} ${config?.border} ${config?.text} p-4 ${className}`}
       role="alert"
       {...props}
     >

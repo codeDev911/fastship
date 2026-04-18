@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { SellerLayout } from '@/components/seller/SellerLayout';
 import OrderDetailsSheet from '@/components/seller/OrderDetails';
+import { ReportDisputeModal } from '@/components/shared/ReportDisputeModal';
 import { Loader, ArrowLeft } from 'lucide-react';
 import { secureFetch } from '@/lib/secure-fetch';
 
@@ -16,6 +17,7 @@ export default function OrderDetailsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [walletBalance, setWalletBalance] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [isDisputeModalOpen, setIsDisputeModalOpen] = useState(false);
 
   useEffect(() => {
     const fetchOrderData = async () => {
@@ -102,6 +104,18 @@ export default function OrderDetailsPage() {
           isOpen={true} 
           data={order} 
           onClose={() => router.back()}
+          onReportIssue={() => setIsDisputeModalOpen(true)}
+        />
+
+        <ReportDisputeModal
+          shipmentId={orderId}
+          isOpen={isDisputeModalOpen}
+          onClose={() => setIsDisputeModalOpen(false)}
+          onSuccess={() => {
+            setIsDisputeModalOpen(false);
+            // Optionally refresh order data
+          }}
+          userRole="SELLER"
         />
       </div>
     </SellerLayout>
