@@ -1,0 +1,16 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "jsx": "preserve",
+    "jsxImportSource": "react",
+    "paths": {
+      "@/*": ["./*"],
+      "@/components/ui": ["./*"],
+      "@/lib/utils": ["../../lib/utils/utils.ts"],
+      "@/lib": ["../../lib/*"],
+      "@/hooks": ["../../hooks/*"],
+    }
+  },
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx"],
+  "exclude": ["node_modules"]
+}

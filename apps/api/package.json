@@ -1,0 +1,33 @@
+{
+  "name": "@fastship/api",
+  "version": "1.0.0",
+  "description": "FastShip Next.js API Server",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -p 8000",
+    "build": "next build",
+    "start": "next start -p 8000",
+    "lint": "next lint",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "next": "16.2.0",
+    "react": "^19",
+    "react-dom": "^19",
+    "@fastship/lib": "file:../../packages/lib/server",
+    "@fastship/db": "file:../../packages/db",
+    "zod": "^3.24.1",
+    "bcryptjs": "^2.4.3",
+    "jsonwebtoken": "^9.0.3"
+  },
+  "devDependencies": {
+    "@types/node": "^22",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@types/bcryptjs": "^2.4.2",
+    "@types/jsonwebtoken": "^9.0.5",
+    "typescript": "5.7.3",
+    "eslint": "^8.54.0",
+    "eslint-config-next": "16.2.0"
+  }
+}

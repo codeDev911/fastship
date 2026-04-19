@@ -1,0 +1,10 @@
+{
+  "buildCommand": "cd ../.. && npm install && npm run build -- --filter=@fastship/business",
+  "outputDirectory": ".next",
+  "framework": "nextjs",
+  "nodeVersion": "18.x",
+  "installCommand": "npm install --prefer-offline",
+  "env": {
+    "NODE_ENV": "production"
+  }
+}

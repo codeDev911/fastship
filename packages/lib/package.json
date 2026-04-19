@@ -1,0 +1,26 @@
+{
+  "name": "@fastship/lib",
+  "version": "0.0.1",
+  "description": "Shared library utilities, types, and auth",
+  "private": true,
+  "main": "index.ts",
+  "exports": {
+    ".": "./index.ts",
+    "./auth": "./auth.ts",
+    "./types": "./types.ts",
+    "./utils": "./utils.ts",
+    "./context": "./context/index.ts",
+    "./client": "./client.ts",
+    "./server": "./server.ts",
+    "./secure-fetch": "./secure-fetch.ts"
+  },
+  "dependencies": {
+    "@fastship/db": "file:./db",
+    "jsonwebtoken": "^9.0.3",
+    "bcryptjs": "^2.4.3"
+  },
+  "devDependencies": {
+    "@types/jsonwebtoken": "^9.0.3",
+    "@types/node": "^22"
+  }
+}

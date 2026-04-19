@@ -1,0 +1,14 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "jsx": "preserve",
+    "jsxImportSource": "react",
+    "paths": {
+      "@/*": ["./*"],
+      "@fastship/db": ["../../packages/db"],
+      "@fastship/lib": ["../../packages/lib"]
+    }
+  },
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", "../../packages/services/auth.service.ts"],
+  "exclude": ["node_modules"]
+}

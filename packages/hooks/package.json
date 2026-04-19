@@ -1,0 +1,17 @@
+{
+  "name": "@fastship/hooks",
+  "version": "0.0.1",
+  "description": "Shared React hooks",
+  "private": true,
+  "main": "index.ts",
+  "exports": {
+    ".": "./index.ts"
+  },
+  "dependencies": {
+    "react": "^19",
+    "@fastship/lib": "file:../lib"
+  },
+  "devDependencies": {
+    "typescript": "5.7.3"
+  }
+}

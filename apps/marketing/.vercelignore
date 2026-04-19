@@ -1,0 +1,4 @@
+# Ignore everything except the current app and shared packages
+../**
+!../packages/**
+!../.env*
