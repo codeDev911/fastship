@@ -5,7 +5,7 @@
   "outputDirectory": ".next",
   "env": {
     "NODE_ENV": "production"
-  },
+  },   
   "headers": [
     {
       "source": "/api/(.*)",

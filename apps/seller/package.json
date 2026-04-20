@@ -1,8 +1,8 @@
 {
-  "name": "@fastship/seller",
+  "name": "seller",
   "version": "1.0.0",
   "description": "FastShip Seller App",
-  "private": true,
+  "private": true,  
   "scripts": {
     "dev": "next dev -p 3002",
     "build": "next build",
@@ -17,7 +17,6 @@
     "react-dom": "^19",
     "@fastship/ui": "file:../../packages/ui",
     "@fastship/lib": "file:../../packages/lib",
-    "@fastship/lib/client": "file:../../packages/lib/client.ts",
     "@fastship/hooks": "file:../../packages/hooks",
     "@fastship/db": "file:../../packages/db",
     "lucide-react": "^0.564.0",
