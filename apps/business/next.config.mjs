@@ -2,7 +2,7 @@
 const config = {
   reactStrictMode: true,
   turbopack: {},
-  transpilePackages: ["@repo/ui"],
+  transpilePackages: ["@fastship/ui"],
   webpack: (config, { isServer }) => {
     if (!isServer) {
       config.resolve.fallback = {

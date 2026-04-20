@@ -14,7 +14,6 @@
     "next": "16.2.0",
     "react": "^19",
     "react-dom": "^19",
-    "@repo/ui": "*",
      "@fastship/ui": "file:../../packages/ui",
     "@fastship/lib": "file:../../packages/lib",
     "@fastship/hooks": "file:../../packages/hooks",
