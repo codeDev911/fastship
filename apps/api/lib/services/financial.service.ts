@@ -4,7 +4,7 @@ import {
   runIdempotent,
   addLedger,
   withWalletLock,
-} from "@fastship/lib";
+} from "./financial.engine";
 type Tx = any;
 
 export const financialService = {

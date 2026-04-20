@@ -8,7 +8,7 @@ const SHOPIFY_API_KEY = process.env.SHOPIFY_API_KEY;
 const SHOPIFY_API_SECRET = process.env.SHOPIFY_API_SECRET;
 
 if (!SHOPIFY_API_KEY || !SHOPIFY_API_SECRET) {
-  throw new Error('SHOPIFY_API_KEY and SHOPIFY_API_SECRET environment variables are required');
+  console.log('SHOPIFY_API_KEY and SHOPIFY_API_SECRET environment variables are required');
 }
 
 /**
