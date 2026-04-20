@@ -1,7 +1,8 @@
 {
-  "name": "@fastship/business",
+  "name": "business",
   "version": "1.0.0",
   "description": "FastShip Business App",
+  "packageManager": "npm@10.2.4",
   "private": true,
   "scripts": {
     "dev": "next dev -p 3003",
@@ -14,10 +15,9 @@
     "next": "16.2.0",
     "react": "^19",
     "react-dom": "^19",
-     "@fastship/ui": "file:../../packages/ui",
+    "@fastship/ui": "file:../../packages/ui",
     "@fastship/lib": "file:../../packages/lib",
     "@fastship/hooks": "file:../../packages/hooks",
-    "@fastship/db": "file:../../packages/db",
     "lucide-react": "^0.564.0",
     "zod": "^3.24.1"
   },
