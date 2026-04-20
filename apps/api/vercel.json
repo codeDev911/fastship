@@ -3,7 +3,6 @@
   "buildCommand": "cd ../.. && npx turbo build --filter=api",
   "framework": "nextjs",
   "outputDirectory": ".next",
-  "nodeVersion": "18.x",
   "env": {
     "NODE_ENV": "production"
   },
