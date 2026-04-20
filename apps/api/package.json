@@ -1,9 +1,8 @@
 {
-  "name": "@fastship/api",
+  "name": "api",
   "version": "1.0.0",
   "description": "FastShip Next.js API Server",
   "private": true,
-  "packageManager": "npm@10.2.4",
   "scripts": {
     "dev": "next dev -p 8000",
     "build": "next build",
