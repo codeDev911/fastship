@@ -2,15 +2,15 @@ import crypto from 'crypto';
 const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY;
 
 if (!ENCRYPTION_KEY) {
-  throw new Error('ENCRYPTION_KEY environment variable is required');
+  console.log('ENCRYPTION_KEY environment variable is required');
 }
 
 // Ensure key is 32 bytes for AES-256
 const key = crypto
   .createHash('sha256')
-  .update(ENCRYPTION_KEY)
+  .update(ENCRYPTION_KEY||"")
   .digest();
-
+   
 /**
  * Encrypt a token using AES-256-GCM
  */
