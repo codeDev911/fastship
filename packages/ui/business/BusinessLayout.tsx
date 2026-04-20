@@ -26,12 +26,14 @@ interface BusinessLayoutProps {
   children: React.ReactNode;
   currentPage: string;
   unreadNotifications?: number;
+  walletBalance?: number | string;
 }
 
 export function BusinessLayout({
   children,
   currentPage,
   unreadNotifications = 0,
+  walletBalance=0
 }: BusinessLayoutProps) {
   const router = useRouter();
   const { logout } = useAuth();
