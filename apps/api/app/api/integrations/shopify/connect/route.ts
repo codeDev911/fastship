@@ -4,7 +4,7 @@ import crypto from 'crypto';
 const SHOPIFY_API_KEY = process.env.SHOPIFY_API_KEY;
 
 if (!SHOPIFY_API_KEY) {
-  throw new Error('SHOPIFY_API_KEY environment variable is required');
+  console.log('SHOPIFY_API_KEY environment variable is required');
 }
 
 /**
