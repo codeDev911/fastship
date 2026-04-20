@@ -24,7 +24,15 @@ export async function PATCH(
 
     const dispute = await prisma.dispute.findUnique({
       where: { id: params.id },
-      include: { seller: true },
+      include: { seller: {
+        include:{
+          wallet:{
+            select:{
+              id:true
+            }
+          }
+        }
+      } },
     });
 
     if (!dispute) {
@@ -59,13 +67,16 @@ export async function PATCH(
       }
 
       // Create transaction record
-      await prisma.payment.create({
+      await prisma.transaction.create({
         data: {
-          sellerId: dispute.sellerId,
+          walletId: dispute.seller?.wallet?.id||"",
           amount: refundAmount,
           status: 'COMPLETED',
-          paymentMethod: 'DISPUTE_REFUND',
-          transactionId: `dispute-${params.id}`,
+          description:"Refund for dispute " + dispute.id,
+          type:"CREDIT",
+          createdAt: new Date(),
+          completedAt: new Date(),
+          referenceId: dispute.id,
         },
       });
     }

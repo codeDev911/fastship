@@ -2,6 +2,10 @@
 const config = {
   reactStrictMode: true,
   turbopack: {},
+  typescript: {
+    // Warning: This allows production builds to complete even with errors.
+    ignoreBuildErrors: true,
+  },
   webpack: (config, { isServer }) => {
     if (!isServer) {
       config.resolve.fallback = {

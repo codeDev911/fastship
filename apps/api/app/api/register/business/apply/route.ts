@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
-import { sendEmail, getApplicationSubmittedEmail } from '@/lib/email';
 
 const businessApplicationSchema = z.object({
   email: z.string().email(),
@@ -63,11 +62,11 @@ export async function POST(request: NextRequest) {
     });
 
     // Send confirmation email
-    const emailContent = getApplicationSubmittedEmail(application.companyName, 'BUSINESS', approval.id, application.email);
-    await sendEmail({
-      to: application.email,
-      ...emailContent,
-    });
+    // const emailContent = getApplicationSubmittedEmail(application.companyName, 'BUSINESS', approval.id, application.email);
+    // await sendEmail({
+    //   to: application.email,
+    //   ...emailContent,
+    // });
 
     return NextResponse.json(
       {

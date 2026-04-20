@@ -55,13 +55,13 @@ export async function PATCH(
       }/complete?approvalId=${approval.id}`;
 
       // Send approval email
-      const emailContent = getApplicationApprovedEmail(
+      const emailContent = await getApplicationApprovedEmail(
         approval.name,
         approval.applicationType,
         approval.id,
         completionUrl
       );
-      await sendEmail({
+      await  sendEmail({
         to: approval.email,
         ...emailContent,
       });
@@ -84,7 +84,7 @@ export async function PATCH(
       console.log(`Reason: ${rejectionReason || 'No reason provided'}`);
 
       // Send rejection email
-      const emailContent = getApplicationRejectedEmail(
+      const emailContent = await getApplicationRejectedEmail(
         approval.name,
         approval.applicationType,
         rejectionReason || 'Your application does not meet our current requirements.'

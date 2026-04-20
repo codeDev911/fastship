@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
 import bcrypt from 'bcryptjs';
-import { sendEmail, getRegistrationCompleteEmail } from '@/lib/email';
 
 const completeRegistrationSchema = z.object({
   approvalId: z.string(),
@@ -90,12 +89,12 @@ export async function POST(request: NextRequest) {
     });
 
     // Send registration complete email
-    const loginUrl = `${process.env.NEXT_PUBLIC_APP_URL}/login`;
-    const emailContent = getRegistrationCompleteEmail(approval.name, 'DRIVER', loginUrl);
-    await sendEmail({
-      to: approval.email,
-      ...emailContent,
-    });
+    // const loginUrl = `${process.env.NEXT_PUBLIC_APP_URL}/login`;
+    // const emailContent = getRegistrationCompleteEmail(approval.name, 'DRIVER', loginUrl);
+    // await sendEmail({
+    //   to: approval.email,
+    //   ...emailContent,
+    // });
 
     return NextResponse.json(
       {

@@ -1,7 +1,8 @@
 {
   "installCommand": "cd ../.. && npm install --legacy-peer-deps",
-  "buildCommand": "cd ../.. && npm run build --filter=@fastship/api",
+  "buildCommand": "cd ../.. && npx turbo build --filter=@fastship/api",
   "framework": "nextjs",
+   "outputDirectory": ".nexts",
   "nodeVersion": "18.x",
   "env": {
     "NODE_ENV": "production"

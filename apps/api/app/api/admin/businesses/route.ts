@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
       commissionRate: business.commissionRate,
       rating: business.rating,
       isActive: business.isActive,
-      activeDrivers: business.activeDrivers,
+      activeDrivers: business?.drivers?.length ||0,
       createdAt: business.createdAt,
     }));
 
