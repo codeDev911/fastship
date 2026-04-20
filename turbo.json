@@ -5,7 +5,7 @@
     "build": {
       "outputs": [".next/**", "dist/**"],
       "cache": false,
-      "dependsOn": ["^build", "prisma:generate"]
+      "dependsOn": ["^build"]
     },
     "dev": {
       "cache": false,
