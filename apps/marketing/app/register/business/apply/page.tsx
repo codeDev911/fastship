@@ -118,7 +118,7 @@ export default function BusinessApplyPage() {
 
               <div className="space-y-3">
                 <Link href="/register/check-status" className="block">
-                  <Button className="w-full" variant="default">
+                  <Button className="w-full" variant="primary">
                     Check Application Status
                   </Button>
                 </Link>

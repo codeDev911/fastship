@@ -8,11 +8,13 @@ import { Input } from '@fastship/ui';
 import { Label } from '@fastship/ui';
 import { AlertCircle, Loader2, ArrowLeft, CheckCircle2, Clock, XCircle } from 'lucide-react';
 import { Alert } from '@fastship/ui';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@fastship/ui/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@fastship/ui';
 
 interface ApprovalStatus {
   status: 'APPROVED' | 'PENDING' | 'REJECTED' | 'NOT_FOUND';
   message: string;
+  approvalId?: string;
+  data:any;
   approval?: {
     id: string;
     email: string;
