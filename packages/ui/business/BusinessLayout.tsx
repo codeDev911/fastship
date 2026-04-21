@@ -27,13 +27,15 @@ interface BusinessLayoutProps {
   currentPage: string;
   unreadNotifications?: number;
   walletBalance?: number | string;
+  currency?: string;
 }
 
 export function BusinessLayout({
   children,
   currentPage,
   unreadNotifications = 0,
-  walletBalance=0
+  walletBalance=0,
+  currency = 'PKR',
 }: BusinessLayoutProps) {
   const router = useRouter();
   const { logout } = useAuth();
