@@ -36,28 +36,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null);
 
   // Check if user is logged in on mount
-  useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        setIsLoading(true);
-        const response = await secureFetch('/api/auth/me');
+ useEffect(() => {
+  const checkAuth = async () => {
+    try {
+      console.log('[AuthProvider] checkAuth started');
+      console.log('[AuthProvider] Token before auth check:', localStorage.getItem('auth_token') ? `exists (${localStorage.getItem('auth_token')?.length} chars)` : 'NOT FOUND');
+      
+      setIsLoading(true);
+      const response = await secureFetch('/api/auth/me');
 
-        if (response.ok) {
-          const data = await response.json();
-          setUser(data);
-        } else {
-          setUser(null);
-        }
-      } catch (err) {
-        console.error(' Auth check failed:', err);
+      console.log('[AuthProvider] Auth response status:', response.status);
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('[AuthProvider] Auth check passed, setting user');
+        setUser(data);
+      } else {
+        console.log('[AuthProvider] Auth check failed, user set to null');
         setUser(null);
-      } finally {
-        setIsLoading(false);
       }
-    };
+      
+      console.log('[AuthProvider] Token after auth check:', localStorage.getItem('auth_token') ? `exists (${localStorage.getItem('auth_token')?.length} chars)` : 'NOT FOUND');
+    } catch (err) {
+      console.error('[AuthProvider] Auth check failed:', err);
+      setUser(null);
+      console.log('[AuthProvider] Token after error:', localStorage.getItem('auth_token') ? `exists (${localStorage.getItem('auth_token')?.length} chars)` : 'NOT FOUND');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-    checkAuth();
-  }, []);
+  checkAuth();
+}, []);
 
   const login = async (email: string, password: string, role: string) => {
     try {
@@ -90,7 +100,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       AuthService.saveUser(data.user);
       
       // Also keep existing localStorage for backward compatibility
-      localStorage.setItem("user", JSON.stringify(data.user));
+      // localStorage.setItem("user", JSON.stringify(data.user));
       
       
 
