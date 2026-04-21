@@ -63,7 +63,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       setError(null);
       setIsLoading(true);
-      console.log('[Auth] Login attempt:', { email, role });
 
 
       const response = await secureFetch('/api/auth/login', {
@@ -74,7 +73,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         body: JSON.stringify({ email, password, role }),
       });
 
-      console.log('[Auth] Login response status:', response.status);
       const data = await response.json();
 
       if (!response.ok) {

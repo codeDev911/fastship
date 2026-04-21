@@ -3,7 +3,7 @@ import { Geist, Geist_Mono } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import '../../../packages/ui/styles/globals.css'
 
-import { AuthProvider, ProtectedLayout } from '@fastship/lib'
+import { AuthProvider, ProtectedLayout, TokenExtractor } from '@fastship/lib'
 import { Suspense } from 'react'
 
 const _geist = Geist({ subsets: ["latin"] });
@@ -41,6 +41,8 @@ export default function RootLayout({
     <html lang="en">
       <body className="font-sans antialiased">
         <AuthProvider>
+          <TokenExtractor />
+
           <ProtectedLayout><Suspense>{children}</Suspense></ProtectedLayout>
         </AuthProvider>
         <Analytics />

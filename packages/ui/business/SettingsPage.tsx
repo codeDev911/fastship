@@ -159,7 +159,7 @@ export function SettingsPage({ isLoading: externalLoading = false, onSave }: Set
 
     setIsSaving(true);
     try {
-      const response = await fetch(`/api/business/settings?userId=${userId}`, {
+      const response = await secureFetch(`/api/business/settings?userId=${userId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),

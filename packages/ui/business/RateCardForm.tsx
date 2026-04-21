@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { Button } from "../shared/Button";
+import { secureFetch } from "@fastship/lib";
 
 // --- Mock UI Components ---
 // Replace these with imports from your actual UI library (e.g., shadcn/ui, MUI, or your custom components)
@@ -59,7 +60,7 @@ export default function RateCardForm({rateCard}:any) {
    
     try {
       // Simulate an API request (replace with your actual fetch/axios call)
-      await fetch("/api/rate-cards", {
+      await secureFetch("/api/rate-cards", {
         method: rateCard ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),

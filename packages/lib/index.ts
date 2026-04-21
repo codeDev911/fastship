@@ -22,4 +22,5 @@ export { ProtectedRoute } from "./components/ProtectedRoute"
 export * from "./middleware"
 export * from "./utils/utils"
 export * from "./hooks/useTokenFromUrl"
+export * from './components/TokenExtractor'
 // Mock data

@@ -4,7 +4,7 @@ import { Analytics } from '@vercel/analytics/next'
 import '../../../packages/ui/styles/globals.css'
 import { AuthProvider } from '@fastship/lib/client'
 import { Suspense } from 'react'
-import { ProtectedLayout } from '@fastship/lib'
+import { ProtectedLayout, TokenExtractor } from '@fastship/lib'
 
 const _geist = Geist({ subsets: ["latin"] });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });
@@ -41,6 +41,7 @@ export default function RootLayout({
     <html lang="en">
       <body className="font-sans antialiased">
         <AuthProvider>
+          <TokenExtractor/>
           <ProtectedLayout><Suspense>{children}</Suspense></ProtectedLayout>  
         </AuthProvider>
         <Analytics />

@@ -93,7 +93,6 @@ export default function BusinessOverviewPage() {
           });
 
           setRecentActivityData(calculatedActivity);
-          console.log('Activity data calculated:', calculatedActivity);
         }
       } catch (error) {
         console.error('Error fetching activity data:', error);

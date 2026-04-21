@@ -119,7 +119,7 @@ export function ServiceAreasManager({ businessId }: ServiceAreasManagerProps) {
         setSuccessMessage('Service area updated successfully');
       } else {
         // Create
-        const response = await fetch(`/api/business/service-areas?businessId=${businessId}`, {
+        const response = await secureFetch(`/api/business/service-areas?businessId=${businessId}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(formData),

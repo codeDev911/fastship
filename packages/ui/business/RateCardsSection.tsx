@@ -6,6 +6,7 @@ import { useToast } from '../../hooks/use-toast';
 import { RateCardFormNew } from '../business/RateCardFormNew';
 import { RateCardListNew } from '../business/RateCardListNew';
 import { Loader, X } from 'lucide-react';
+import { secureFetch } from '@fastship/lib';
 
 interface RateCardsPageProps {
   businessId: string;
@@ -23,7 +24,7 @@ export default function RateCardsPage({ businessId }: RateCardsPageProps) {
   const fetchRateCards = useCallback(async () => {
     setIsLoading(true);
     try {
-      const response = await fetch(`/api/rate-cards?businessId=${businessId}`);
+      const response = await secureFetch(`/api/rate-cards?businessId=${businessId}`);
       if (!response.ok) throw new Error('Failed to fetch rate cards');
       const data = await response.json();
       setRateCards(data.rateCards || []);
@@ -52,7 +53,7 @@ export default function RateCardsPage({ businessId }: RateCardsPageProps) {
       
       const method = selectedRateCard ? 'PATCH' : 'POST';
       
-      const response = await fetch(url, {
+      const response = await secureFetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
@@ -89,7 +90,7 @@ export default function RateCardsPage({ businessId }: RateCardsPageProps) {
   // Handle delete
   const handleDelete = async (id: string) => {
     try {
-      const response = await fetch(`/api/rate-cards/${id}`, {
+      const response = await secureFetch(`/api/rate-cards/${id}`, {
         method: 'DELETE',
       });
 
