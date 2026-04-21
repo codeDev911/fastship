@@ -15,13 +15,22 @@ export async function GET(request: NextRequest) {
       }
     }
     
+     // If still no token, return 401
+    if (!token) {
+      return NextResponse.json(
+        { message: 'Unauthorized - No auth token' },
+        { status: 401 }
+      );
+    }
+
     // Verify JWT token
     const secret = new TextEncoder().encode(
       process.env.JWT_SECRET || 'your-secret-key'
     );
     const verified = await jwtVerify(token, secret);
     const userId = (verified.payload as any).id;
-
+    console.log({userId});
+    
     // Generate CSRF token
     const csrfToken = await generateCSRFToken(userId);
 
