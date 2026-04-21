@@ -1,6 +1,6 @@
 {
   "installCommand": "cd ../.. && npm install --legacy-peer-deps",
-  "buildCommand": "cd ../.. && npm run build --filter=api",
+  "buildCommand": "cd ../.. && npm run build -- --filter=api",
   "framework": "nextjs",
   "outputDirectory": ".next",
   "env": {
