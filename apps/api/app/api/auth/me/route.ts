@@ -4,11 +4,20 @@ import prisma from '@/lib/prisma';
 
 export async function GET(request: NextRequest) {
   try {
-    // Get token from cookie
-    const token = request.cookies.get('auth_token')?.value;
+    // Try to get token from cookie first (same-origin requests)
+    let token = request.cookies.get('auth_token')?.value;
+    
+    // If no cookie, try Authorization header (cross-origin requests)
+    if (!token) {
+      const authHeader = request.headers.get('Authorization');
+      if (authHeader?.startsWith('Bearer ')) {
+        token = authHeader.substring(7); // Remove 'Bearer ' prefix
+      }
+    }
+    
     const userRole = request.cookies.get('user_role')?.value;
 
-    if (!token || !userRole) {
+    if (!token) {
       return NextResponse.json(
         { message: 'Unauthorized' },
         { status: 401 }
@@ -43,7 +52,7 @@ export async function GET(request: NextRequest) {
       email: user.email,
       name: user.name,
       phone: user.phone,
-      role: userRole,
+      role: decoded.role, // Use role from decoded token instead of cookie
       createdAt: user.createdAt.toISOString(),
     });
   } catch (error) {
