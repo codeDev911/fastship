@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jwtVerify } from "jose";
 import prisma from "@/lib/prisma";
+import { csrfErrorResponse, validateCSRFMiddleware } from "@/lib/csrf-middleware";
 
 /**
  * PATCH /api/auth/api-keys/[id]

@@ -5,15 +5,16 @@ import { generateCSRFToken } from '@/lib/csrf';
 export async function GET(request: NextRequest) {
   try {
     // Get authentication token from cookies
-    const token = request.cookies.get('auth_token')?.value;
-
+       let token = request.cookies.get('auth_token')?.value|| "";
+    
+    // If no cookie, try Authorization header (cross-origin requests)
     if (!token) {
-      return NextResponse.json(
-        { message: 'Unauthorized: No auth token found' },
-        { status: 401 }
-      );
+      const authHeader = request.headers.get('Authorization');
+      if (authHeader?.startsWith('Bearer ')) {
+        token = authHeader.substring(7); // Remove 'Bearer ' prefix
+      }
     }
-
+    
     // Verify JWT token
     const secret = new TextEncoder().encode(
       process.env.JWT_SECRET || 'your-secret-key'
