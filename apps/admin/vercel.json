@@ -1,5 +1,5 @@
 {
-  "buildCommand": "cd ../.. && npm install --legacy-peer-deps && npm run build -- --filter=@fastship/admin",
+  "buildCommand": "cd ../.. && npm install --legacy-peer-deps && npm run build  --filter=admin",
   "outputDirectory": ".next",
   "framework": "nextjs",
   "nodeVersion": "18.x",

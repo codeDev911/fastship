@@ -1,29 +1,32 @@
 {
-  "installCommand": "cd ../.. && npm install --legacy-peer-deps",
-  "buildCommand": "cd ../.. && npm run build -- --filter=@fastship/api",
-  "outputDirectory": ".next",
-  "framework": "nextjs",
-  "nodeVersion": "18.x",
-  "env": {
-    "NODE_ENV": "production"
+  "name": "admin",
+  "version": "1.0.0",
+  "description": "FastShip Business App",
+  "private": true,
+  "packageManager": "npm@10.2.4",
+  "scripts": {
+    "dev": "next dev -p 3003",
+    "build": "next build",
+    "start": "next start -p 3003",
+    "lint": "next lint",
+    "type-check": "tsc --noEmit"
   },
-  "headers": [
-    {
-      "source": "/api/(.*)",
-      "headers": [
-        {
-          "key": "Access-Control-Allow-Credentials",
-          "value": "true"
-        },
-        {
-          "key": "Access-Control-Allow-Methods",
-          "value": "GET, POST, PUT, DELETE, PATCH, OPTIONS"
-        },
-        {
-          "key": "Access-Control-Allow-Headers",
-          "value": "Content-Type, Authorization, X-CSRF-Token, X-Requested-With"
-        }
-      ]
-    }
-  ]
+  "dependencies": {
+    "next": "16.2.0",
+    "react": "^19",
+    "react-dom": "^19",
+    "@fastship/ui": "file:../../packages/ui",
+    "@fastship/lib": "file:../../packages/lib",
+    "@fastship/hooks": "file:../../packages/hooks",
+    "lucide-react": "^0.564.0",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "typescript": "5.7.3",
+    "tailwindcss": "^4.2.0",
+    "postcss": "^8.5"
+  }
 }
