@@ -77,11 +77,7 @@ export async function DELETE(
   { params }: { params: { id: string } },
 ) {
   try {
-    // Validate CSRF token
-    if (!(await validateCSRFMiddleware(request))) {
-      return csrfErrorResponse();
-    }
-
+    
     // Verify authentication
     const token = request.cookies.get("auth_token")?.value;
 

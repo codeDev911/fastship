@@ -40,8 +40,8 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="font-sans antialiased">
-        <AuthProvider>
           <TokenExtractor/>
+        <AuthProvider>
           <Suspense>{children}</Suspense>
         </AuthProvider>
         <Analytics />

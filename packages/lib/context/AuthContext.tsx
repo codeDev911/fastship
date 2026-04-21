@@ -39,28 +39,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
  useEffect(() => {
   const checkAuth = async () => {
     try {
-      console.log('[AuthProvider] checkAuth started');
-      console.log('[AuthProvider] Token before auth check:', localStorage.getItem('auth_token') ? `exists (${localStorage.getItem('auth_token')?.length} chars)` : 'NOT FOUND');
-      
+    
       setIsLoading(true);
       const response = await secureFetch('/api/auth/me');
 
-      console.log('[AuthProvider] Auth response status:', response.status);
 
       if (response.ok) {
         const data = await response.json();
-        console.log('[AuthProvider] Auth check passed, setting user');
         setUser(data);
       } else {
-        console.log('[AuthProvider] Auth check failed, user set to null');
         setUser(null);
       }
       
-      console.log('[AuthProvider] Token after auth check:', localStorage.getItem('auth_token') ? `exists (${localStorage.getItem('auth_token')?.length} chars)` : 'NOT FOUND');
     } catch (err) {
-      console.error('[AuthProvider] Auth check failed:', err);
       setUser(null);
-      console.log('[AuthProvider] Token after error:', localStorage.getItem('auth_token') ? `exists (${localStorage.getItem('auth_token')?.length} chars)` : 'NOT FOUND');
     } finally {
       setIsLoading(false);
     }

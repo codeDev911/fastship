@@ -4,7 +4,7 @@ import { DriverLayout } from '../../../components/DriverLayout';
 import { useNotifications } from '@fastship/lib';
 
 export default function DriverNotificationsPage() {
-  const { notifications, isLoading, markAsRead, deleteNotification, getUnreadCount } =
+  const {  getUnreadCount } =
     useNotifications();
 
   const unreadCount = getUnreadCount();

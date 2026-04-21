@@ -1,17 +1,27 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { validateCSRFMiddleware } from '@/lib/csrf-middleware';
+import { NextRequest, NextResponse } from "next/server";
+import { csrfErrorResponse, validateCSRFMiddleware } from "@/lib/csrf-middleware";
+import { jwtVerify } from "jose";
 
-export const runtime = 'nodejs';
+export const runtime = "nodejs";
 
 /**
  * Get allowed origins from environment
  */
 function getAllowedOrigins(): string[] {
-  const env = process.env.ALLOWED_ORIGINS || '';
+  const env = process.env.ALLOWED_ORIGINS || "";
   if (!env.trim()) {
-    return ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:3002', 'http://localhost:3003', 'http://localhost:3004'];
+    return [
+      "http://localhost:3000",
+      "http://localhost:3001",
+      "http://localhost:3002",
+      "http://localhost:3003",
+      "http://localhost:3004",
+    ];
   }
-  return env.split(',').map(o => o.trim()).filter(o => o);
+  return env
+    .split(",")
+    .map((o) => o.trim())
+    .filter((o) => o);
 }
 
 /**
@@ -20,12 +30,12 @@ function getAllowedOrigins(): string[] {
 function isOriginAllowed(origin: string | null | undefined): boolean {
   if (!origin) return true;
   const allowed = getAllowedOrigins();
-  return allowed.some(a => {
-    if (a.includes('*')) {
-      const regex = new RegExp('^' + a.replace(/\*/g, '[a-z0-9.-]*') + '$');
+  return allowed.some((a) => {
+    if (a.includes("*")) {
+      const regex = new RegExp("^" + a.replace(/\*/g, "[a-z0-9.-]*") + "$");
       return regex.test(origin);
     }
-    return a === origin;  
+    return a === origin;
   });
 }
 
@@ -37,11 +47,12 @@ function getCORSHeaders(origin: string | null | undefined) {
     return {};
   }
   return {
-    'Access-Control-Allow-Origin': origin || '*',
-    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, PATCH, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-CSRF-Token, X-Requested-With',
-    'Access-Control-Allow-Credentials': 'true',
-    'Access-Control-Max-Age': '86400',
+    "Access-Control-Allow-Origin": origin || "*",
+    "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, PATCH, OPTIONS",
+    "Access-Control-Allow-Headers":
+      "Content-Type, Authorization, X-CSRF-Token, X-Requested-With",
+    "Access-Control-Allow-Credentials": "true",
+    "Access-Control-Max-Age": "86400",
   };
 }
 
@@ -49,35 +60,35 @@ function getCORSHeaders(origin: string | null | undefined) {
  * Public API routes that don't require authentication or CSRF
  */
 const publicRoutes = [
-  '/api/auth/login',
-  '/api/auth/register',
-  '/api/auth/business',
-  '/api/auth/driver',
-  '/api/auth/seller',
-  '/api/locations',
-  '/api/rate-cards',
-  '/api/distance',
-  '/api/auth/csrf-token', // Allow CSRF token refresh without token
+  "/api/auth/login",
+  "/api/auth/register",
+  "/api/auth/business",
+  "/api/auth/driver",
+  "/api/auth/seller",
+  "/api/locations",
+  "/api/rate-cards",
+  "/api/distance",
+  "/api/auth/csrf-token", // Allow CSRF token refresh without token
 ];
 
 /**
  * Check if route is public
  */
 function isPublicRoute(pathname: string): boolean {
-  return publicRoutes.some(route => pathname.startsWith(route));
+  return publicRoutes.some((route) => pathname.startsWith(route));
 }
 
 export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
-  const origin = request.headers.get('origin');
+  const origin = request.headers.get("origin");
 
   // Only handle /api routes
-  if (!pathname.startsWith('/api/')) {
+  if (!pathname.startsWith("/api/")) {
     return NextResponse.next();
   }
 
   // Handle preflight
-  if (request.method === 'OPTIONS') {
+  if (request.method === "OPTIONS") {
     const corsHeaders = getCORSHeaders(origin);
     return new NextResponse(null, {
       status: 204,
@@ -89,7 +100,7 @@ export async function middleware(request: NextRequest) {
   if (isPublicRoute(pathname)) {
     const response = NextResponse.next();
     const corsHeaders = getCORSHeaders(origin);
-    
+
     Object.entries(corsHeaders).forEach(([key, value]) => {
       response.headers.set(key, value);
     });
@@ -98,19 +109,46 @@ export async function middleware(request: NextRequest) {
   }
 
   // For state-changing requests on protected routes, validate CSRF
-  const isStateChangingMethod = ['POST', 'PUT', 'DELETE', 'PATCH'].includes(
-    request.method.toUpperCase()
+  const isStateChangingMethod = ["POST", "PUT", "DELETE", "PATCH"].includes(
+    request.method.toUpperCase(),
   );
+
+  let userId : any =""
 
   if (isStateChangingMethod) {
     if (!(await validateCSRFMiddleware(request))) {
       const corsHeaders = getCORSHeaders(origin);
-      const errorResponse = NextResponse.json(
-        {
-          message: 'CSRF token validation failed. Please refresh the page and try again.',
-        },
-        { status: 403 }
+      const errorResponse = csrfErrorResponse();
+      
+      Object.entries(corsHeaders).forEach(([key, value]) => {
+        errorResponse.headers.set(key, value);
+      });
+      
+      return errorResponse;
+    }
+    console.log("CSRF checked : TRUE");
+
+    //=============== check auth ===============
+
+    // Get authentication token from cookies
+    let token = request.cookies.get("auth_token")?.value || "";
+
+    // If no cookie, try Authorization header (cross-origin requests)
+    if (!token) {
+      const authHeader = request.headers.get("Authorization");
+      if (authHeader?.startsWith("Bearer ")) {
+        token = authHeader.substring(7); // Remove 'Bearer ' prefix
+      }
+    }
+
+    if (!token) {
+      // If no token, return 401 with CORS headers
+      let errorResponse = NextResponse.json(
+        { message: "Unauthorized - No authentication token provided" },
+        { status: 401 },
       );
+
+      const corsHeaders = getCORSHeaders(origin);
 
       Object.entries(corsHeaders).forEach(([key, value]) => {
         errorResponse.headers.set(key, value);
@@ -118,12 +156,20 @@ export async function middleware(request: NextRequest) {
 
       return errorResponse;
     }
-  }
+    const secret = new TextEncoder().encode(
+      process.env.JWT_SECRET || "your-secret-key",
+    );
 
+    const verified = await jwtVerify(token, secret);
+    userId = (verified.payload as any).jobId;
+    (request as NextRequest & { user?: string }).user = userId;
+  }
+  
   // For other methods, add CORS headers
   const response = NextResponse.next();
+  response.headers.set("X-User-Id", userId);
   const corsHeaders = getCORSHeaders(origin);
-  
+
   Object.entries(corsHeaders).forEach(([key, value]) => {
     response.headers.set(key, value);
   });
@@ -132,5 +178,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/api/:path*'],
+  matcher: ["/api/:path*"],
 };

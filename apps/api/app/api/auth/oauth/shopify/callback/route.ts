@@ -42,19 +42,24 @@ export async function GET(request: NextRequest) {
     }
 
     // Get seller ID from session
-    const authToken = request.cookies.get('auth_token')?.value;
+    // Get authentication token from cookies
+       let token = request.cookies.get('auth_token')?.value|| "";
+    
+    // If no cookie, try Authorization header (cross-origin requests)
+    if (!token) {
+      const authHeader = request.headers.get('Authorization');
+      if (authHeader?.startsWith('Bearer ')) {
+        token = authHeader.substring(7); // Remove 'Bearer ' prefix
+      }
+    }
+    
     let sellerId: string;
 
-    if (!authToken) {
-      return NextResponse.json(
-        { message: 'Authentication required' },
-        { status: 401 }
-      );
-    }
+   
 
     // Verify JWT token
     try {
-      const verified = await jwtVerify(authToken, JWT_SECRET);
+      const verified = await jwtVerify(token, JWT_SECRET);
       sellerId = verified.payload.jobId as string;
     } catch (error) {
       return NextResponse.json(

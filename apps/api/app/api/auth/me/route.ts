@@ -15,7 +15,6 @@ export async function GET(request: NextRequest) {
       }
     }
     
-    const userRole = request.cookies.get('user_role')?.value;
 
     if (!token) {
       return NextResponse.json(

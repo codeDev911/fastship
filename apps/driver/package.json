@@ -1,5 +1,5 @@
 {
-  "name": "@fastship/driver",
+  "name": "driver",
   "version": "1.0.0",
   "description": "FastShip Driver App",
   "private": true,
@@ -8,8 +8,7 @@
     "build": "next build",
     "start": "next start -p 3001",
     "lint": "next lint",
-    "type-check": "tsc --noEmit",
-    "prisma:generate": "prisma generate --schema ../../packages/db/prisma/schema.prisma"
+    "type-check": "tsc --noEmit"
   },
   "dependencies": {
     "next": "16.2.0",
@@ -18,7 +17,6 @@
      "@fastship/ui": "file:../../packages/ui",
     "@fastship/lib": "file:../../packages/lib",
     "@fastship/hooks": "file:../../packages/hooks",
-    "@fastship/db": "file:../../packages/db",
     "lucide-react": "^0.564.0",
     "zod": "^3.24.1"
   },

@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { Card, CardHeader, CardContent } from '@fastship/ui';
 import { Button } from '@fastship/ui';
-import { secureFetch } from '@fastship/lib';
+import { secureFetch, ShipmentStatus } from '@fastship/lib';
 
 import { StatusBadge } from '@fastship/ui';
 import { ReportDisputeModal } from '@fastship/ui';
@@ -33,7 +33,7 @@ export default function OrderDetailPage() {
   const [shipment, setShipment] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
-  const [selectedStatus, setSelectedStatus] = useState<string>('');
+  const [selectedStatus, setSelectedStatus] = useState<ShipmentStatus>('PENDING');
   const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
   const [isDisputeModalOpen, setIsDisputeModalOpen] = useState(false);
 
