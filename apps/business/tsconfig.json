@@ -8,7 +8,6 @@
       "@fastship/ui": ["../../packages/ui"],
       "@fastship/lib": ["../../packages/lib"],
       "@fastship/hooks": ["../../packages/hooks"],
-      "@fastship/db": ["../../packages/db"]
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx"],
