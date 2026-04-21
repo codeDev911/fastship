@@ -29,6 +29,7 @@ import {
   Clock,
   RouteIcon,
 } from 'lucide-react';
+import { secureFetch } from '@fastship/lib';
 
 // Pakistan states/provinces list (static, won't change)
 const STATES = [
@@ -101,7 +102,7 @@ export default function RateCalculatorPage() {
     const fetchRateCards = async () => {
       try {
         setIsLoading(true);
-        const response = await fetch(
+        const response = await secureFetch(
           '/api/rate-cards?isActive=true&limit=50'
         );
 
@@ -125,7 +126,7 @@ export default function RateCalculatorPage() {
     const fetchPickupCities = async () => {
       try {
         setLoadingPickupCities(true);
-        const response = await fetch(
+        const response = await secureFetch(
           `/api/locations/cities?state=${encodeURIComponent(pickupState)}`
         );
 
@@ -155,7 +156,7 @@ export default function RateCalculatorPage() {
     const fetchDeliveryCities = async () => {
       try {
         setLoadingDeliveryCities(true);
-        const response = await fetch(
+        const response = await secureFetch(
           `/api/locations/cities?state=${encodeURIComponent(deliveryState)}`
         );
 
@@ -187,7 +188,7 @@ export default function RateCalculatorPage() {
     const calculateDistance = async () => {
       try {
         setCalculatingDistance(true);
-        const response = await fetch('/api/distance/calculate', {
+        const response = await secureFetch('/api/distance/calculate', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

@@ -9,6 +9,7 @@ import { Label } from '@fastship/ui';
 import { AlertCircle, Loader2, ArrowLeft, CheckCircle2, Clock, XCircle } from 'lucide-react';
 import { Alert } from '@fastship/ui';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@fastship/ui';
+import { secureFetch } from '@fastship/lib';
 
 interface ApprovalStatus {
   status: 'APPROVED' | 'PENDING' | 'REJECTED' | 'NOT_FOUND';
@@ -57,7 +58,7 @@ export default function CheckStatusPage() {
     setIsLoading(true);
 
     try {
-      const response = await fetch(
+      const response = await secureFetch(
         `/api/register/check-approval?email=${encodeURIComponent(formData.email)}&type=${formData.type}`,
         {
           method: 'GET',

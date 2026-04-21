@@ -9,6 +9,7 @@ import { Input } from '@fastship/ui';
 import { Label } from '@fastship/ui';
 import { AlertCircle, Loader2, ArrowLeft, CheckCircle2 } from 'lucide-react';
 import { Alert } from '@fastship/ui';
+import { secureFetch } from '@fastship/lib';
 
 export default function DriverCompletePage() {
   const router = useRouter();
@@ -57,7 +58,7 @@ export default function DriverCompletePage() {
     setIsLoading(true);
 
     try {
-      const response = await fetch('/api/register/driver/complete', {
+      const response = await secureFetch('/api/register/driver/complete', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

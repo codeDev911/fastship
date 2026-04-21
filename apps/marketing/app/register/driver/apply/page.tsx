@@ -10,6 +10,7 @@ import { Label } from '@fastship/ui';
 import { AlertCircle, Loader2, ArrowLeft, CheckCircle2 } from 'lucide-react';
 import { Alert } from '@fastship/ui';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@fastship/ui';
+import { secureFetch } from '@fastship/lib';
 
 export default function DriverApplyPage() {
   const router = useRouter();
@@ -55,7 +56,7 @@ export default function DriverApplyPage() {
     setIsLoading(true);
 
     try {
-      const response = await fetch('/api/register/driver/apply', {
+      const response = await secureFetch('/api/register/driver/apply', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
