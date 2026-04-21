@@ -10,5 +10,5 @@ export { Checkbox} from "./checkbox"
 export * from './tabs'
 export {buttonVariants} from "./button"
 export * from "./toggle"
-
+export * from './select'
 export {Textarea} from "./textarea"
