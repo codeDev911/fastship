@@ -75,7 +75,7 @@ export async function refreshCSRFToken(): Promise<string | null> {
   }
 
   try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/authj/csrf-token`, {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/csrf-token`, {
       method: 'GET',
       credentials: 'include',
       headers: {
