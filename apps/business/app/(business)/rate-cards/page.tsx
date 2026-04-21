@@ -40,7 +40,7 @@ export default function RateCardsPage() {
         toast({
           title: 'Error',
           description: error.message || 'Failed to fetch rate cards',
-          type: 'error',
+          variant:"destructive"
         });
       } finally {
         setIsLoading(false);
@@ -85,13 +85,11 @@ export default function RateCardsPage() {
         description: selectedRateCard 
           ? 'Rate card updated successfully' 
           : 'Rate card created successfully',
-        type: 'success',
       });
     } catch (error: any) {
       toast({
         title: 'Error',
         description: error.message || 'Failed to save rate card',
-        type: 'error',
       });
       throw error;
     } finally {
@@ -118,13 +116,11 @@ export default function RateCardsPage() {
       toast({
         title: 'Success',
         description: 'Rate card deleted successfully',
-        type: 'success',
       });
     } catch (error: any) {
       toast({
         title: 'Error',
         description: error.message || 'Failed to delete rate card',
-        type: 'error',
       });
       throw error;
     }

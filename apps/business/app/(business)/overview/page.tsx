@@ -124,7 +124,6 @@ export default function BusinessOverviewPage() {
         <Card>
           <CardHeader
             title="Today's Activity"
-            description="Orders and deliveries throughout the day"
           />
           <CardContent>
             {isLoadingActivity ? (

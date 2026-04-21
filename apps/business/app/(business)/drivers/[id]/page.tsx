@@ -255,7 +255,7 @@ export default function DriverDetailsPage() {
         {/* Performance Chart */}
         {performanceData.length > 0 && (
           <Card>
-            <CardHeader title="Weekly Performance" description="Last 7 days deliveries" />
+            <CardHeader title="Weekly Performance"  />
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
                 <BarChart data={performanceData}>
@@ -282,7 +282,7 @@ export default function DriverDetailsPage() {
         {/* Recent Assignments */}
         {assignments.length > 0 && (
           <Card>
-            <CardHeader title="Recent Assignments" description="Latest shipments assigned to this driver" />
+            <CardHeader title="Recent Assignments" />
             <CardContent>
               <div className="overflow-x-auto">
                 <table className="w-full">
