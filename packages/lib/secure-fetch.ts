@@ -69,26 +69,40 @@ export function clearCSRFToken(): void {
 /**
  * Refresh CSRF token from server
  */
+/**
+ * Refresh CSRF token from server
+ */
 export async function refreshCSRFToken(): Promise<string | null> {
   if (typeof window === 'undefined') {
     return null; // SSR - cannot refresh
   }
 
   try {
+    const token = getAuthToken();
+    
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    
+    // Add Authorization header if we have a token
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
     const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/csrf-token`, {
       method: 'GET',
       credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
     });
 
     if (response.ok) {
       const data = await response.json();
-      if (data.token) {
-        setCSRFToken(data.token);
-        return data.token;
+      if (data.csrfToken) { 
+        setCSRFToken(data.csrfToken);
+        return data.csrfToken;
       }
+    } else {
+      console.warn('[SecureFetch] CSRF token refresh failed with status:', response.status);
     }
   } catch (error) {
     console.error('[SecureFetch] CSRF token refresh failed:', error);
