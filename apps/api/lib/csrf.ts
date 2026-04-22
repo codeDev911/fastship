@@ -32,6 +32,8 @@ export async function verifyCSRFToken(token: string): Promise<string> {
     );
 
     const verified = await jwtVerify(token, secret);
+    console.log({verified});
+    
     const payload = verified.payload as {
       userId: string;
       type: string;
@@ -43,6 +45,8 @@ export async function verifyCSRFToken(token: string): Promise<string> {
 
     return payload.userId;
   } catch (error) {
+    console.log({error});
+    
     throw new Error('CSRF token verification failed');
   }
 }

@@ -14,7 +14,6 @@ export async function validateCSRFMiddleware(request: NextRequest): Promise<bool
 
   try {
     const csrfToken = getCSRFTokenFromRequest(request.headers);
-    console.log({csrfToken});
     
     if (!csrfToken) {
       console.warn('[CSRF] No CSRF token provided in headers');
