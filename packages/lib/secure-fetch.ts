@@ -146,7 +146,7 @@ export async function secureFetch(
     }
     
     if (csrfToken) {
-      headers.set('X-CSRF-Token', csrfToken);
+      headers.set('x-csrf-token', csrfToken);
     }
   }
 
