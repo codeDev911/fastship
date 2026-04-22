@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { Button } from '@fastship/ui';
 import { Card, CardContent } from '@fastship/ui';
-import { Truck, Briefcase, ArrowRight, Package, DollarSign, BarChart3, MapPin, Zap, Shield, Users, Clock, TrendingUp } from 'lucide-react';
+import { Truck, Briefcase, ArrowRight, Package, DollarSign, BarChart3, MapPin, Zap, Shield, Users, Clock, TrendingUp, Gavel, Store, Eye } from 'lucide-react';
 
 export default function HomePage() {
   return (
