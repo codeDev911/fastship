@@ -10,7 +10,7 @@ import { useAuth } from '@fastship/lib';
 
 interface SellerLayoutProps {
   children: React.ReactNode;
-  currentPage?: 'overview' | 'orders' | 'bidding' | 'integrations' | 'billing';
+  currentPage?: 'overview' | 'orders' | 'bidding' |'payments'| 'integrations' | 'billing';
   walletBalance?: number;
   currency?: string;
   onTopUp?: () => void;

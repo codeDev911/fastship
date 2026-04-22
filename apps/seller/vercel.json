@@ -1,9 +1,8 @@
 {
-  "buildCommand": "cd ../.. && npm install --legacy-peer-deps && npm run build -- --filter=@fastship/seller",
-  "outputDirectory": ".next",
+  "installCommand": "cd ../.. && npm install --legacy-peer-deps",
+  "buildCommand": "cd ../.. && npm run build -- --filter=seller",
   "framework": "nextjs",
-  "nodeVersion": "18.x",
-  "installCommand": "npm install --prefer-offline",
+  "outputDirectory": ".next",
   "env": {
     "NODE_ENV": "production"
   }

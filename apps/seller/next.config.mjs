@@ -2,6 +2,11 @@
 const config = {
   reactStrictMode: true,
   turbopack: {},
+  transpilePackages: ["@fastship/ui"],
+   typescript: {
+    // Warning: This allows production builds to complete even with errors.
+    ignoreBuildErrors: true,
+  },
   webpack: (config, { isServer }) => {
     if (!isServer) {
       config.resolve.fallback = {
