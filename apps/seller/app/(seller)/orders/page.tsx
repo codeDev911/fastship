@@ -226,7 +226,7 @@ export default function SellerOrdersPage() {
     if (!selectedIntegration) return;
 
     try {
-      const response = await fetch('/api/integrations/shopify/sync', {
+      const response = await secureFetch('/api/integrations/shopify/sync', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -349,7 +349,7 @@ export default function SellerOrdersPage() {
           orders={filteredOrders}
           onFindCourier={handleFindCourier}
           onEdit={handleEdit}
-          onViewDetails={(order) => location.assign(`/seller/orders/${order.id}`)}
+          onViewDetails={(order) => location.assign(`/orders/${order.id}`)}
         />
 
 

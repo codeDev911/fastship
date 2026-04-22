@@ -1,10 +1,6 @@
 import { prisma } from "@fastship/lib";
 import { TransactionType } from "@prisma/client";
-import {
-  runIdempotent,
-  addLedger,
-  withWalletLock,
-} from "./financial.engine";
+import { runIdempotent, addLedger, withWalletLock } from "./financial.engine";
 type Tx = any;
 
 export const financialService = {
@@ -12,6 +8,11 @@ export const financialService = {
   // WALLET TOPUP
   // =========================
   async topUpWallet(walletId: string, amount: number) {
+    // Validate amount is integer (cents/paise)
+    if (!Number.isInteger(amount) || amount <= 0) {
+      throw new Error("Amount must be a positive integer (cents/paise)");
+    }
+
     return prisma.$transaction(async (tx) => {
       return this.createTransaction(
         tx,
@@ -19,6 +20,7 @@ export const financialService = {
         "CREDIT",
         amount,
         "Wallet top-up",
+        `topup-${walletId}-${amount}-${Date.now()}`,
       );
     });
   },
@@ -34,9 +36,17 @@ export const financialService = {
     description: string,
     referenceId?: string,
   ) {
+    // Validate amount is integer (cents/paise)
+    if (!Number.isInteger(amount) || amount === 0) {
+      throw new Error("Amount must be a non-zero integer (cents/paise)");
+    }
+
+    // Create idempotency key with wallet, amount, timestamp
+    const idempotencyKey = `tx-${walletId}-${type}-${amount}-${referenceId || 'no-ref'}-${Date.now()}`;
+
     return await runIdempotent(
       tx,
-      `tx-${walletId}-${amount}-${referenceId}`,
+      idempotencyKey,
       "transaction",
       async () => {
         const transaction = await tx.transaction.create({
@@ -87,6 +97,11 @@ export const financialService = {
     reason: string,
     referenceId?: string,
   ) {
+    // Validate amount is integer (cents/paise)
+    if (!Number.isInteger(amount) || amount <= 0) {
+      throw new Error("Amount must be a positive integer (cents/paise)");
+    }
+
     return await runIdempotent(
       tx,
       `lock-${walletId}-${amount}-${referenceId}`,
@@ -97,11 +112,18 @@ export const financialService = {
           select: { balance: true },
         });
 
-        if (Number(amount) > Number(wallet?.balance)) {
+        if (!wallet || wallet.balance < amount) {
           throw new Error("Insufficient balance");
         }
 
         return withWalletLock(tx, walletId, async () => {
+          await addLedger(tx, {
+            walletId,
+            amount,
+            type: "ESCROW_LOCK",
+            category: "ESCROW_LOCK",
+            referenceId: referenceId,
+          });
           await tx.wallet.update({
             where: { id: walletId },
             data: {
@@ -133,14 +155,19 @@ export const financialService = {
     reason: string,
     referenceId?: string,
   ) {
+    // Validate amount is integer (cents/paise)
+    if (!Number.isInteger(amount) || amount <= 0) {
+      throw new Error("Amount must be a positive integer (cents/paise)");
+    }
+
     return await runIdempotent(
       tx,
       `release-${walletId}-${amount}-${referenceId}`,
       "releaseEscrow",
       async () => {
         const wallet = await tx.wallet.findUnique({ where: { id: walletId } });
-        
-        if (!wallet || Number(wallet.escrowBalance?.toFixed(2)) < Number(amount.toFixed(2))) {
+
+        if (!wallet || wallet.escrowBalance < amount) {
           throw new Error("Insufficient escrow balance");
         }
 
@@ -159,8 +186,6 @@ export const financialService = {
               escrowBalance: { decrement: amount },
             },
           });
-          console.log("done.");
-          
 
           return tx.transaction.create({
             data: {
@@ -187,9 +212,14 @@ export const financialService = {
     amount: number,
     paymentMethod: "PREPAID" | "COD",
   ) {
+    // Validate amount is integer (cents/paise)
+    if (!Number.isInteger(amount) || amount <= 0) {
+      throw new Error("Amount must be a positive integer (cents/paise)");
+    }
+
     return await runIdempotent(
       tx,
-      `payment-${shipmentId}`,
+      `payment-${shipmentId}-${amount}-${paymentMethod}`,
       "payment",
       async () => {
         const shipment = await tx.shipment.findUnique({
@@ -199,11 +229,11 @@ export const financialService = {
         if (!shipment) throw new Error("Shipment not found");
 
         let tax = 0;
-        let commission = Number(shipment.actualRate);
+        let commission = amount; // Already in cents
         let driverPayable = 0;
 
         if (paymentMethod === "COD") {
-          driverPayable = commission * 0.8;
+          driverPayable = Math.floor((commission * 80) / 100); // 80% with proper rounding
         }
 
         return tx.payment.create({
@@ -232,9 +262,14 @@ export const financialService = {
     amount: number,
     referenceId?: string,
   ) {
+    // Validate amount is integer (cents/paise)
+    if (!Number.isInteger(amount) || amount <= 0) {
+      throw new Error("Amount must be a positive integer (cents/paise)");
+    }
+
     return await runIdempotent(
       tx,
-      `driver-settle-${driverId}-${referenceId}`,
+      `driver-settle-${driverId}-${amount}-${referenceId || 'no-ref'}`,
       "settlement",
       async () => {
         const driver = await tx.driver.findUnique({
@@ -262,48 +297,79 @@ export const financialService = {
     amount: number,
     shipmentId?: string,
   ) {
-    return await runIdempotent(tx, `cod-${shipmentId}`, "codDebt", async () => {
-      const debt = await tx.driverDebt.create({
-        data: {
-          driverId,
-          amount,
-          shipmentId,
-          debtReason: "COD collection not completed",
-        },
-      });
+    // Validate amount is integer (cents/paise)
+    if (!Number.isInteger(amount) || amount <= 0) {
+      throw new Error("Amount must be a positive integer (cents/paise)");
+    }
 
-      await tx.driver.update({
-        where: { id: driverId },
-        data: {
-          currentDebt: { increment: amount },
-        },
-      });
+    return await runIdempotent(
+      tx,
+      `cod-${shipmentId}-${driverId}-${amount}`,
+      "codDebt",
+      async () => {
+        const debt = await tx.driverDebt.create({
+          data: {
+            driverId,
+            amount,
+            shipmentId,
+            debtReason: "COD collection not completed",
+          },
+        });
 
-      return debt;
-    });
+        await tx.driver.update({
+          where: { id: driverId },
+          data: {
+            currentDebt: { increment: amount },
+          },
+        });
+
+        return debt;
+      },
+    );
   },
 
   // =========================
   // SHIPMENT PROCESSING (CORE FLOW)
   // =========================
   async processShipmentTransactions(tx: Tx, shipment: any) {
+    // All amounts MUST be integers (cents/paise)
+    const amountInCents = Math.round(Number(
+      shipment.actualRate || shipment.expectedRate || 0
+    ) * 100); // Convert to cents
+
+    if (!Number.isInteger(amountInCents) || amountInCents <= 0) {
+      throw new Error("Invalid shipment amount: must be positive integer");
+    }
+
+    // Calculate fees with integer math to prevent floating point errors
+    const businessFeePercent = 10; // 10%
+    const platformFeePercent = 10; // 10%
+    const driverFeePercent = 80; // 80%
+
+    // Use integer division to ensure no fractional cents
+    const businessFeeCents = Math.floor((amountInCents * businessFeePercent) / 100);
+    const platformFeeCents = Math.floor((amountInCents * platformFeePercent) / 100);
+    // Driver gets the remainder to ensure no money is lost due to rounding
+    const driverFeeCents = amountInCents - businessFeeCents - platformFeeCents;
+
+    // Validation: total must equal amount
+    const totalCents = businessFeeCents + platformFeeCents + driverFeeCents;
+    if (totalCents !== amountInCents) {
+      throw new Error(
+        `Fee calculation error: ${totalCents} != ${amountInCents}`
+      );
+    }
+
     return await runIdempotent(
       tx,
-      `shipment-${shipment.id}`,
+      `shipment-${shipment.id}-${amountInCents}`,
       "shipmentProcess",
       async () => {
-        const amount = Number(
-          shipment.actualRate || shipment.expectedRate || 0,
-        );
-        const businessFee = amount * 0.1;
-        const platformFee = amount * 0.1;
-        const driverFee = amount * 0.8;
-
         // Deduct fee from seller
         await withWalletLock(tx, shipment.seller.wallet.id, async () => {
           await addLedger(tx, {
             walletId: shipment.seller.wallet.id,
-            amount: -amount,
+            amount: -amountInCents,
             type: "DEBIT",
             category: "SHIPMENT_CLEAR",
             referenceId: shipment.id,
@@ -312,14 +378,14 @@ export const financialService = {
           await tx.wallet.update({
             where: { id: shipment.seller.wallet.id },
             data: {
-              balance: { decrement: amount },
-              escrowBalance: { decrement: amount },
+              balance: { decrement: amountInCents },
+              escrowBalance: { decrement: amountInCents },
             },
           });
 
           await tx.transaction.create({
             data: {
-              amount: amount,
+              amount: amountInCents,
               description: "Shipping fee deducted",
               type: "DEBIT",
               completedAt: new Date(),
@@ -339,7 +405,7 @@ export const financialService = {
         await withWalletLock(tx, businessWallet.id, async () => {
           await addLedger(tx, {
             walletId: businessWallet.id,
-            amount: businessFee,
+            amount: businessFeeCents,
             type: "CREDIT",
             category: "DELIVERY_FEE",
             referenceId: shipment.id,
@@ -348,15 +414,15 @@ export const financialService = {
           await tx.wallet.update({
             where: { id: businessWallet.id },
             data: {
-              balance: { increment: businessFee },
-              escrowBalance: { decrement: platformFee },
+              balance: { increment: businessFeeCents },
+              escrowBalance: { decrement: platformFeeCents },
             },
           });
 
           await tx.transaction.create({
             data: {
-              amount: businessFee,
-              description: "Delivery fee and Released Escrow",
+              amount: businessFeeCents,
+              description: "Delivery fee received",
               type: "CREDIT",
               completedAt: new Date(),
               referenceId: shipment.id,
@@ -375,7 +441,7 @@ export const financialService = {
           async () => {
             await addLedger(tx, {
               walletId: shipment?.assignment?.driver?.wallet.id,
-              amount: driverFee,
+              amount: driverFeeCents,
               type: "CREDIT",
               category: "DELIVERY_FEE",
               referenceId: shipment.id,
@@ -384,14 +450,14 @@ export const financialService = {
             await tx.wallet.update({
               where: { id: shipment?.assignment?.driver?.wallet.id },
               data: {
-                balance: { increment: driverFee },
+                balance: { increment: driverFeeCents },
               },
             });
 
             await tx.transaction.create({
               data: {
-                amount: driverFee,
-                description: "Delivery fee",
+                amount: driverFeeCents,
+                description: "Delivery fee earned",
                 type: "CREDIT",
                 completedAt: new Date(),
                 referenceId: shipment.id,
@@ -405,8 +471,15 @@ export const financialService = {
         await this.settleDriverPayment(
           tx,
           shipment.assignment?.driverId,
-          amount * 0.8,
+          driverFeeCents,
         );
+
+        return {
+          amountProcessed: amountInCents,
+          businessFee: businessFeeCents,
+          driverFee: driverFeeCents,
+          platformFee: platformFeeCents,
+        };
       },
     );
   },
@@ -421,6 +494,11 @@ export const financialService = {
     reason: string,
     referenceId: string,
   ) {
+    // Validate amount is integer (cents/paise)
+    if (!Number.isInteger(amount) || amount <= 0) {
+      throw new Error("Amount must be a positive integer (cents/paise)");
+    }
+
     return await runIdempotent(
       tx,
       `cut-${walletId}-${amount}-${referenceId}`,
@@ -460,7 +538,7 @@ export const financialService = {
   },
 
   // =========================
-  // ESCROW CUT
+  // FUND TRANSFER
   // =========================
   async transferFunds(
     tx: Tx,
@@ -472,11 +550,17 @@ export const financialService = {
     description: string = "Funds Transfer",
     referenceId?: string,
   ) {
-    if (amount <= 0) throw new Error("Invalid transfer amount");
+    // Validate amount is integer (cents/paise)
+    if (!Number.isInteger(amount) || amount <= 0) {
+      throw new Error("Amount must be a positive integer (cents/paise)");
+    }
+
+    // Better idempotency key with timestamp to avoid collisions
+    const uniqueKey = `transfer-${from}-${fromId}-${to}-${toId}-${amount}-${referenceId || 'no-ref'}-${Date.now()}`;
 
     return await runIdempotent(
       tx,
-      `transfer-${from}-${fromId}-${to}-${toId}-${referenceId}`,
+      uniqueKey,
       "transfer",
       async () => {
         // 🔐 resolve wallets safely
@@ -487,9 +571,6 @@ export const financialService = {
               ? { businessId: fromId }
               : { driverId: fromId };
 
-              console.log(to);
-              console.log(toId);
-              
         const receiverWhere =
           to === "seller"
             ? { sellerId: toId }
@@ -504,8 +585,6 @@ export const financialService = {
         const receiverWallet = await tx.wallet.findFirst({
           where: receiverWhere,
         });
-
-
 
         if (!senderWallet || !receiverWallet) {
           throw new Error("Wallet not found");
@@ -538,7 +617,7 @@ export const financialService = {
               type: "DEBIT",
               amount,
               referenceId,
-              description:"Funds transfered",
+              description: description,
               status: "COMPLETED",
               completedAt: new Date(),
             },
@@ -567,7 +646,7 @@ export const financialService = {
                 type: "CREDIT",
                 amount,
                 referenceId,
-                description: "Funds recieved",
+                description: description,
                 status: "COMPLETED",
                 completedAt: new Date(),
               },
@@ -581,27 +660,29 @@ export const financialService = {
           to: receiverWallet.id,
           amount,
         };
-      }
+      },
     );
   },
 
   // =========================
   // Settle COD Debt
   // =========================
-  async   settleCODDebt(
+  async settleCODDebt(
     tx: Tx,
     driverId: string,
     amount: number,
     referenceId?: string,
   ) {
-    if (amount <= 0) throw new Error("Invalid amount");
+    // Validate amount is integer (cents/paise)
+    if (!Number.isInteger(amount) || amount <= 0) {
+      throw new Error("Amount must be a positive integer (cents/paise)");
+    }
 
     return runIdempotent(
       tx,
-      `cod-settle:${driverId}:${amount}:${referenceId}`,
+      `cod-settle:${driverId}:${amount}:${referenceId}:${Date.now()}`,
       "cod_debt_settlement",
       async () => {
-        
         const driver = await tx.driver.findUnique({
           where: { id: driverId },
           include: { wallet: true },
@@ -611,7 +692,7 @@ export const financialService = {
           throw new Error("Driver or wallet not found");
         }
 
-        if (driver?.currentDebt?.toFixed() < amount) {
+        if (!driver.currentDebt || driver.currentDebt < amount) {
           throw new Error("Amount exceeds current debt");
         }
 
