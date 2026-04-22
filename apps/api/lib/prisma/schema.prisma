@@ -678,7 +678,7 @@ model ShopifyOrder {
 }
 
 model ReconciliationAlert {
-  id             String
+  id             String  @id @default(cuid())
   walletId       String
   logId          String
   severity       String // CRITICAL | HIGH | MEDIUM | LOW
@@ -698,7 +698,7 @@ model ReconciliationAlert {
 }
 
 model Notification {
-  id         String
+  id         Int @unique @default(autoincrement())
   type       String // RECONCILIATION_ALERT
   severity   String // CRITICAL | HIGH | MEDIUM | LOW
   title      String
