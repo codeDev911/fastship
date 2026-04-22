@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
 import { sendEmail, getApplicationApprovedEmail, getApplicationRejectedEmail } from '@/lib/email';
-
+//// update now
 const updateApprovalSchema = z.object({
   status: z.enum(['APPROVED', 'REJECTED']).optional(),
   rejectionReason: z.string().optional(),
