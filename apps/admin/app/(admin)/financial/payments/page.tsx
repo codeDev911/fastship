@@ -12,6 +12,7 @@ import {
   TrendingUp,
   Zap,
 } from 'lucide-react';
+import { secureFetch } from '@fastship/lib';
 
 interface Payment {
   id: string;
@@ -39,7 +40,7 @@ export default function PaymentsPage() {
   const fetchPayments = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch(`/api/admin/payments?status=${filterStatus}`);
+      const response = await secureFetch(`/api/admin/payments?status=${filterStatus}`);
       if (response.ok) {
         const data = await response.json();
         setPayments(data.data);

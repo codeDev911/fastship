@@ -14,6 +14,7 @@ import {
   MapPin,
   Navigation,
 } from 'lucide-react';
+import { secureFetch } from '@fastship/lib';
 
 interface Driver {
   id: string;
@@ -38,7 +39,7 @@ export default function DriversPage() {
   const fetchDrivers = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch(`/api/admin/drivers?status=${filterStatus}`);
+      const response = await secureFetch(`/api/admin/drivers?status=${filterStatus}`);
       if (response.ok) {
         const data = await response.json();
         setDrivers(data.data);

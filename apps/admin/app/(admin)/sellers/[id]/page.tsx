@@ -22,6 +22,7 @@ import {
   AlertTriangle,
   Truck,
 } from 'lucide-react';
+import { secureFetch } from '@fastship/lib';
 
 interface SellerDetail {
   id: string;
@@ -92,7 +93,7 @@ export default function SellerDetailPage() {
     const fetchSeller = async () => {
       try {
         setIsLoading(true);
-        const response = await fetch(`/api/admin/sellers/${sellerId}`);
+        const response = await secureFetch(`/api/admin/sellers/${sellerId}`);
         if (response.ok) {
           const { data } = await response.json();
           setSeller(data);

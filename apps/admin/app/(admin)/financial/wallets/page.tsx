@@ -14,6 +14,7 @@ import {
   Eye,
   Filter,
 } from 'lucide-react';
+import { secureFetch } from '@fastship/lib';
 
 interface Wallet {
   id: string;
@@ -47,7 +48,7 @@ export default function WalletsPage() {
   const fetchWallets = async (page: number = 1) => {
     try {
       setIsLoading(true);
-      const response = await fetch(`/api/admin/wallets?page=${page}&limit=20&type=${filterType}`);
+      const response = await secureFetch(`/api/admin/wallets?page=${page}&limit=20&type=${filterType}`);
       if (response.ok) {
         const { data, pagination } = await response.json();
         setWallets(data);

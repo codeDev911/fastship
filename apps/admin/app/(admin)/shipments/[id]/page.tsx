@@ -13,6 +13,7 @@ import {
   Calendar,
   AlertTriangle,
 } from 'lucide-react';
+import { secureFetch } from '@fastship/lib';
 
 interface ShipmentDetail {
   id: string;
@@ -152,7 +153,7 @@ export default function ShipmentDetailPage() {
     const fetchShipment = async () => {
       try {
         setIsLoading(true);
-        const response = await fetch(`/api/admin/shipments/${shipmentId}`);
+        const response = await secureFetch(`/api/admin/shipments/${shipmentId}`);
         if (response.ok) {
           const { data } = await response.json();
           setShipment(data);

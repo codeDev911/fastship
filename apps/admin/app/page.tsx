@@ -17,6 +17,7 @@ import {
   Award,
   BadgeCheck,
 } from 'lucide-react';
+import { secureFetch } from '@fastship/lib';
 
 interface DashboardMetrics {
   totalShipments: number;
@@ -49,7 +50,6 @@ const statusColors: Record<string, string> = {
   FAILED: 'bg-red-100 text-red-700',
   OPEN: 'bg-red-100 text-red-700',
   RESOLVED: 'bg-green-100 text-green-700',
-  PENDING: 'bg-yellow-100 text-yellow-700',
 };
 
 export default function AdminDashboard() {
@@ -61,7 +61,7 @@ export default function AdminDashboard() {
   const fetchMetrics = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch('/api/admin/dashboard');
+      const response = await secureFetch('/api/admin/dashboard');
       if (response.ok) {
         const data = await response.json();
         setMetrics(data.data);

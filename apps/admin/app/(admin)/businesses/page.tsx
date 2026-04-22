@@ -13,6 +13,7 @@ import {
   RefreshCw,
   TrendingUp,
 } from 'lucide-react';
+import { secureFetch } from '@fastship/lib';
 
 interface Business {
   id: string;
@@ -35,7 +36,7 @@ export default function BusinessesPage() {
   const fetchBusinesses = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch(`/api/admin/businesses?status=${filterStatus}`);
+      const response = await secureFetch(`/api/admin/businesses?status=${filterStatus}`);
       if (response.ok) {
         const data = await response.json();
         setBusinesses(data.data);

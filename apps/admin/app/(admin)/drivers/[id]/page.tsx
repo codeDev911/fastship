@@ -21,6 +21,7 @@ import {
   AlertTriangle,
   Shield,
 } from 'lucide-react';
+import { secureFetch } from '@fastship/lib';
 
 interface DriverDetail {
   id: string;
@@ -82,7 +83,7 @@ export default function DriverDetailPage() {
     const fetchDriver = async () => {
       try {
         setIsLoading(true);
-        const response = await fetch(`/api/admin/drivers/${driverId}`);
+        const response = await secureFetch(`/api/admin/drivers/${driverId}`);
         if (response.ok) {
           const { data } = await response.json();
           setDriver(data);

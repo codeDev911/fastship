@@ -284,8 +284,10 @@ model Shipment {
   description       String
   paymentMethod     PaymentMethod  @default(PREPAID)
   codAmount         Float?
+  codAmount_cents   Int?           @default(0) // Store COD amount in cents for accuracy (used for calculation in backed only)
   expectedRate      Float?
   actualRate        Float?
+  actualRate_cents  Int?           @default(0) // Store actual rate in cents for accuracy (used for calculation in backed only)
   status            ShipmentStatus @default(PENDING)
   priority          String         @default("STANDARD")
   notes             String?
@@ -356,24 +358,28 @@ model RateCard {
 }
 
 model Wallet {
-  id               String   @id @default(cuid())
-  balance          Float    @default(0)
-  escrowBalance    Float    @default(0)
-  totalEarnings    Float    @default(0)
-  totalWithdrawals Float    @default(0)
-  lastUpdated      DateTime @updatedAt
-  createdAt        DateTime @default(now())
+  id                     String   @id @default(cuid())
+  balance                Float    @default(0) // Keep for backward compatibility, but will be generated from balance_cents
+  balance_cents          Int?     @default(0) // Store balance in cents for accuracy (used for calculation in backed only)
+  escrowBalance          Float    @default(0) // Keep for backward compatibility, but will be generated from balance_cents
+  escrowBalance_cents    Int?     @default(0)
+  totalEarnings          Float    @default(0) // Keep for backward compatibility, but will be generated from balance_cents
+  totalEarnings_cents    Int?     @default(0)
+  totalWithdrawals       Float    @default(0) // Keep for backward compatibility, but will be generated from balance_cents
+  totalWithdrawals_cents Int?     @default(0)
+  lastUpdated            DateTime @updatedAt
+  createdAt              DateTime @default(now())
 
   sellerId   String? @unique
   driverId   String? @unique
   businessId String? @unique
 
-  seller                Seller?              @relation(fields: [sellerId], references: [id], onDelete: Cascade)
-  driver                Driver?              @relation(fields: [driverId], references: [id], onDelete: Cascade)
-  business              Business?            @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  transactions          Transaction[]
-  ledgerEntries         LedgerEntry[]
-  reconciliationLogs    ReconciliationLog[]
+  seller             Seller?             @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  driver             Driver?             @relation(fields: [driverId], references: [id], onDelete: Cascade)
+  business           Business?           @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  transactions       Transaction[]
+  ledgerEntries      LedgerEntry[]
+  reconciliationLogs ReconciliationLog[]
 
   @@index([sellerId])
   @@index([driverId])
@@ -381,15 +387,16 @@ model Wallet {
 }
 
 model Transaction {
-  id          String          @id @default(cuid())
-  walletId    String
-  type        TransactionType
-  amount      Float
-  description String
-  referenceId String?
-  status      PaymentStatus   @default(PENDING)
-  createdAt   DateTime        @default(now())
-  completedAt DateTime?
+  id           String          @id @default(cuid())
+  walletId     String
+  type         TransactionType
+  amount       Float           @default(0) // Keep for backward compatibility, but will be generated from amount_cents
+  amount_cents Int?            @default(0) // Store amount in cents for accuracy (used for calculation in backed only)
+  description  String
+  referenceId  String?
+  status       PaymentStatus   @default(PENDING)
+  createdAt    DateTime        @default(now())
+  completedAt  DateTime?
 
   wallet Wallet @relation(fields: [walletId], references: [id], onDelete: Cascade)
 
@@ -399,19 +406,23 @@ model Transaction {
 }
 
 model Payment {
-  id            String        @id @default(cuid())
-  shipmentId    String        @unique
-  amount        Float
-  tax           Float         @default(0)
-  commission    Float         @default(0)
-  driverPayable Float
-  paymentMethod PaymentMethod
-  paymentStatus PaymentStatus @default(PENDING)
-  transactionId String?
-  notes         String?
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-  paidAt        DateTime?
+  id                  String        @id @default(cuid())
+  shipmentId          String        @unique
+  amount              Float         @default(0) // Keep for backward compatibility, but will be generated from amount_cents
+  amount_cents        Int?          @default(0) // Store amount in cents for accuracy (used for calculation in backed only)
+  tax                 Float         @default(0) // Keep for backward compatibility, but will be generated from amount_cents
+  tax_cents           Int?          @default(0) // Store amount in cents for accuracy (used for calculation in backed only)
+  commission          Float         @default(0) // Keep for backward compatibility, but will be generated from amount_cents
+  commission_cents    Int?          @default(0) // Store amount in cents for accuracy (used for calculation in backed only)
+  driverPayable       Float         @default(0) // Keep for backward compatibility, but will be generated from amount_cents
+  driverPayable_cents Int?          @default(0) // Store amount in cents for accuracy (used for calculation in backed only)
+  paymentMethod       PaymentMethod
+  paymentStatus       PaymentStatus @default(PENDING)
+  transactionId       String?
+  notes               String?
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+  paidAt              DateTime?
 
   shipment Shipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
 
@@ -420,15 +431,16 @@ model Payment {
 }
 
 model LedgerEntry {
-  id           String  @id @default(uuid())
-  walletId     String
-  amount       Float // +credit / -debit
-  type         String // CREDIT / DEBIT
-  category     String // escrow, fee, transfer
-  referenceId  String?
-  balanceAfter Float
-
-  createdAt DateTime @default(now())
+  id                 String   @id @default(uuid())
+  walletId           String
+  amount             Float    @default(0) // +credit / -debit
+  amount_cents       Int?     @default(0) // Store amount in cents for accuracy (used for calculation in backed only)
+  type               String // CREDIT / DEBIT
+  category           String // escrow, fee, transfer
+  referenceId        String?
+  balanceAfter       Float
+  balanceAfter_cents Int?     @default(0) // Store balance in cents for accuracy (used for calculation in backed only)
+  createdAt          DateTime @default(now())
 
   wallet Wallet @relation(fields: [walletId], references: [id])
 
@@ -437,14 +449,17 @@ model LedgerEntry {
 }
 
 model ReconciliationLog {
-  id         String   @id @default(cuid())
-  walletId   String
-  expected   Float // Expected balance from ledger
-  actual     Float // Actual balance in wallet
-  difference Float // Difference (expected - actual)
-  status     String // OK, FIXED, ERROR
-  message    String? // Description of what happened
-  createdAt  DateTime @default(now())
+  id               String   @id @default(cuid())
+  walletId         String
+  expected         Float    @default(0) // Expected balance from ledger
+  expected_cents   Int?     @default(0) // Store amount in cents for accuracy (used for calculation in backed only)
+  actual           Float    @default(0) // Actual balance in wallet
+  actual_cents     Int?     @default(0) // Store amount in cents for accuracy (used for calculation in backed only)
+  difference       Float    @default(0) // Difference (expected - actual)
+  difference_cents Int?     @default(0) // Store amount in cents for accuracy (used for calculation in backed only))
+  status           String // OK, FIXED, ERROR
+  message          String? // Description of what happened
+  createdAt        DateTime @default(now())
 
   wallet Wallet @relation(fields: [walletId], references: [id], onDelete: Cascade)
 
@@ -498,7 +513,8 @@ model Earning {
   id           String    @id @default(cuid())
   driverId     String
   shipmentId   String?
-  amount       Float
+  amount       Float     @default(0)
+  amount_cents Int?      @default(0) // Store amount in cents for accuracy (used for calculation in backed only)
   earnedAt     DateTime  @default(now())
   settlementId String?
   isSettled    Boolean   @default(false)
@@ -516,7 +532,8 @@ model DriverDebt {
   id           String    @id @default(cuid())
   driverId     String
   shipmentId   String?
-  amount       Float
+  amount       Float     @default(0)
+  amount_cents Int?      @default(0) // Store amount in cents for accuracy (used for calculation in backed only)
   debtReason   String
   incurredAt   DateTime  @default(now())
   settledAt    DateTime?
@@ -532,19 +549,22 @@ model DriverDebt {
 }
 
 model Settlement {
-  id          String           @id @default(cuid())
-  businessId  String
-  driverId    String?
-  periodStart DateTime
-  periodEnd   DateTime
-  totalAmount Float
-  commission  Float            @default(0)
-  netAmount   Float
-  status      SettlementStatus @default(PENDING)
-  notes       String?
-  settledAt   DateTime?
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
+  id                String           @id @default(cuid())
+  businessId        String
+  driverId          String?
+  periodStart       DateTime
+  periodEnd         DateTime
+  totalAmount       Float            @default(0)
+  totalAmount_cents Int?             @default(0) // Store total amount in cents for accuracy (used for calculation in backed only) 
+  commission        Float            @default(0)
+  commission_cents  Int?             @default(0) // Store total amount in cents for accuracy (used for calculation in backed only)
+  netAmount         Float            @default(0)
+  netAmount_cents   Int?             @default(0) // Store total amount in cents for accuracy (used for calculation in backed only)
+  status            SettlementStatus @default(PENDING)
+  notes             String?
+  settledAt         DateTime?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
 
   business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
 
@@ -558,7 +578,8 @@ model Bid {
   sellerId            String
   shipmentId          String?
   businessId          String?
-  amount              Float
+  amount              Float     @default(0) // Keep for backward compatibility, but will be generated from amount_cents
+  amount_cents        Int?      @default(0) // Store bid amount in cents for accuracy (used for calculation in backed only)
   description         String? // Custom terms or special notes
   distance            Float? // Calculated distance for this bid
   estimatedPickupTime DateTime? // Estimated when business can pickup

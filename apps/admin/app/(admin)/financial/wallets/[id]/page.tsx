@@ -16,6 +16,7 @@ import {
   Clock,
   Download,
 } from 'lucide-react';
+import { secureFetch } from '@fastship/lib';
 
 interface Transaction {
   id: string;
@@ -94,7 +95,7 @@ export default function WalletDetailPage() {
   const fetchWallet = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch(`/api/admin/wallets/${walletId}`);
+      const response = await secureFetch(`/api/admin/wallets/${walletId}`);
       if (response.ok) {
         const { data } = await response.json();
         setWallet(data);
@@ -118,7 +119,7 @@ export default function WalletDetailPage() {
   const handleReconcile = async () => {
     try {
       setIsReconciling(true);
-      const response = await fetch(`/api/admin/wallets/${walletId}`, {
+      const response = await secureFetch(`/api/admin/wallets/${walletId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'reconcile' }),

@@ -13,6 +13,7 @@ import {
   RefreshCw,
   AlertCircle,
 } from 'lucide-react';
+import { secureFetch } from '@fastship/lib';
 
 interface Seller {
   id: string;
@@ -34,7 +35,7 @@ export default function SellersPage() {
   const fetchSellers = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch(`/api/admin/sellers?status=${filterStatus}`);
+      const response = await secureFetch(`/api/admin/sellers?status=${filterStatus}`);
       if (response.ok) {
         const data = await response.json();
         setSellers(data.data);

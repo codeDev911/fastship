@@ -12,6 +12,7 @@ import {
   DollarSign,
   AlertCircle,
 } from 'lucide-react';
+import { secureFetch } from '@fastship/lib';
 
 interface Dispute {
   id: string;
@@ -38,7 +39,7 @@ export default function DisputesPage() {
     try {
       setIsLoading(true);
       const statusParam = filterStatus !== 'all' ? `?status=${filterStatus}` : '';
-      const response = await fetch(`/api/disputes${statusParam}`);
+      const response = await secureFetch(`/api/disputes${statusParam}`);
       if (response.ok) {
         const data = await response.json();
         setDisputes(data.data.map((d: any) => ({
@@ -67,7 +68,7 @@ export default function DisputesPage() {
   const handleResolveDispute = async (id: string, resolution: 'APPROVE' | 'REJECT', amount?: number) => {
     try {
       setProcessingId(id);
-      const response = await fetch(`/api/disputes/${id}`, {
+      const response = await secureFetch(`/api/disputes/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

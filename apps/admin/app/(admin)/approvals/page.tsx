@@ -11,6 +11,7 @@ import {
   RefreshCw,
   AlertCircle,
 } from 'lucide-react';
+import { secureFetch } from '@fastship/lib';
 
 interface Approval {
   id: string;
@@ -37,7 +38,7 @@ export default function ApprovalsPage() {
   const fetchApprovals = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch(`/api/admin/approvals?type=${filterType}`);
+      const response = await secureFetch(`/api/admin/approvals?type=${filterType}`);
       if (response.ok) {
         const data = await response.json();
         setApprovals(data.data);
@@ -56,7 +57,7 @@ export default function ApprovalsPage() {
   const handleApprove = async (id: string) => {
     try {
       setProcessingId(id);
-      const response = await fetch(`/api/admin/approvals/${id}`, {
+      const response = await secureFetch(`/api/admin/approvals/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'APPROVED' }),
@@ -83,7 +84,7 @@ export default function ApprovalsPage() {
 
     try {
       setProcessingId(id);
-      const response = await fetch(`/api/admin/approvals/${id}`, {
+      const response = await secureFetch(`/api/admin/approvals/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'REJECTED', rejectionReason }),

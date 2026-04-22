@@ -3,22 +3,51 @@ import { TransactionType } from "@prisma/client";
 import { runIdempotent, addLedger, withWalletLock } from "./financial.engine";
 type Tx = any;
 
+// =========================
+// HELPER FUNCTIONS FOR CENTS CONVERSION
+// =========================
+
+/**
+ * Convert decimal amount to cents (e.g., 99.99 -> 9999)
+ * Rounds to nearest cent to handle floating point errors
+ */
+function toCents(amount: number): number {
+  return Math.round(amount * 100);
+}
+
+/**
+ * Convert cents to decimal (e.g., 9999 -> 99.99)
+ */
+function toDecimal(cents: number): number {
+  return cents / 100;
+}
+
+/**
+ * Validate that amount in cents is positive integer
+ */
+function validateCents(cents: number, fieldName: string = "amount"): void {
+  if (!Number.isInteger(cents) || cents <= 0) {
+    throw new Error(
+      `${fieldName} must be a positive integer (cents). Got: ${cents}`
+    );
+  }
+}
+
 export const financialService = {
   // =========================
   // WALLET TOPUP
   // =========================
   async topUpWallet(walletId: string, amount: number) {
-    // Validate amount is integer (cents/paise)
-    if (!Number.isInteger(amount) || amount <= 0) {
-      throw new Error("Amount must be a positive integer (cents/paise)");
-    }
+    // Convert incoming decimal amount to cents
+    const amountCents = toCents(amount);
+    validateCents(amountCents, "topup amount");
 
     return prisma.$transaction(async (tx) => {
       return this.createTransaction(
         tx,
         walletId,
         "CREDIT",
-        amount,
+        amount, // Pass original decimal amount
         "Wallet top-up",
         `topup-${walletId}-${amount}-${Date.now()}`,
       );
@@ -36,13 +65,12 @@ export const financialService = {
     description: string,
     referenceId?: string,
   ) {
-    // Validate amount is integer (cents/paise)
-    if (!Number.isInteger(amount) || amount === 0) {
-      throw new Error("Amount must be a non-zero integer (cents/paise)");
-    }
+    // Convert incoming decimal amount to cents
+    const amountCents = toCents(amount);
+    validateCents(amountCents, "transaction amount");
 
-    // Create idempotency key with wallet, amount, timestamp
-    const idempotencyKey = `tx-${walletId}-${type}-${amount}-${referenceId || 'no-ref'}-${Date.now()}`;
+    // Create idempotency key with cents and timestamp
+    const idempotencyKey = `tx-${walletId}-${type}-${amountCents}-${referenceId || 'no-ref'}-${Date.now()}`;
 
     return await runIdempotent(
       tx,
@@ -53,7 +81,8 @@ export const financialService = {
           data: {
             walletId,
             type,
-            amount,
+            amount: amount, // Decimal value for display
+            amount_cents: amountCents, // Integer cents for calculations
             description,
             referenceId,
             status: "COMPLETED",
@@ -61,14 +90,14 @@ export const financialService = {
           },
         });
 
-        const balanceChange = ["CREDIT", "SETTLEMENT"].includes(type)
-          ? amount
-          : -amount;
+        const balanceChangeCents = ["CREDIT", "SETTLEMENT"].includes(type)
+          ? amountCents
+          : -amountCents;
 
         await withWalletLock(tx, walletId, async () => {
           await addLedger(tx, {
             walletId,
-            amount: balanceChange,
+            amount: balanceChangeCents,  // IMPORTANT: pass amount in cents (integer)
             type,
             category: "TRANSACTION",
             referenceId,
@@ -77,7 +106,8 @@ export const financialService = {
           await tx.wallet.update({
             where: { id: walletId },
             data: {
-              balance: { increment: balanceChange },
+              balance: { increment: toDecimal(balanceChangeCents) },
+              balance_cents: { increment: balanceChangeCents },
             },
           });
         });
@@ -97,29 +127,28 @@ export const financialService = {
     reason: string,
     referenceId?: string,
   ) {
-    // Validate amount is integer (cents/paise)
-    if (!Number.isInteger(amount) || amount <= 0) {
-      throw new Error("Amount must be a positive integer (cents/paise)");
-    }
+    // Convert incoming decimal amount to cents
+    const amountCents = toCents(amount);
+    validateCents(amountCents, "escrow lock amount");
 
     return await runIdempotent(
       tx,
-      `lock-${walletId}-${amount}-${referenceId}`,
+      `lock-${walletId}-${amountCents}-${referenceId}`,
       "lockEscrow",
       async () => {
         const wallet = await tx.wallet.findUnique({
           where: { id: walletId },
-          select: { balance: true },
+          select: { balance: true, balance_cents: true },
         });
 
-        if (!wallet || wallet.balance < amount) {
+        if (!wallet || wallet.balance_cents < amountCents) {
           throw new Error("Insufficient balance");
         }
 
         return withWalletLock(tx, walletId, async () => {
           await addLedger(tx, {
             walletId,
-            amount,
+            amount: amountCents,  // IMPORTANT: pass amount in cents (integer)
             type: "ESCROW_LOCK",
             category: "ESCROW_LOCK",
             referenceId: referenceId,
@@ -127,7 +156,8 @@ export const financialService = {
           await tx.wallet.update({
             where: { id: walletId },
             data: {
-              escrowBalance: { increment: amount },
+              escrowBalance: { increment: toDecimal(amountCents) },
+              escrowBalance_cents: { increment: amountCents },
             },
           });
           return tx.transaction.create({
@@ -135,7 +165,8 @@ export const financialService = {
               walletId,
               referenceId,
               type: "ESCROW_LOCK",
-              amount,
+              amount: toDecimal(amountCents),
+              amount_cents: amountCents,
               description: `Escrow locked: ${reason}`,
               status: "PENDING",
             },
@@ -155,26 +186,28 @@ export const financialService = {
     reason: string,
     referenceId?: string,
   ) {
-    // Validate amount is integer (cents/paise)
-    if (!Number.isInteger(amount) || amount <= 0) {
-      throw new Error("Amount must be a positive integer (cents/paise)");
-    }
+    // Convert incoming decimal amount to cents
+    const amountCents = toCents(amount);
+    validateCents(amountCents, "escrow release amount");
 
     return await runIdempotent(
       tx,
-      `release-${walletId}-${amount}-${referenceId}`,
+      `release-${walletId}-${amountCents}-${referenceId}`,
       "releaseEscrow",
       async () => {
-        const wallet = await tx.wallet.findUnique({ where: { id: walletId } });
+        const wallet = await tx.wallet.findUnique({
+          where: { id: walletId },
+          select: { escrowBalance_cents: true },
+        });
 
-        if (!wallet || wallet.escrowBalance < amount) {
+        if (!wallet || wallet.escrowBalance_cents < amountCents) {
           throw new Error("Insufficient escrow balance");
         }
 
         return withWalletLock(tx, walletId, async () => {
           await addLedger(tx, {
             walletId,
-            amount,
+            amount: amountCents,  // IMPORTANT: pass amount in cents (integer)
             type: "CREDIT",
             category: "ESCROW_RELEASE",
             referenceId: reason,
@@ -183,7 +216,8 @@ export const financialService = {
           await tx.wallet.update({
             where: { id: walletId },
             data: {
-              escrowBalance: { decrement: amount },
+              escrowBalance: { decrement: toDecimal(amountCents) },
+              escrowBalance_cents: { decrement: amountCents },
             },
           });
 
@@ -191,7 +225,8 @@ export const financialService = {
             data: {
               walletId,
               type: "ESCROW_RELEASE",
-              amount,
+              amount: toDecimal(amountCents),
+              amount_cents: amountCents,
               referenceId,
               description: `Escrow released: ${reason}`,
               status: "COMPLETED",
@@ -212,14 +247,13 @@ export const financialService = {
     amount: number,
     paymentMethod: "PREPAID" | "COD",
   ) {
-    // Validate amount is integer (cents/paise)
-    if (!Number.isInteger(amount) || amount <= 0) {
-      throw new Error("Amount must be a positive integer (cents/paise)");
-    }
+    // Convert incoming decimal amount to cents
+    const amountCents = toCents(amount);
+    validateCents(amountCents, "payment amount");
 
     return await runIdempotent(
       tx,
-      `payment-${shipmentId}-${amount}-${paymentMethod}`,
+      `payment-${shipmentId}-${amountCents}-${paymentMethod}`,
       "payment",
       async () => {
         const shipment = await tx.shipment.findUnique({
@@ -228,21 +262,26 @@ export const financialService = {
 
         if (!shipment) throw new Error("Shipment not found");
 
-        let tax = 0;
-        let commission = amount; // Already in cents
-        let driverPayable = 0;
+        // Calculate fees using integer math with cents
+        let taxCents = 0;
+        let commissionCents = amountCents;
+        let driverPayableCents = 0;
 
         if (paymentMethod === "COD") {
-          driverPayable = Math.floor((commission * 80) / 100); // 80% with proper rounding
+          driverPayableCents = Math.floor((commissionCents * 80) / 100); // 80% with proper rounding
         }
 
         return tx.payment.create({
           data: {
             shipmentId,
-            amount,
-            tax,
-            commission,
-            driverPayable,
+            amount: toDecimal(amountCents),
+            amount_cents: amountCents,
+            tax: toDecimal(taxCents),
+            tax_cents: taxCents,
+            commission: toDecimal(commissionCents),
+            commission_cents: commissionCents,
+            driverPayable: toDecimal(driverPayableCents),
+            driverPayable_cents: driverPayableCents,
             paymentMethod,
             paymentStatus:
               paymentMethod === "PREPAID" ? "COMPLETED" : "PENDING",
@@ -262,14 +301,13 @@ export const financialService = {
     amount: number,
     referenceId?: string,
   ) {
-    // Validate amount is integer (cents/paise)
-    if (!Number.isInteger(amount) || amount <= 0) {
-      throw new Error("Amount must be a positive integer (cents/paise)");
-    }
+    // Convert incoming decimal amount to cents
+    const amountCents = toCents(amount);
+    validateCents(amountCents, "settlement amount");
 
     return await runIdempotent(
       tx,
-      `driver-settle-${driverId}-${amount}-${referenceId || 'no-ref'}`,
+      `driver-settle-${driverId}-${amountCents}-${referenceId || 'no-ref'}`,
       "settlement",
       async () => {
         const driver = await tx.driver.findUnique({
@@ -280,7 +318,11 @@ export const financialService = {
         if (!driver?.wallet) throw new Error("Driver or wallet not found");
 
         const earning = await tx.earning.create({
-          data: { driverId, amount },
+          data: {
+            driverId,
+            amount: toDecimal(amountCents),
+            amount_cents: amountCents,
+          },
         });
 
         return earning;
@@ -297,20 +339,20 @@ export const financialService = {
     amount: number,
     shipmentId?: string,
   ) {
-    // Validate amount is integer (cents/paise)
-    if (!Number.isInteger(amount) || amount <= 0) {
-      throw new Error("Amount must be a positive integer (cents/paise)");
-    }
+    // Convert incoming decimal amount to cents
+    const amountCents = toCents(amount);
+    validateCents(amountCents, "COD debt amount");
 
     return await runIdempotent(
       tx,
-      `cod-${shipmentId}-${driverId}-${amount}`,
+      `cod-${shipmentId}-${driverId}-${amountCents}`,
       "codDebt",
       async () => {
         const debt = await tx.driverDebt.create({
           data: {
             driverId,
-            amount,
+            amount: toDecimal(amountCents),
+            amount_cents: amountCents,
             shipmentId,
             debtReason: "COD collection not completed",
           },
@@ -319,7 +361,7 @@ export const financialService = {
         await tx.driver.update({
           where: { id: driverId },
           data: {
-            currentDebt: { increment: amount },
+            currentDebt: { increment: toDecimal(amountCents) },
           },
         });
 
@@ -332,14 +374,11 @@ export const financialService = {
   // SHIPMENT PROCESSING (CORE FLOW)
   // =========================
   async processShipmentTransactions(tx: Tx, shipment: any) {
-    // All amounts MUST be integers (cents/paise)
-    const amountInCents = Math.round(Number(
+    // Convert decimal amount to cents and validate
+    const amountCents = toCents(
       shipment.actualRate || shipment.expectedRate || 0
-    ) * 100); // Convert to cents
-
-    if (!Number.isInteger(amountInCents) || amountInCents <= 0) {
-      throw new Error("Invalid shipment amount: must be positive integer");
-    }
+    );
+    validateCents(amountCents, "shipment rate");
 
     // Calculate fees with integer math to prevent floating point errors
     const businessFeePercent = 10; // 10%
@@ -347,29 +386,35 @@ export const financialService = {
     const driverFeePercent = 80; // 80%
 
     // Use integer division to ensure no fractional cents
-    const businessFeeCents = Math.floor((amountInCents * businessFeePercent) / 100);
-    const platformFeeCents = Math.floor((amountInCents * platformFeePercent) / 100);
+    const businessFeeCents = Math.floor((amountCents * businessFeePercent) / 100);
+    const platformFeeCents = Math.floor((amountCents * platformFeePercent) / 100);
     // Driver gets the remainder to ensure no money is lost due to rounding
-    const driverFeeCents = amountInCents - businessFeeCents - platformFeeCents;
+    const driverFeeCents = amountCents - businessFeeCents - platformFeeCents;
 
     // Validation: total must equal amount
     const totalCents = businessFeeCents + platformFeeCents + driverFeeCents;
-    if (totalCents !== amountInCents) {
+    if (totalCents !== amountCents) {
       throw new Error(
-        `Fee calculation error: ${totalCents} != ${amountInCents}`
+        `Fee calculation error: ${totalCents} != ${amountCents}`
       );
     }
 
+    // Convert back to decimal for ledger entries and transactions
+    const businessFee = toDecimal(businessFeeCents);
+    const platformFee = toDecimal(platformFeeCents);
+    const driverFee = toDecimal(driverFeeCents);
+    const totalAmount = toDecimal(amountCents);
+
     return await runIdempotent(
       tx,
-      `shipment-${shipment.id}-${amountInCents}`,
+      `shipment-${shipment.id}-${totalAmount}`,
       "shipmentProcess",
       async () => {
         // Deduct fee from seller
         await withWalletLock(tx, shipment.seller.wallet.id, async () => {
           await addLedger(tx, {
             walletId: shipment.seller.wallet.id,
-            amount: -amountInCents,
+            amount: -amountCents,  // IMPORTANT: pass amount in cents (integer)
             type: "DEBIT",
             category: "SHIPMENT_CLEAR",
             referenceId: shipment.id,
@@ -378,14 +423,17 @@ export const financialService = {
           await tx.wallet.update({
             where: { id: shipment.seller.wallet.id },
             data: {
-              balance: { decrement: amountInCents },
-              escrowBalance: { decrement: amountInCents },
+              balance: { decrement: totalAmount },
+              balance_cents: { decrement: amountCents },
+              escrowBalance: { decrement: totalAmount },
+              escrowBalance_cents: { decrement: amountCents },
             },
           });
 
           await tx.transaction.create({
             data: {
-              amount: amountInCents,
+              amount: totalAmount,
+              amount_cents: amountCents,
               description: "Shipping fee deducted",
               type: "DEBIT",
               completedAt: new Date(),
@@ -405,7 +453,7 @@ export const financialService = {
         await withWalletLock(tx, businessWallet.id, async () => {
           await addLedger(tx, {
             walletId: businessWallet.id,
-            amount: businessFeeCents,
+            amount: businessFeeCents,  // IMPORTANT: pass amount in cents (integer)
             type: "CREDIT",
             category: "DELIVERY_FEE",
             referenceId: shipment.id,
@@ -414,14 +462,17 @@ export const financialService = {
           await tx.wallet.update({
             where: { id: businessWallet.id },
             data: {
-              balance: { increment: businessFeeCents },
-              escrowBalance: { decrement: platformFeeCents },
+              balance: { increment: businessFee },
+              balance_cents: { increment: businessFeeCents },
+              escrowBalance: { decrement: platformFee },
+              escrowBalance_cents: { decrement: platformFeeCents },
             },
           });
 
           await tx.transaction.create({
             data: {
-              amount: businessFeeCents,
+              amount: businessFee,
+              amount_cents: businessFeeCents,
               description: "Delivery fee received",
               type: "CREDIT",
               completedAt: new Date(),
@@ -441,7 +492,7 @@ export const financialService = {
           async () => {
             await addLedger(tx, {
               walletId: shipment?.assignment?.driver?.wallet.id,
-              amount: driverFeeCents,
+              amount: driverFeeCents,  // IMPORTANT: pass amount in cents (integer)
               type: "CREDIT",
               category: "DELIVERY_FEE",
               referenceId: shipment.id,
@@ -450,13 +501,15 @@ export const financialService = {
             await tx.wallet.update({
               where: { id: shipment?.assignment?.driver?.wallet.id },
               data: {
-                balance: { increment: driverFeeCents },
+                balance: { increment: driverFee },
+                balance_cents: { increment: driverFeeCents },
               },
             });
 
             await tx.transaction.create({
               data: {
-                amount: driverFeeCents,
+                amount: driverFee,
+                amount_cents: driverFeeCents,
                 description: "Delivery fee earned",
                 type: "CREDIT",
                 completedAt: new Date(),
@@ -471,14 +524,14 @@ export const financialService = {
         await this.settleDriverPayment(
           tx,
           shipment.assignment?.driverId,
-          driverFeeCents,
+          driverFee,
         );
 
         return {
-          amountProcessed: amountInCents,
-          businessFee: businessFeeCents,
-          driverFee: driverFeeCents,
-          platformFee: platformFeeCents,
+          amountProcessed: totalAmount,
+          businessFee: businessFee,
+          driverFee: driverFee,
+          platformFee: platformFee,
         };
       },
     );
@@ -494,20 +547,19 @@ export const financialService = {
     reason: string,
     referenceId: string,
   ) {
-    // Validate amount is integer (cents/paise)
-    if (!Number.isInteger(amount) || amount <= 0) {
-      throw new Error("Amount must be a positive integer (cents/paise)");
-    }
+    // Convert incoming decimal amount to cents
+    const amountCents = toCents(amount);
+    validateCents(amountCents, "escrow cut amount");
 
     return await runIdempotent(
       tx,
-      `cut-${walletId}-${amount}-${referenceId}`,
+      `cut-${walletId}-${amountCents}-${referenceId}`,
       "cutEscrow",
       async () => {
         return withWalletLock(tx, walletId, async () => {
           await addLedger(tx, {
             walletId,
-            amount: -amount,
+            amount: -amountCents,  // IMPORTANT: pass amount in cents (integer)
             type: "DEBIT",
             category: "ESCROW_CUT",
             referenceId: reason,
@@ -516,8 +568,10 @@ export const financialService = {
           await tx.wallet.update({
             where: { id: walletId },
             data: {
-              balance: { decrement: amount },
-              escrowBalance: { decrement: amount },
+              balance: { decrement: toDecimal(amountCents) },
+              balance_cents: { decrement: amountCents },
+              escrowBalance: { decrement: toDecimal(amountCents) },
+              escrowBalance_cents: { decrement: amountCents },
             },
           });
 
@@ -525,7 +579,8 @@ export const financialService = {
             data: {
               walletId,
               type: "COMMISSION",
-              amount,
+              amount: toDecimal(amountCents),
+              amount_cents: amountCents,
               referenceId,
               description: `Escrow cut: ${reason}`,
               status: "COMPLETED",
@@ -550,13 +605,12 @@ export const financialService = {
     description: string = "Funds Transfer",
     referenceId?: string,
   ) {
-    // Validate amount is integer (cents/paise)
-    if (!Number.isInteger(amount) || amount <= 0) {
-      throw new Error("Amount must be a positive integer (cents/paise)");
-    }
+    // Convert incoming decimal amount to cents
+    const amountCents = toCents(amount);
+    validateCents(amountCents, "transfer amount");
 
     // Better idempotency key with timestamp to avoid collisions
-    const uniqueKey = `transfer-${from}-${fromId}-${to}-${toId}-${amount}-${referenceId || 'no-ref'}-${Date.now()}`;
+    const uniqueKey = `transfer-${from}-${fromId}-${to}-${toId}-${amountCents}-${referenceId || 'no-ref'}-${Date.now()}`;
 
     return await runIdempotent(
       tx,
@@ -590,7 +644,7 @@ export const financialService = {
           throw new Error("Wallet not found");
         }
 
-        if (senderWallet.balance < amount) {
+        if (senderWallet.balance_cents < amountCents) {
           throw new Error("Insufficient balance");
         }
 
@@ -599,7 +653,7 @@ export const financialService = {
           // 💰 DEBIT sender (ledger + balance)
           await addLedger(tx, {
             walletId: senderWallet.id,
-            amount: -amount,
+            amount: -amountCents,  // IMPORTANT: pass amount in cents (integer)
             type: "DEBIT",
             category: "TRANSFER_OUT",
             referenceId,
@@ -608,14 +662,16 @@ export const financialService = {
           await tx.wallet.update({
             where: { id: senderWallet.id },
             data: {
-              balance: { decrement: amount },
+              balance: { decrement: toDecimal(amountCents) },
+              balance_cents: { decrement: amountCents },
             },
           });
           await tx.transaction.create({
             data: {
               walletId: senderWallet.id,
               type: "DEBIT",
-              amount,
+              amount: toDecimal(amountCents),
+              amount_cents: amountCents,
               referenceId,
               description: description,
               status: "COMPLETED",
@@ -628,7 +684,7 @@ export const financialService = {
             // 💰 CREDIT receiver (ledger + balance)
             await addLedger(tx, {
               walletId: receiverWallet.id,
-              amount: amount,
+              amount: amountCents,  // IMPORTANT: pass amount in cents (integer)
               type: "CREDIT",
               category: "TRANSFER_IN",
               referenceId,
@@ -637,14 +693,16 @@ export const financialService = {
             await tx.wallet.update({
               where: { id: receiverWallet.id },
               data: {
-                balance: { increment: amount },
+                balance: { increment: toDecimal(amountCents) },
+                balance_cents: { increment: amountCents },
               },
             });
             await tx.transaction.create({
               data: {
                 walletId: receiverWallet.id,
                 type: "CREDIT",
-                amount,
+                amount: toDecimal(amountCents),
+                amount_cents: amountCents,
                 referenceId,
                 description: description,
                 status: "COMPLETED",
@@ -658,7 +716,7 @@ export const financialService = {
           success: true,
           from: senderWallet.id,
           to: receiverWallet.id,
-          amount,
+          amount: toDecimal(amountCents),
         };
       },
     );
@@ -673,14 +731,13 @@ export const financialService = {
     amount: number,
     referenceId?: string,
   ) {
-    // Validate amount is integer (cents/paise)
-    if (!Number.isInteger(amount) || amount <= 0) {
-      throw new Error("Amount must be a positive integer (cents/paise)");
-    }
+    // Convert incoming decimal amount to cents
+    const amountCents = toCents(amount);
+    validateCents(amountCents, "COD debt settlement amount");
 
     return runIdempotent(
       tx,
-      `cod-settle:${driverId}:${amount}:${referenceId}:${Date.now()}`,
+      `cod-settle:${driverId}:${amountCents}:${referenceId}:${Date.now()}`,
       "cod_debt_settlement",
       async () => {
         const driver = await tx.driver.findUnique({
@@ -692,7 +749,7 @@ export const financialService = {
           throw new Error("Driver or wallet not found");
         }
 
-        if (!driver.currentDebt || driver.currentDebt < amount) {
+        if (!driver.currentDebt || driver.currentDebt < toDecimal(amountCents)) {
           throw new Error("Amount exceeds current debt");
         }
 
@@ -708,12 +765,13 @@ export const financialService = {
             },
           });
 
-          let remainingAmount = amount;
+          let remainingAmountCents = amountCents;
 
           for (const debt of debts) {
-            if (remainingAmount <= 0) break;
+            if (remainingAmountCents <= 0) break;
 
-            const settleAmount = Math.min(remainingAmount, debt.amount);
+            const debtCents = toCents(debt.amount);
+            const settleAmountCents = Math.min(remainingAmountCents, debtCents);
 
             // mark debt as settled (or partially settled if you later upgrade)
             await tx.driverDebt.update({
@@ -724,7 +782,7 @@ export const financialService = {
               },
             });
 
-            remainingAmount -= settleAmount;
+            remainingAmountCents -= settleAmountCents;
           }
 
           // update driver debt safely
@@ -732,7 +790,7 @@ export const financialService = {
             where: { id: driverId },
             data: {
               currentDebt: {
-                decrement: amount,
+                decrement: toDecimal(amountCents),
               },
             },
           });
@@ -740,8 +798,8 @@ export const financialService = {
 
         return {
           success: true,
-          settledAmount: amount,
-          remainingDebt: driver.currentDebt - amount,
+          settledAmount: toDecimal(amountCents),
+          remainingDebt: driver.currentDebt - toDecimal(amountCents),
         };
       },
     );

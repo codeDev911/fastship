@@ -159,13 +159,13 @@ export const shipmentService = {
         // ================= COD FLOW =================
         if (shipment.paymentMethod === "COD") {
           const businessCommission = amount * 0.2;
-          const debtAmount =
+          const debtAmount : number =
             safeNumber(shipment.codAmount) + businessCommission;
 
           await financialService.addCODDebt(
             tx,
             shipment.assignment?.driver?.id || "",
-            debtAmount,
+            Number(debtAmount),
             shipment.id,
           );
 
@@ -177,7 +177,7 @@ export const shipmentService = {
           await financialService.cutEscrow(
             tx,
             businessWallet?.id!,
-            amount * 0.1,
+            Number(amount * 0.1), // platform fee 10%
             "Platform fee 10%",
             updated.id,
           );

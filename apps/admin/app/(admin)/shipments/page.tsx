@@ -13,6 +13,7 @@ import {
   MapPin,
   Truck,
 } from 'lucide-react';
+import { secureFetch } from '@fastship/lib';
 
 interface Shipment {
   id: string;
@@ -47,7 +48,7 @@ export default function ShipmentsPage() {
   const fetchShipments = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch(`/api/admin/shipments?status=${filterStatus}`);
+      const response = await secureFetch(`/api/admin/shipments?status=${filterStatus}`);
       if (response.ok) {
         const data = await response.json();
         setShipments(data.data);

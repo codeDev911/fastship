@@ -21,6 +21,7 @@ import {
   Shield,
   Trash2,
 } from 'lucide-react';
+import { secureFetch } from '@fastship/lib';
 
 interface HealthStatus {
   status: 'healthy' | 'degraded' | 'offline';
@@ -71,7 +72,7 @@ export default function SystemHealthPage() {
     try {
       // Check API health
       const apiStart = performance.now();
-      const apiRes = await fetch('/api/health', { cache: 'no-store' });
+      const apiRes = await secureFetch('/api/health', { cache: 'no-store' });
       const apiTime = performance.now() - apiStart;
 
       if (apiRes.ok) {
@@ -91,7 +92,7 @@ export default function SystemHealthPage() {
       }
 
       // Check database health
-      const dbRes = await fetch('/api/admin/system/db-health', { cache: 'no-store' });
+      const dbRes = await secureFetch('/api/admin/system/db-health', { cache: 'no-store' });
       if (dbRes.ok) {
         setDbHealth({
           status: 'healthy',
@@ -107,7 +108,7 @@ export default function SystemHealthPage() {
       }
 
       // Fetch audit logs
-      const logsRes = await fetch('/api/admin/system/audit-logs?limit=20', { cache: 'no-store' });
+      const logsRes = await secureFetch('/api/admin/system/audit-logs?limit=20', { cache: 'no-store' });
       if (logsRes.ok) {
         const data = await logsRes.json();
         setAuditLogs(data.logs || []);
@@ -123,7 +124,7 @@ export default function SystemHealthPage() {
     try {
       setIsReconciling(true);
       setError(null);
-      const response = await fetch('/api/admin/system/reconcile-wallets', { 
+      const response = await secureFetch('/api/admin/system/reconcile-wallets', { 
         method: 'POST',
         cache: 'no-store'
       });

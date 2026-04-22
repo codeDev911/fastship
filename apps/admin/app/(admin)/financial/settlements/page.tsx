@@ -12,6 +12,7 @@ import {
   TrendingDown,
   Calendar,
 } from 'lucide-react';
+import { secureFetch } from '@fastship/lib';
 
 interface Settlement {
   id: string;
@@ -40,7 +41,7 @@ export default function SettlementsPage() {
   const fetchSettlements = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch(`/api/admin/settlements?status=${filterStatus}`);
+      const response = await secureFetch(`/api/admin/settlements?status=${filterStatus}`);
       if (response.ok) {
         const data = await response.json();
         setSettlements(data.data);

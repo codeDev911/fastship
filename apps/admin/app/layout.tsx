@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import '../../../packages/ui/styles/globals.css'
+import '../../../../packages/ui/styles/globals.css'
 
 import { useRouter } from 'next/navigation';
 import { 
@@ -60,26 +60,26 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
   }
 
   const menuItems = [
-    { label: 'Dashboard', icon: LayoutDashboard, href: '/admin' },
-    { label: 'Sellers', icon: Users, href: '/admin/sellers' },
-    { label: 'Drivers', icon: Truck, href: '/admin/drivers' },
-    { label: 'Businesses', icon: ShoppingCart, href: '/admin/businesses' },
-    { label: 'Shipments', icon: BarChart3, href: '/admin/shipments' },
+    { label: 'Dashboard', icon: LayoutDashboard, href:'/' },
+    { label: 'Sellers', icon: Users, href: '/sellers' },
+    { label: 'Drivers', icon: Truck, href: '/drivers' },
+    { label: 'Businesses', icon: ShoppingCart, href: '/businesses' },
+    { label: 'Shipments', icon: BarChart3, href: '/shipments' },
     { 
       label: 'Financial', 
       icon: DollarSign,
       subItems: [
-        { label: 'Wallets', href: '/admin/financial/wallets' },
-        { label: 'Settlements', href: '/admin/financial/settlements' },
-        { label: 'Payments', href: '/admin/financial/payments' },
+        { label: 'Wallets', href: '/financial/wallets' },
+        { label: 'Settlements', href: '/financial/settlements' },
+        { label: 'Payments', href: '/financial/payments' },
       ]
     },
-    { label: 'Approvals', icon: CheckCircle2, href: '/admin/approvals' },
-    { label: 'Disputes', icon: AlertCircle, href: '/admin/disputes' },
+    { label: 'Approvals', icon: CheckCircle2, href: '/approvals' },
+    { label: 'Disputes', icon: AlertCircle, href: '/disputes' },
     { 
       label: 'System', 
       icon: Settings,
-     href:"/admin/system",
+     href:"/system",
     },
   ];
 

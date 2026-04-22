@@ -120,7 +120,7 @@ function OrderCard({ shipment, onUpdateStatus }: OrderCardProps) {
         {/* Actions */}
         <div className="flex gap-3 border-t border-border pt-4">
           <Link
-            href={`/driver/orders/${shipment.id}`}
+            href={`/orders/${shipment.id}`}
             className="flex-1 rounded-full bg-secondary px-4 py-2 text-sm font-medium text-foreground hover:bg-secondary/80 transition-colors flex items-center justify-center gap-2"
           >
             <Eye className="h-4 w-4" /> View Details

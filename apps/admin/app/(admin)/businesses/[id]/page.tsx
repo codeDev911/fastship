@@ -12,6 +12,7 @@ import {
   AlertCircle,
   Star,
 } from 'lucide-react';
+import { secureFetch } from '@fastship/lib';
 
 interface BusinessDetail {
   id: string;
@@ -90,7 +91,7 @@ export default function BusinessDetailPage() {
     const fetchBusiness = async () => {
       try {
         setIsLoading(true);
-        const response = await fetch(`/api/admin/businesses/${businessId}`);
+        const response = await secureFetch(`/api/admin/businesses/${businessId}`);
         if (response.ok) {
           const { data } = await response.json();
           setBusiness(data);
