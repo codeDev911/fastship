@@ -5,7 +5,7 @@ import { Card, CardHeader, CardContent } from '@fastship/ui';
 import { Button } from '@fastship/ui';
 import { StatusBadge } from '@fastship/ui';
 import { TrackingMap, MapDirections, MapLink } from '@fastship/ui';
-import type  {ShipmentMapData} from '@fastship/lib';
+import  {secureFetch, type ShipmentMapData} from '@fastship/lib';
 import {
   MapPin,
   Phone,
@@ -116,7 +116,7 @@ export default function TrackPage() {
       }
 
       // Fetch from API only - no mock data fallback
-      const response = await fetch(`/api/shipments/track/${searchId.trim()||id?.trim()}`);
+      const response = await secureFetch(`/api/shipments/track/${searchId.trim()||id?.trim()}`);
       
       if (response.ok) {
         const data = await response.json();
