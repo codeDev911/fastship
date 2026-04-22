@@ -1,7 +1,7 @@
 /**
  * Google Maps Configuration
  * Handles API key and URL generation for Maps URLs API
- */
+ */////
 
 export const GOOGLE_MAPS_CONFIG = {
   // Get from environment variables
