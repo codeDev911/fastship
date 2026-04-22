@@ -10,6 +10,7 @@ import { Button } from '@fastship/ui';
 import { Badge } from '@fastship/ui';
 import { Loader2, AlertCircle } from 'lucide-react';
 import { useToast } from '@fastship/hooks';
+import { secureFetch } from '@fastship/lib';
 
 interface Integration {
   id: string;
@@ -48,7 +49,7 @@ export default function IntegrationsPage() {
     setError(null);
 
     try {
-      const response = await fetch('/api/sellers/integrations', {
+      const response = await secureFetch('/api/sellers/integrations', {
         headers: {
           'Content-Type': 'application/json',
         },
@@ -76,7 +77,7 @@ export default function IntegrationsPage() {
 
   const handleSync = async (integrationId: string) => {
     try {
-      const response = await fetch('/api/integrations/shopify/sync', {
+      const response = await secureFetch('/api/integrations/shopify/sync', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -113,7 +114,7 @@ export default function IntegrationsPage() {
 
   const handleDisconnect = async (integrationId: string) => {
     try {
-      const response = await fetch(`/api/integrations/${integrationId}`, {
+      const response = await secureFetch(`/api/integrations/${integrationId}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
@@ -146,7 +147,7 @@ export default function IntegrationsPage() {
     if (!selectedIntegration) return;
 
     try {
-      const response = await fetch('/api/integrations/shopify/sync', {
+      const response = await secureFetch('/api/integrations/shopify/sync', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -119,7 +119,7 @@ export default function DriverOverviewPage() {
                 </div>
               </div>
 
-              <Link href="/driver/settle-debt" className="block">
+              <Link href="/settle-debt" className="block">
                 <Button variant="primary" className="w-full" icon={<Wallet className="h-4 w-4" />}>
                   Settle Debt Now
                 </Button>

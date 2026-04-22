@@ -103,7 +103,7 @@ const headers = ["ID", "Tax","Date", "Method", "Commission", "Driver", "Status",
               </td>
               <td className="">
                 <span className="text-sm  text-slate-900">
-                  <Link className='hover:underline' href={`/business/shipments/${data.shipmentId}`}>View shipment</Link>
+                  <Link className='hover:underline' href={`/shipments/${data.shipmentId}`}>View shipment</Link>
                 </span>
               </td>
             </tr>

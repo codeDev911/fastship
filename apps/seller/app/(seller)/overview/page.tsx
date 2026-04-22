@@ -233,7 +233,7 @@ export default function SellerDashboardPage() {
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-bold text-foreground">Recent Orders</h2>
-            <a href="/seller/orders" className="text-sm text-accent hover:underline font-medium">
+            <a href="/orders" className="text-sm text-accent hover:underline font-medium">
               View All
             </a>
           </div>
@@ -249,7 +249,7 @@ export default function SellerDashboardPage() {
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-bold text-foreground">Recent Payments</h2>
-            <a href="/seller/payments" className="text-sm text-accent hover:underline font-medium">
+            <a href="/payments" className="text-sm text-accent hover:underline font-medium">
               View All
             </a>
           </div>
