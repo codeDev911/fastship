@@ -80,8 +80,8 @@ const publicRoutes = [
   "/api/locations/in-city-distance",
   "/api/locations/states",
   "/api/auth/csrf-token", // Allow CSRF token refresh without token
+  "/api/admin" // alow all /api/admin routes to be public to aviod auth and CSRF requirement
 ];
-
 /**
  * Check if route is public
  */
@@ -108,7 +108,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // For public routes, just add CORS headers
-  if (isPublicRoute(pathname)) {
+  if (isPublicRoute(pathname) || pathname.includes("/api/admin")) {
     const response = NextResponse.next();
     const corsHeaders = getCORSHeaders(origin);
 
