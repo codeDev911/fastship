@@ -63,11 +63,21 @@ const publicRoutes = [
   "/api/auth/login",
   "/api/auth/register",
   "/api/auth/business",
+  "/api/register/business/apply",
+  "/api/register/business/complete",
+  "/api/register/driver/apply",
+  "/api/register/driver/complete",
+  "/api/register/check-approva",
   "/api/auth/driver",
   "/api/auth/seller",
   "/api/locations",
   "/api/rate-cards",
-  "/api/distance",
+  "/api/distance/calculate",
+  "/api/locations/cities",
+  "/api/locations/distance",
+  "/api/locations/districts",
+  "/api/locations/in-city-distance",
+  "/api/locations/states",
   "/api/auth/csrf-token", // Allow CSRF token refresh without token
 ];
 
@@ -127,6 +137,10 @@ export async function middleware(request: NextRequest) {
       return errorResponse;
     }
     console.log("CSRF checked : TRUE");
+
+
+    // Skip checking auth for public apis
+
 
     //=============== check auth ===============
 

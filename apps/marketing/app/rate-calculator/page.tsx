@@ -68,7 +68,7 @@ export default function RateCalculatorPage() {
 
   const fetchCities = async (state: string, type: 'pickup' | 'delivery') => {
     try {
-      const response = await secureFetch(`/api/location/cities?state=${state}`);
+      const response = await secureFetch(`/api/locations/cities?state=${state}`);
       if (response.ok) {
         const data = await response.json();
         if (type === 'pickup') setPickupCities(data.cities || []);
