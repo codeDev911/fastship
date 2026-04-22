@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import '../../../packages/ui/styles/globals.css';
+import '../../../packages/ui/styles/globals.css'
+
 
 import { useRouter } from 'next/navigation';
 import { 

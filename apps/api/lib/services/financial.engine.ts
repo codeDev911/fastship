@@ -23,25 +23,30 @@ function toDecimal(cents: number): number {
 function validateCents(cents: number, fieldName: string = "amount"): void {
   if (!Number.isInteger(cents) || cents <= 0) {
     throw new Error(
-      `${fieldName} must be a positive integer (cents). Got: ${cents}`
+      `${fieldName} must be a positive integer (cents). Got: ${cents}`,
     );
   }
 }
 
-export const runIdempotent = async (tx: any, key: string, scope: string, fn: () => Promise<any>) => {
+export const runIdempotent = async (
+  tx: any,
+  key: string,
+  scope: string,
+  fn: () => Promise<any>,
+) => {
   // Generate idempotency key with timestamp and random nonce for uniqueness
   const uniqueKey = `${key}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-  
+
   // Check if we already processed this request (within 24 hours)
-  const existing = await tx.idempotencyKey.findUnique({ 
-    where: { key: uniqueKey } 
+  const existing = await tx.idempotencyKey.findUnique({
+    where: { key: uniqueKey },
   });
 
   if (existing?.response) {
     // Return cached response if within TTL
     const ageMs = Date.now() - new Date(existing.createdAt).getTime();
     const ttlMs = 24 * 60 * 60 * 1000; // 24 hours
-    
+
     if (ageMs < ttlMs) {
       return existing.response;
     }
@@ -54,19 +59,23 @@ export const runIdempotent = async (tx: any, key: string, scope: string, fn: () 
   await tx.idempotencyKey.upsert({
     where: { key: uniqueKey },
     update: { response: result, updatedAt: new Date() },
-    create: { 
-      key: uniqueKey, 
-      scope, 
+    create: {
+      key: uniqueKey,
+      scope,
       response: result,
       createdAt: new Date(),
-      updatedAt: new Date()
+      updatedAt: new Date(),
     },
   });
 
   return result;
 };
 
-export const withWalletLock = async (tx: any, walletId: string, fn: () => Promise<any>) => {
+export const withWalletLock = async (
+  tx: any,
+  walletId: string,
+  fn: () => Promise<any>,
+) => {
   // Use parameterized query to prevent SQL injection
   await tx.$queryRaw`SELECT id FROM "Wallet" WHERE id = ${walletId} FOR UPDATE`;
   return fn();
@@ -76,12 +85,12 @@ export const addLedger = async (tx: any, data: any) => {
   // CRITICAL: Use database SUM to calculate balance, NOT application logic
   // This prevents race conditions and floating-point errors
   // All amounts are stored and calculated in cents (integers) for accuracy
-  
+
   // Validate amount is integer cents
-  if (typeof data.amount !== 'number' || !Number.isInteger(data.amount)) {
+  if (typeof data.amount !== "number" || !Number.isInteger(data.amount)) {
     throw new Error(
       `Ledger amount must be an integer (cents/paise). Got: ${data.amount}. ` +
-      `If passing decimal, use toCents() first.`
+        `If passing decimal, use toCents() first.`,
     );
   }
 
@@ -99,7 +108,7 @@ export const addLedger = async (tx: any, data: any) => {
       *,
       (SELECT COALESCE(SUM("amount_cents"), 0) FROM "LedgerEntry" WHERE "walletId" = ${data.walletId}) as "balanceAfterCents"
   `;
-  
+
   return result[0];
 };
 
@@ -113,13 +122,15 @@ import { prisma } from "@fastship/lib";
  * Calculate alert severity based on discrepancy amount
  * Helps prioritize which mismatches need immediate attention
  */
-function calculateAlertSeverity(diffCents: number): "CRITICAL" | "HIGH" | "MEDIUM" | "LOW" {
+function calculateAlertSeverity(
+  diffCents: number,
+): "CRITICAL" | "HIGH" | "MEDIUM" | "LOW" {
   const absDiffCents = Math.abs(diffCents);
-  
-  if (absDiffCents > 10000000) return "CRITICAL";     // > 100,000 rupees/dollars
-  if (absDiffCents > 5000000) return "HIGH";          // > 50,000
-  if (absDiffCents > 1000000) return "MEDIUM";        // > 10,000
-  return "LOW";                                        // < 10,000
+
+  if (absDiffCents > 10000000) return "CRITICAL"; // > 100,000 rupees/dollars
+  if (absDiffCents > 5000000) return "HIGH"; // > 50,000
+  if (absDiffCents > 1000000) return "MEDIUM"; // > 10,000
+  return "LOW"; // < 10,000
 }
 
 /**
@@ -136,7 +147,7 @@ async function createReconciliationAlert(
     expectedCents: number;
     actualCents: number;
     diffCents: number;
-  }
+  },
 ) {
   // Create alert record
   const alert = await tx.reconciliationAlert.create({
@@ -180,7 +191,7 @@ async function queueNotification(
     severity: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW";
     type: "WALLET_MISMATCH" | "BANK_MISMATCH";
     message: string;
-  }
+  },
 ) {
   // Critical alerts: immediate notification
   if (data.severity === "CRITICAL" || data.severity === "HIGH") {
@@ -215,89 +226,91 @@ async function queueNotification(
 }
 
 export const reconciliationService = {
-
   async reconcileWallet(walletId: string) {
-    return prisma.$transaction(async (tx) => {
+    return prisma.$transaction(
+      async (tx) => {
+        const wallet = await tx.wallet.findUnique({
+          where: { id: walletId },
+        });
 
-      const wallet = await tx.wallet.findUnique({
-        where: { id: walletId },
-      });
+        if (!wallet) throw new Error("Wallet not found");
 
-      if (!wallet) throw new Error("Wallet not found");
+        // Calculate ledger balance in cents (integer arithmetic)
+        const ledgerSumResult = await tx.ledgerEntry.aggregate({
+          where: { walletId },
+          _sum: { amount: true },
+        });
 
-      // Calculate ledger balance in cents (integer arithmetic)
-      const ledgerSumResult = await tx.ledgerEntry.aggregate({
-        where: { walletId },
-        _sum: { amount: true },
-      });
+        // Ledger balance is in cents (integers)
+        const ledgerBalanceCents = ledgerSumResult._sum.amount || 0;
+        // Wallet balance_cents is the source of truth for reconciliation
+        const walletBalanceCents = wallet.balance_cents || 0;
+        const diffCents = ledgerBalanceCents - walletBalanceCents;
 
-      // Ledger balance is in cents (integers)
-      const ledgerBalanceCents = ledgerSumResult._sum.amount || 0;
-      // Wallet balance_cents is the source of truth for reconciliation
-      const walletBalanceCents = wallet.balance_cents || 0;
-      const diffCents = ledgerBalanceCents - walletBalanceCents;
-      
-      // ✅ No issue - balances match perfectly
-      if (diffCents === 0) {
-        await tx.reconciliationLog.create({
+        // ✅ No issue - balances match perfectly
+        if (diffCents === 0) {
+          await tx.reconciliationLog.create({
+            data: {
+              walletId,
+              expected: toDecimal(ledgerBalanceCents),
+              expected_cents: ledgerBalanceCents,
+              actual: toDecimal(walletBalanceCents),
+              actual_cents: walletBalanceCents,
+              difference: 0,
+              difference_cents: 0,
+              status: "OK",
+            },
+          });
+
+          return { status: "OK", ledgerBalanceCents, walletBalanceCents };
+        }
+
+        // 🚨 MISMATCH DETECTED - ALERT, DO NOT AUTO-FIX
+        // Auto-correcting financial data is dangerous. Require manual investigation.
+        const log = await tx.reconciliationLog.create({
           data: {
             walletId,
             expected: toDecimal(ledgerBalanceCents),
             expected_cents: ledgerBalanceCents,
             actual: toDecimal(walletBalanceCents),
             actual_cents: walletBalanceCents,
-            difference: 0,
-            difference_cents: 0,
-            status: "OK",
+            difference: toDecimal(diffCents),
+            difference_cents: diffCents,
+            status: "MISMATCH_ALERT",
+            message: `CRITICAL MISMATCH: Ledger=${ledgerBalanceCents} cents (${toDecimal(ledgerBalanceCents)}), Wallet=${walletBalanceCents} cents (${toDecimal(walletBalanceCents)}), Diff=${diffCents} cents (${toDecimal(diffCents)}). Manual investigation required. DO NOT AUTO-FIX.`,
           },
         });
 
-        return { status: "OK", ledgerBalanceCents, walletBalanceCents };
-      }
-
-      // 🚨 MISMATCH DETECTED - ALERT, DO NOT AUTO-FIX
-      // Auto-correcting financial data is dangerous. Require manual investigation.
-      const log = await tx.reconciliationLog.create({
-        data: {
+        // Create alert notification
+        const severity = calculateAlertSeverity(diffCents);
+        await createReconciliationAlert(tx, {
           walletId,
-          expected: toDecimal(ledgerBalanceCents),
-          expected_cents: ledgerBalanceCents,
-          actual: toDecimal(walletBalanceCents),
-          actual_cents: walletBalanceCents,
-          difference: toDecimal(diffCents),
-          difference_cents: diffCents,
-          status: "MISMATCH_ALERT",
-          message: `CRITICAL MISMATCH: Ledger=${ledgerBalanceCents} cents (${toDecimal(ledgerBalanceCents)}), Wallet=${walletBalanceCents} cents (${toDecimal(walletBalanceCents)}), Diff=${diffCents} cents (${toDecimal(diffCents)}). Manual investigation required. DO NOT AUTO-FIX.`,
-        },
-      });
+          logId: log.id,
+          severity,
+          type: "WALLET_MISMATCH",
+          message: log.message,
+          expectedCents: ledgerBalanceCents,
+          actualCents: walletBalanceCents,
+          diffCents,
+        });
 
-      // Create alert notification
-      const severity = calculateAlertSeverity(diffCents);
-      await createReconciliationAlert(tx, {
-        walletId,
-        logId: log.id,
-        severity,
-        type: "WALLET_MISMATCH",
-        message: log.message,
-        expectedCents: ledgerBalanceCents,
-        actualCents: walletBalanceCents,
-        diffCents,
-      });
-
-      return {
-        status: "MISMATCH_DETECTED",
-        ledgerBalanceCents,
-        ledgerBalance: toDecimal(ledgerBalanceCents),
-        walletBalanceCents,
-        walletBalance: toDecimal(walletBalanceCents),
-        discrepancyCents: diffCents,
-        discrepancy: toDecimal(diffCents),
-        action: "ALERT_CREATED - Manual investigation required by finance team",
-      };
-    },{timeout:10000});
+        return {
+          status: "MISMATCH_DETECTED",
+          ledgerBalanceCents,
+          ledgerBalance: toDecimal(ledgerBalanceCents),
+          walletBalanceCents,
+          walletBalance: toDecimal(walletBalanceCents),
+          discrepancyCents: diffCents,
+          discrepancy: toDecimal(diffCents),
+          action:
+            "ALERT_CREATED - Manual investigation required by finance team",
+        };
+      },
+      { timeout: 10000 },
+    );
   },
 
-//   // 🔥 Run for ALL wallets
+  //   // 🔥 Run for ALL wallets
   async reconcileAllWallets() {
     const wallets = await prisma.wallet.findMany({
       select: { id: true },
@@ -343,7 +356,7 @@ export const reconciliationService = {
     // If decimal (has decimals like 999.99), convert to cents
     // If already in cents (integer), use as-is
     let bankBalanceCents: number;
-    
+
     if (!Number.isInteger(bankBalance)) {
       // Decimal input - convert to cents
       bankBalanceCents = toCents(bankBalance);
@@ -395,7 +408,7 @@ export const reconciliationService = {
 
       // MISMATCH: Log it with critical severity
       const severity = calculateAlertSeverity(diffCents);
-      
+
       const log = await tx.reconciliationLog.create({
         data: {
           walletId,
@@ -424,7 +437,7 @@ export const reconciliationService = {
 
       // Throw error to prevent further operations until resolved
       throw new Error(
-        `CRITICAL: Bank reconciliation failed for wallet ${walletId}. Bank: ${bankBalanceCents} cents (${toDecimal(bankBalanceCents)}), Ledger: ${ledgerBalanceCents} cents (${toDecimal(ledgerBalanceCents)}), Diff: ${diffCents} cents (${toDecimal(diffCents)}). Manual investigation required.`
+        `CRITICAL: Bank reconciliation failed for wallet ${walletId}. Bank: ${bankBalanceCents} cents (${toDecimal(bankBalanceCents)}), Ledger: ${ledgerBalanceCents} cents (${toDecimal(ledgerBalanceCents)}), Diff: ${diffCents} cents (${toDecimal(diffCents)}). Manual investigation required.`,
       );
     });
   },
@@ -489,11 +502,7 @@ export const reconciliationService = {
   /**
    * Resolve an alert (issue has been investigated and fixed)
    */
-  async resolveAlert(
-    alertId: string,
-    resolution: string,
-    resolvedBy?: string
-  ) {
+  async resolveAlert(alertId: string, resolution: string, resolvedBy?: string) {
     return prisma.reconciliationAlert.update({
       where: { id: alertId },
       data: {
@@ -513,16 +522,6 @@ export const reconciliationService = {
       where: { walletId },
       orderBy: { createdAt: "desc" },
       take: limit,
-      include: {
-        log: {
-          select: {
-            id: true,
-            status: true,
-            message: true,
-            createdAt: true,
-          },
-        },
-      },
     });
   },
 
@@ -670,9 +669,10 @@ export const reconciliationService = {
       const stats = {
         ok: reconciliationResults.filter((r) => r.status === "OK").length,
         mismatches: reconciliationResults.filter(
-          (r) => r.status === "MISMATCH_DETECTED"
+          (r) => r.status === "MISMATCH_DETECTED",
         ).length,
-        errors: reconciliationResults.filter((r) => r.status === "ERROR").length,
+        errors: reconciliationResults.filter((r) => r.status === "ERROR")
+          .length,
         total: reconciliationResults.length,
       };
 
@@ -717,8 +717,8 @@ export const reconciliationService = {
    * Helps monitor if cleanup is working
    */
   async getReconciliationDbStats() {
-    const [logCount, alertCount, totalLogSize, totalAlertSize] = await Promise.all(
-      [
+    const [logCount, alertCount, totalLogSize, totalAlertSize] =
+      await Promise.all([
         prisma.reconciliationLog.count(),
         prisma.reconciliationAlert.count(),
         prisma.$queryRaw`
@@ -727,19 +727,24 @@ export const reconciliationService = {
         prisma.$queryRaw`
           SELECT pg_total_relation_size('"ReconciliationAlert"') as size
         `,
-      ]
-    );
+      ]);
 
     return {
       reconciliationLogs: {
         count: logCount,
         sizeBytes: (totalLogSize as any)?.[0]?.size || 0,
-        sizeMB: (((totalLogSize as any)?.[0]?.size || 0) / 1024 / 1024).toFixed(2),
+        sizeMB: (((totalLogSize as any)?.[0]?.size || 0) / 1024 / 1024).toFixed(
+          2,
+        ),
       },
       reconciliationAlerts: {
         count: alertCount,
         sizeBytes: (totalAlertSize as any)?.[0]?.size || 0,
-        sizeMB: (((totalAlertSize as any)?.[0]?.size || 0) / 1024 / 1024).toFixed(2),
+        sizeMB: (
+          ((totalAlertSize as any)?.[0]?.size || 0) /
+          1024 /
+          1024
+        ).toFixed(2),
       },
     };
   },
