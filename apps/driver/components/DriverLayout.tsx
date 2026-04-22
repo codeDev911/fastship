@@ -53,39 +53,39 @@ export function DriverLayout({
   const navItems = [
     {
       label: 'Overview',
-      href: '/driver/overview',
+      href: '/overview',
       icon: <Home className="h-5 w-5" />,
     },
     {
       label: 'Orders',
-      href: '/driver/orders',
+      href: '/orders',
       icon: <Package className="h-5 w-5" />,
     },
     {
       label: 'Income',
-      href: '/driver/income',
+      href: '/income',
       icon: <DollarSign className="h-5 w-5" />,
     },
      
     {
       label: 'Settle Debt',
-      href: '/driver/settle-debt',
+      href: '/settle-debt',
       icon: <Wallet className="h-5 w-5" />,
     },
     {
       label: 'Notifications',
-      href: '/driver/notifications',
+      href: '/notifications',
       icon: <Bell className="h-5 w-5" />,
       badge: unreadNotifications,
     },
      {
         label:"Billing",
       icon: <CreditCard className="h-5 w-5" />,
-        href:"/driver/billing"
+        href:"/billing"
       },
     {
       label: 'Settings',
-      href: '/driver/settings',
+      href: '/settings',
       icon: <Settings className="h-5 w-5" />,
     },
   ];

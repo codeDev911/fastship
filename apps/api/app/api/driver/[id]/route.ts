@@ -16,7 +16,7 @@ export async function GET(request: NextRequest,
       where:{
         drivers:{
           some:{
-            driverId:driver?.id
+            id:driver?.id
           }
         }
       },
