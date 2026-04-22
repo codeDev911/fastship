@@ -1,19 +1,30 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@fastship/lib';
 import { Button } from '@fastship/ui';
-import { Card, CardHeader, CardContent } from '@fastship/ui';
 import { Input } from '@fastship/ui';
 import { Label } from '@fastship/ui';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@fastship/ui';
-import { AlertCircle, Loader2 } from 'lucide-react';
-import { Alert } from '@fastship/ui';
+import { AlertCircle } from 'lucide-react';
+
+const QUOTES = {
+  DRIVER: {
+    text: "Every journey is an opportunity to deliver excellence.",
+    author: "FastShip"
+  },
+  SELLER: {
+    text: "Reliable delivery is the foundation of customer trust.",
+    author: "FastShip"
+  },
+  BUSINESS: {
+    text: "Efficiency at scale defines modern logistics.",
+    author: "FastShip"
+  }
+};
 
 export default function LoginPage() {
-  const router = useRouter();
   const { login, isLoading, error } = useAuth();
 
   const [formData, setFormData] = useState({
@@ -42,10 +53,7 @@ export default function LoginPage() {
     }
 
     try {
-      // login now returns the redirect URL
       const redirectUrl = await login(formData.email, formData.password, formData.role);
-      
-      // Redirect to the appropriate app based on role
       window.location.href = redirectUrl;
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Login failed';
@@ -53,27 +61,40 @@ export default function LoginPage() {
     }
   };
 
+  const quote = QUOTES[formData.role as keyof typeof QUOTES];
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-secondary p-4">
-      <div className="w-full max-w-md">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-foreground mb-2">FastShip</h1>
-          <p className="text-muted-foreground">Modern Delivery Management Platform</p>
+    <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="grid grid-cols-1 lg:grid-cols-2 w-full max-w-7xl gap-0">
+        {/* Left Side - Quote */}
+        <div className="hidden lg:flex flex-col items-center justify-center bg-secondary/40 px-12 py-20 min-h-screen">
+          <div className="max-w-md">
+            <blockquote className="space-y-6">
+              <p className="text-3xl font-bold text-foreground leading-tight">
+                "{quote.text}"
+              </p>
+              <footer className="text-lg text-muted-foreground">
+                — {quote.author}
+              </footer>
+            </blockquote>
+          </div>
         </div>
 
-        {/* Login Card */}
-        <Card className="shadow-lg border-0">
-          <CardHeader title="Sign In to Your Account" />
-          <CardContent className="space-y-6 p-6">
+        {/* Right Side - Login Form */}
+        <div className="flex flex-col items-center justify-center px-6 py-12 sm:px-12 sm:py-20 min-h-screen">
+          <div className="w-full max-w-sm">
+            {/* Header */}
+            <div className="mb-8">
+              <h1 className="text-4xl font-bold text-foreground mb-2">Welcome Back</h1>
+              <p className="text-muted-foreground">Sign in to your account to continue</p>
+            </div>
+
             {/* Error Alert */}
             {(error || formError) && (
-              <Alert className="bg-red-50 border-red-200 p-4 rounded-lg flex gap-3">
+              <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex gap-3">
                 <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0" />
-                <div>
-                  <p className="font-medium text-red-900">{error || formError}</p>
-                </div>
-              </Alert>
+                <p className="text-sm text-red-700">{error || formError}</p>
+              </div>
             )}
 
             <form onSubmit={handleSubmit} className="space-y-5">
@@ -107,7 +128,7 @@ export default function LoginPage() {
                   value={formData.email}
                   onChange={handleChange}
                   disabled={isLoading}
-                  className="w-full"
+                  className="w-full px-4 py-2 rounded-lg border border-border bg-card"
                 />
               </div>
 
@@ -124,79 +145,34 @@ export default function LoginPage() {
                   value={formData.password}
                   onChange={handleChange}
                   disabled={isLoading}
-                  className="w-full"
+                  className="w-full px-4 py-2 rounded-lg border border-border bg-card"
                 />
               </div>
 
               {/* Submit Button */}
-              <Button
-                type="submit"
+              <Button 
+                type="submit" 
+                variant="primary" 
+                fullWidth 
                 disabled={isLoading}
-                className="w-full bg-primary text-white hover:bg-primary/90"
               >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    Signing in...
-                  </>
-                ) : (
-                  'Sign In'
-                )}
+                {isLoading ? 'Signing In...' : 'Sign In'}
               </Button>
             </form>
 
-            {/* Divider */}
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-border"></div>
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-card text-muted-foreground">New user?</span>
-              </div>
+            {/* Footer Links */}
+            <div className="mt-8 text-center space-y-4">
+              <p className="text-muted-foreground">
+                Don&apos;t have an account?{' '}
+                <Link href="/register/driver/apply" className="text-accent font-medium hover:underline">
+                  Register here
+                </Link>
+              </p>
             </div>
-
-            {/* Registration Links */}
-            <div className="space-y-2">
-              <Link href="/register/driver" className="block">
-                <Button
-                  variant="outline"
-                  className="w-full text-primary border-primary hover:bg-primary/5"
-                >
-                  Register as Driver
-                </Button>
-              </Link>
-              <Link href="/register/seller" className="block">
-                <Button
-                  variant="outline"
-                  className="w-full text-primary border-primary hover:bg-primary/5"
-                >
-                  Register as Seller
-                </Button>
-              </Link>
-              <Link href="/register/business" className="block">
-                <Button
-                  variant="outline"
-                  className="w-full text-primary border-primary hover:bg-primary/5"
-                >
-                  Register as Business
-                </Button>
-              </Link>
-            </div>
-
-            {/* Footer */}
-            <p className="text-xs text-center text-muted-foreground">
-              By signing in, you agree to our{' '}
-              <Link href="#" className="text-primary hover:underline">
-                Terms of Service
-              </Link>{' '}
-              and{' '}
-              <Link href="#" className="text-primary hover:underline">
-                Privacy Policy
-              </Link>
-            </p>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
     </div>
   );
 }
+           

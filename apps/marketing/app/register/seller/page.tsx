@@ -1,265 +1,233 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { useAuth } from '@fastship/lib';
 import { Button } from '@fastship/ui';
-import { Card, CardContent } from '@fastship/ui';
 import { Input } from '@fastship/ui';
 import { Label } from '@fastship/ui';
-import { AlertCircle, Loader2, ArrowLeft } from 'lucide-react';
-import { Alert } from '@fastship/ui';
+import { AlertCircle, ArrowLeft, CheckCircle2 } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@fastship/ui';
+import { secureFetch } from '@fastship/lib';
 
-export default function SellerRegistrationPage() {
-  const router = useRouter();
-  const { registerSeller, isLoading, error } = useAuth();
+const QUOTE = {
+  text: "Reliable delivery is the foundation of customer trust. Start your journey with FastShip.",
+  author: "FastShip"
+};
+
+const BENEFITS = [
+  { number: "01", title: "Auto-Fulfillment", desc: "Automated order processing" },
+  { number: "02", title: "Rate Calculator", desc: "Dynamic pricing for all routes" },
+  { number: "03", title: "Smart Analytics", desc: "Track sales and delivery metrics" }
+];
+
+export default function SellerApplyPage() {
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
+  const [approvalId, setApprovalId] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
     email: '',
-    password: '',
-    confirmPassword: '',
-    name: '',
     phone: '',
-    shopName: '',
-    shopAddress: '',
+    businessName: '',
+    businessType: 'RETAIL',
     city: '',
-    province: '',
   });
-  const [formError, setFormError] = useState<string | null>(null);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
+  const handleBusinessTypeChange = (value: string) => {
+    setFormData((prev) => ({ ...prev, businessType: value }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setFormError(null);
+    setError(null);
 
-    // Validation
-    if (!formData.email || !formData.password || !formData.name || !formData.phone || !formData.shopName || !formData.shopAddress || !formData.city) {
-      setFormError('Please fill in all required fields');
+    if (!formData.email || !formData.phone || !formData.businessName || !formData.city) {
+      setError('Please fill in all fields');
       return;
     }
 
-    if (formData.password !== formData.confirmPassword) {
-      setFormError('Passwords do not match');
-      return;
-    }
-
-    if (formData.password.length < 6) {
-      setFormError('Password must be at least 6 characters');
-      return;
-    }
+    setIsLoading(true);
 
     try {
-      await registerSeller({
-        email: formData.email,
-        password: formData.password,
-        name: formData.name,
-        phone: formData.phone,
-        shopName: formData.shopName,
-        shopAddress: formData.shopAddress,
-        city: formData.city,
-        province: formData.province,
+      const response = await secureFetch('/api/register/seller/apply', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
       });
 
-      router.push('/seller/overview');
+      const data = await response.json();
+      if (!response.ok) {
+        setError(data.error || 'Failed to submit application');
+        return;
+      }
+
+      setApprovalId(data.approval.id);
+      setSuccess(true);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Registration failed';
-      setFormError(message);
+      setError(err instanceof Error ? err.message : 'An error occurred');
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-secondary p-4">
-      <div className="w-full max-w-md">
-        {/* Back Button */}
-        <Link href="/login" className="inline-flex items-center gap-2 text-primary hover:text-primary/80 mb-8">
-          <ArrowLeft className="h-4 w-4" />
-          Back to Login
-        </Link>
-
-        {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-foreground mb-2">Register as Seller</h1>
-          <p className="text-muted-foreground">Join FastShip and grow your business</p>
+  if (success) {
+    return (
+      <div className="min-h-screen bg-background grid grid-cols-1 lg:grid-cols-2">
+        <div className="hidden lg:flex flex-col items-center justify-center bg-secondary/40 px-12 py-20 min-h-screen">
+          <div className="max-w-md">
+            <blockquote className="space-y-6">
+              <p className="text-3xl font-bold text-foreground leading-tight">"{QUOTE.text}"</p>
+              <footer className="text-lg text-muted-foreground">— {QUOTE.author}</footer>
+            </blockquote>
+          </div>
         </div>
+        <div className="flex flex-col items-center justify-center px-6 py-12 sm:px-12 sm:py-20">
+          <div className="w-full max-w-sm text-center">
+            <CheckCircle2 className="h-16 w-16 text-accent mx-auto mb-6" />
+            <h2 className="text-3xl font-bold text-foreground mb-2">Welcome to FastShip!</h2>
+            <p className="text-muted-foreground mb-4">Your seller account has been created successfully.</p>
+            <div className="bg-secondary/40 rounded-lg p-4 mb-6 break-all font-mono text-sm font-semibold text-accent">{approvalId}</div>
+            <p className="text-muted-foreground mb-8">Complete your profile and start shipping products today.</p>
+            <Link href="/" className="block mb-3">
+              <Button variant="primary" fullWidth>Go to Home</Button>
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
-        {/* Registration Card */}
-        <Card className="shadow-lg border-0">
-          <CardContent className="space-y-6 p-6">
-            {/* Error Alert */}
-            {(error || formError) && (
-              <Alert className="bg-red-50 border-red-200 p-4 rounded-lg flex gap-3">
-                <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0" />
-                <p className="font-medium text-red-900">{error || formError}</p>
-              </Alert>
-            )}
-
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Name */}
-              <div className="space-y-2">
-                <Label htmlFor="name" className="text-sm font-medium">Full Name</Label>
-                <Input
-                  id="name"
-                  type="text"
-                  name="name"
-                  placeholder="John Doe"
-                  value={formData.name}
-                  onChange={handleChange}
-                  disabled={isLoading}
-                  className="w-full"
-                />
+  return (
+    <div className="min-h-screen bg-background grid grid-cols-1 lg:grid-cols-2">
+      {/* Left Side - Quote */}
+      <div className="hidden lg:flex flex-col items-center justify-center bg-secondary/40 px-12 py-20 min-h-screen">
+        <div className="max-w-md">
+          <div className="inline-block bg-accent/10 rounded-full px-4 py-2 mb-6">
+            <p className="text-sm font-semibold text-accent">For Sellers</p>
+          </div>
+          <blockquote className="space-y-8">
+            <p className="text-3xl font-bold text-foreground leading-tight">"{QUOTE.text}"</p>
+            <footer className="text-lg text-muted-foreground">— {QUOTE.author}</footer>
+          </blockquote>
+          <div className="mt-12 space-y-6">
+            {BENEFITS.map((benefit) => (
+              <div key={benefit.number} className="flex gap-4">
+                <div className="w-12 h-12 rounded-full bg-accent/10 flex items-center justify-center flex-shrink-0">
+                  <span className="text-accent font-bold">{benefit.number}</span>
+                </div>
+                <div>
+                  <h3 className="font-semibold text-foreground mb-1">{benefit.title}</h3>
+                  <p className="text-muted-foreground text-sm">{benefit.desc}</p>
+                </div>
               </div>
+            ))}
+          </div>
+        </div>
+      </div>
 
-              {/* Email */}
-              <div className="space-y-2">
-                <Label htmlFor="email" className="text-sm font-medium">Email Address</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  name="email"
-                  placeholder="your@email.com"
-                  value={formData.email}
-                  onChange={handleChange}
-                  disabled={isLoading}
-                  className="w-full"
-                />
-              </div>
+      {/* Right Side - Form */}
+      <div className="flex flex-col items-center justify-center px-6 py-12 sm:px-12 sm:py-20 min-h-screen">
+        <div className="w-full max-w-sm">
+          <div className="mb-8">
+            <Link href="/" className="inline-flex items-center gap-2 text-accent hover:underline mb-4">
+              <ArrowLeft className="h-4 w-4" />
+              Back
+            </Link>
+            <h1 className="text-4xl font-bold text-foreground mb-2">Sell on FastShip</h1>
+            <p className="text-muted-foreground">Start shipping your products today</p>
+          </div>
 
-              {/* Phone */}
-              <div className="space-y-2">
-                <Label htmlFor="phone" className="text-sm font-medium">Phone Number</Label>
-                <Input
-                  id="phone"
-                  type="tel"
-                  name="phone"
-                  placeholder="+92 300 1234567"
-                  value={formData.phone}
-                  onChange={handleChange}
-                  disabled={isLoading}
-                  className="w-full"
-                />
-              </div>
+          {error && (
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex gap-3">
+              <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0" />
+              <p className="text-sm text-red-700">{error}</p>
+            </div>
+          )}
 
-              {/* Shop Name */}
-              <div className="space-y-2">
-                <Label htmlFor="shopName" className="text-sm font-medium">Shop Name</Label>
-                <Input
-                  id="shopName"
-                  type="text"
-                  name="shopName"
-                  placeholder="My Awesome Shop"
-                  value={formData.shopName}
-                  onChange={handleChange}
-                  disabled={isLoading}
-                  className="w-full"
-                />
-              </div>
-
-              {/* Shop Address */}
-              <div className="space-y-2">
-                <Label htmlFor="shopAddress" className="text-sm font-medium">Shop Address</Label>
-                <Input
-                  id="shopAddress"
-                  type="text"
-                  name="shopAddress"
-                  placeholder="123 Main Street"
-                  value={formData.shopAddress}
-                  onChange={handleChange}
-                  disabled={isLoading}
-                  className="w-full"
-                />
-              </div>
-
-              {/* City */}
-              <div className="space-y-2">
-                <Label htmlFor="city" className="text-sm font-medium">City</Label>
-                <Input
-                  id="city"
-                  type="text"
-                  name="city"
-                  placeholder="Karachi"
-                  value={formData.city}
-                  onChange={handleChange}
-                  disabled={isLoading}
-                  className="w-full"
-                />
-              </div>
-
-              {/* Province */}
-              <div className="space-y-2">
-                <Label htmlFor="province" className="text-sm font-medium">Province (Optional)</Label>
-                <Input
-                  id="province"
-                  type="text"
-                  name="province"
-                  placeholder="Sindh"
-                  value={formData.province}
-                  onChange={handleChange}
-                  disabled={isLoading}
-                  className="w-full"
-                />
-              </div>
-
-              {/* Password */}
-              <div className="space-y-2">
-                <Label htmlFor="password" className="text-sm font-medium">Password</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  name="password"
-                  placeholder="••••••••"
-                  value={formData.password}
-                  onChange={handleChange}
-                  disabled={isLoading}
-                  className="w-full"
-                />
-              </div>
-
-              {/* Confirm Password */}
-              <div className="space-y-2">
-                <Label htmlFor="confirmPassword" className="text-sm font-medium">Confirm Password</Label>
-                <Input
-                  id="confirmPassword"
-                  type="password"
-                  name="confirmPassword"
-                  placeholder="••••••••"
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
-                  disabled={isLoading}
-                  className="w-full"
-                />
-              </div>
-
-              {/* Submit Button */}
-              <Button
-                type="submit"
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div className="space-y-2">
+              <Label htmlFor="businessName">Business Name *</Label>
+              <Input
+                id="businessName"
+                name="businessName"
+                placeholder="Your Store"
+                value={formData.businessName}
+                onChange={handleChange}
                 disabled={isLoading}
-                className="w-full bg-primary text-white hover:bg-primary/90 mt-6"
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    Creating Account...
-                  </>
-                ) : (
-                  'Register as Seller'
-                )}
-              </Button>
-            </form>
+              />
+            </div>
 
-            {/* Login Link */}
-            <p className="text-center text-sm text-muted-foreground">
-              Already have an account?{' '}
-              <Link href="/login" className="text-primary hover:underline font-medium">
-                Sign in here
-              </Link>
-            </p>
-          </CardContent>
-        </Card>
+            <div className="space-y-2">
+              <Label htmlFor="email">Email Address *</Label>
+              <Input
+                id="email"
+                type="email"
+                name="email"
+                placeholder="seller@store.com"
+                value={formData.email}
+                onChange={handleChange}
+                disabled={isLoading}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="phone">Phone Number *</Label>
+              <Input
+                id="phone"
+                type="tel"
+                name="phone"
+                placeholder="+1 (555) 000-0000"
+                value={formData.phone}
+                onChange={handleChange}
+                disabled={isLoading}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="businessType">Business Type *</Label>
+              <Select value={formData.businessType} onValueChange={handleBusinessTypeChange}>
+                <SelectTrigger id="businessType">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="RETAIL">Retail Store</SelectItem>
+                  <SelectItem value="ECOMMERCE">E-Commerce</SelectItem>
+                  <SelectItem value="WHOLESALE">Wholesale</SelectItem>
+                  <SelectItem value="OTHER">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="city">City *</Label>
+              <Input
+                id="city"
+                name="city"
+                placeholder="Your City"
+                value={formData.city}
+                onChange={handleChange}
+                disabled={isLoading}
+              />
+            </div>
+
+            <Button variant="primary" fullWidth type="submit" disabled={isLoading}>
+              {isLoading ? 'Submitting...' : 'Start Selling'}
+            </Button>
+          </form>
+
+          <div className="mt-6 text-center text-sm text-muted-foreground">
+            Already registered?{' '}
+            <Link href="/login" className="text-accent font-medium hover:underline">
+              Sign In
+            </Link>
+          </div>
+        </div>
       </div>
     </div>
   );
