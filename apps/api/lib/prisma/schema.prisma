@@ -135,12 +135,11 @@ model User {
   updatedAt    DateTime @updatedAt
 
   // Relations
-  seller        Seller?
-  driver        Driver?
-  business      Business?
-  notifications Notification[]
-  auditLogs     AuditLog[]
-  apiKeys       ApiKey[]       @relation("apiKeys")
+  seller    Seller?
+  driver    Driver?
+  business  Business?
+  auditLogs AuditLog[]
+  apiKeys   ApiKey[]   @relation("apiKeys")
 
   @@index([email])
   @@index([role])
@@ -374,12 +373,13 @@ model Wallet {
   driverId   String? @unique
   businessId String? @unique
 
-  seller             Seller?             @relation(fields: [sellerId], references: [id], onDelete: Cascade)
-  driver             Driver?             @relation(fields: [driverId], references: [id], onDelete: Cascade)
-  business           Business?           @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  transactions       Transaction[]
-  ledgerEntries      LedgerEntry[]
-  reconciliationLogs ReconciliationLog[]
+  seller               Seller?               @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  driver               Driver?               @relation(fields: [driverId], references: [id], onDelete: Cascade)
+  business             Business?             @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  transactions         Transaction[]
+  ledgerEntries        LedgerEntry[]
+  reconciliationLogs   ReconciliationLog[]
+  reconciliationAlerts ReconciliationAlert[]
 
   @@index([sellerId])
   @@index([driverId])
@@ -677,22 +677,36 @@ model ShopifyOrder {
   @@index([shipmentId])
 }
 
+model ReconciliationAlert {
+  id             String
+  walletId       String
+  logId          String
+  severity       String // CRITICAL | HIGH | MEDIUM | LOW
+  type           String // WALLET_MISMATCH | BANK_MISMATCH
+  message        String
+  expectedCents  Int
+  actualCents    Int
+  diffCents      Int
+  status         String // NEW | ACKNOWLEDGED | RESOLVED
+  resolution     String?
+  createdAt      DateTime
+  acknowledgedAt DateTime?
+  acknowledgedBy String?
+  resolvedAt     DateTime?
+  resolvedBy     String?
+  wallet         Wallet    @relation(fields: [walletId], references: [id])
+}
+
 model Notification {
-  id        String           @id @default(cuid())
-  userId    String
-  type      NotificationType
-  title     String
-  message   String
-  relatedId String?
-  isRead    Boolean          @default(false)
-  readAt    DateTime?
-  createdAt DateTime         @default(now())
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([isRead])
-  @@index([createdAt])
+  id         String
+  type       String // RECONCILIATION_ALERT
+  severity   String // CRITICAL | HIGH | MEDIUM | LOW
+  title      String
+  message    String
+  relatedId  String
+  targetRole String // ADMIN | FINANCE_TEAM
+  status     String // PENDING | SENT | READ
+  createdAt  DateTime
 }
 
 model AuditLog {

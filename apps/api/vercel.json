@@ -24,5 +24,11 @@
         }
       ]
     }
+  ],
+  "crons": [
+    {
+      "path": "/api/cron/reconciliation",
+      "schedule": "0 */6 * * *"
+    }
   ]
 }

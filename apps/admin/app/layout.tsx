@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import '../../../../packages/ui/styles/globals.css'
+import '../../../packages/ui/styles/globals.css';
 
 import { useRouter } from 'next/navigation';
 import { 
@@ -72,6 +72,7 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
         { label: 'Wallets', href: '/financial/wallets' },
         { label: 'Settlements', href: '/financial/settlements' },
         { label: 'Payments', href: '/financial/payments' },
+        { label: 'Reconciliation', href: '/financial/reconciliation' },
       ]
     },
     { label: 'Approvals', icon: CheckCircle2, href: '/approvals' },

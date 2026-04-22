@@ -105,6 +105,115 @@ export const addLedger = async (tx: any, data: any) => {
 
 import { prisma } from "@fastship/lib";
 
+// =========================
+// RECONCILIATION ALERTS SERVICE
+// =========================
+
+/**
+ * Calculate alert severity based on discrepancy amount
+ * Helps prioritize which mismatches need immediate attention
+ */
+function calculateAlertSeverity(diffCents: number): "CRITICAL" | "HIGH" | "MEDIUM" | "LOW" {
+  const absDiffCents = Math.abs(diffCents);
+  
+  if (absDiffCents > 10000000) return "CRITICAL";     // > 100,000 rupees/dollars
+  if (absDiffCents > 5000000) return "HIGH";          // > 50,000
+  if (absDiffCents > 1000000) return "MEDIUM";        // > 10,000
+  return "LOW";                                        // < 10,000
+}
+
+/**
+ * Create a reconciliation alert with automatic notifications
+ */
+async function createReconciliationAlert(
+  tx: any,
+  data: {
+    walletId: string;
+    logId: string;
+    severity: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW";
+    type: "WALLET_MISMATCH" | "BANK_MISMATCH";
+    message: string;
+    expectedCents: number;
+    actualCents: number;
+    diffCents: number;
+  }
+) {
+  // Create alert record
+  const alert = await tx.reconciliationAlert.create({
+    data: {
+      walletId: data.walletId,
+      logId: data.logId,
+      severity: data.severity,
+      type: data.type,
+      message: data.message,
+      expectedCents: data.expectedCents,
+      actualCents: data.actualCents,
+      diffCents: data.diffCents,
+      status: "NEW",
+      createdAt: new Date(),
+      resolvedAt: null,
+      acknowledgedAt: null,
+      resolvedBy: null,
+      acknowledgedBy: null,
+    },
+  });
+
+  // Queue notification based on severity
+  await queueNotification(tx, {
+    alertId: alert.id,
+    severity: data.severity,
+    type: data.type,
+    message: data.message,
+  });
+
+  return alert;
+}
+
+/**
+ * Queue notifications to alert stakeholders
+ * Integrates with your notification system
+ */
+async function queueNotification(
+  tx: any,
+  data: {
+    alertId: string;
+    severity: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW";
+    type: "WALLET_MISMATCH" | "BANK_MISMATCH";
+    message: string;
+  }
+) {
+  // Critical alerts: immediate notification
+  if (data.severity === "CRITICAL" || data.severity === "HIGH") {
+    // Notify finance admin via email/SMS
+    await tx.notification.create({
+      data: {
+        type: "RECONCILIATION_ALERT",
+        severity: data.severity,
+        title: `🚨 ${data.severity} Reconciliation Alert`,
+        message: data.message,
+        relatedId: data.alertId,
+        targetRole: "ADMIN", // Send to admins/finance team
+        status: "PENDING",
+        createdAt: new Date(),
+      },
+    });
+  } else {
+    // Lower severity: log for next review
+    await tx.notification.create({
+      data: {
+        type: "RECONCILIATION_ALERT",
+        severity: data.severity,
+        title: `⚠️ ${data.severity} Reconciliation Alert`,
+        message: data.message,
+        relatedId: data.alertId,
+        targetRole: "FINANCE_TEAM",
+        status: "PENDING",
+        createdAt: new Date(),
+      },
+    });
+  }
+}
+
 export const reconciliationService = {
 
   async reconcileWallet(walletId: string) {
@@ -148,7 +257,7 @@ export const reconciliationService = {
 
       // 🚨 MISMATCH DETECTED - ALERT, DO NOT AUTO-FIX
       // Auto-correcting financial data is dangerous. Require manual investigation.
-      await tx.reconciliationLog.create({
+      const log = await tx.reconciliationLog.create({
         data: {
           walletId,
           expected: toDecimal(ledgerBalanceCents),
@@ -160,6 +269,19 @@ export const reconciliationService = {
           status: "MISMATCH_ALERT",
           message: `CRITICAL MISMATCH: Ledger=${ledgerBalanceCents} cents (${toDecimal(ledgerBalanceCents)}), Wallet=${walletBalanceCents} cents (${toDecimal(walletBalanceCents)}), Diff=${diffCents} cents (${toDecimal(diffCents)}). Manual investigation required. DO NOT AUTO-FIX.`,
         },
+      });
+
+      // Create alert notification
+      const severity = calculateAlertSeverity(diffCents);
+      await createReconciliationAlert(tx, {
+        walletId,
+        logId: log.id,
+        severity,
+        type: "WALLET_MISMATCH",
+        message: log.message,
+        expectedCents: ledgerBalanceCents,
+        actualCents: walletBalanceCents,
+        diffCents,
       });
 
       return {
@@ -272,9 +394,9 @@ export const reconciliationService = {
       }
 
       // MISMATCH: Log it with critical severity
-      const severity = Math.abs(diffCents) > 5000000 ? "CRITICAL" : "HIGH"; // 50000 rupees = 5000000 paise
+      const severity = calculateAlertSeverity(diffCents);
       
-      await tx.reconciliationLog.create({
+      const log = await tx.reconciliationLog.create({
         data: {
           walletId,
           expected: toDecimal(bankBalanceCents),
@@ -288,10 +410,337 @@ export const reconciliationService = {
         },
       });
 
+      // Create alert notification
+      await createReconciliationAlert(tx, {
+        walletId,
+        logId: log.id,
+        severity,
+        type: "BANK_MISMATCH",
+        message: log.message,
+        expectedCents: bankBalanceCents,
+        actualCents: ledgerBalanceCents,
+        diffCents,
+      });
+
       // Throw error to prevent further operations until resolved
       throw new Error(
         `CRITICAL: Bank reconciliation failed for wallet ${walletId}. Bank: ${bankBalanceCents} cents (${toDecimal(bankBalanceCents)}), Ledger: ${ledgerBalanceCents} cents (${toDecimal(ledgerBalanceCents)}), Diff: ${diffCents} cents (${toDecimal(diffCents)}). Manual investigation required.`
       );
     });
+  },
+
+  // =========================
+  // ALERT MANAGEMENT
+  // =========================
+
+  /**
+   * Get all active alerts
+   */
+  async getActiveAlerts(filters?: {
+    severity?: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW";
+    type?: "WALLET_MISMATCH" | "BANK_MISMATCH";
+    status?: "NEW" | "ACKNOWLEDGED" | "RESOLVED";
+  }) {
+    const whereClause: any = { status: { not: "RESOLVED" } };
+
+    if (filters?.severity) {
+      whereClause.severity = filters.severity;
+    }
+    if (filters?.type) {
+      whereClause.type = filters.type;
+    }
+    if (filters?.status) {
+      whereClause.status = filters.status;
+    }
+
+    return prisma.reconciliationAlert.findMany({
+      where: whereClause,
+      orderBy: [
+        { severity: "desc" }, // Critical first
+        { createdAt: "desc" }, // Newest first
+      ],
+      include: {
+        wallet: {
+          select: {
+            id: true,
+            sellerId: true,
+            businessId: true,
+            driverId: true,
+          },
+        },
+      },
+    });
+  },
+
+  /**
+   * Acknowledge an alert (shows it's been seen)
+   */
+  async acknowledgeAlert(alertId: string, acknowledgedBy?: string) {
+    return prisma.reconciliationAlert.update({
+      where: { id: alertId },
+      data: {
+        status: "ACKNOWLEDGED",
+        acknowledgedAt: new Date(),
+        acknowledgedBy: acknowledgedBy || "SYSTEM",
+      },
+    });
+  },
+
+  /**
+   * Resolve an alert (issue has been investigated and fixed)
+   */
+  async resolveAlert(
+    alertId: string,
+    resolution: string,
+    resolvedBy?: string
+  ) {
+    return prisma.reconciliationAlert.update({
+      where: { id: alertId },
+      data: {
+        status: "RESOLVED",
+        resolvedAt: new Date(),
+        resolvedBy: resolvedBy || "SYSTEM",
+        resolution,
+      },
+    });
+  },
+
+  /**
+   * Get alert history for a specific wallet
+   */
+  async getWalletAlertHistory(walletId: string, limit: number = 10) {
+    return prisma.reconciliationAlert.findMany({
+      where: { walletId },
+      orderBy: { createdAt: "desc" },
+      take: limit,
+      include: {
+        log: {
+          select: {
+            id: true,
+            status: true,
+            message: true,
+            createdAt: true,
+          },
+        },
+      },
+    });
+  },
+
+  /**
+   * Get alert statistics
+   */
+  async getAlertStats() {
+    const [
+      totalAlerts,
+      criticalCount,
+      highCount,
+      mediumCount,
+      lowCount,
+      newCount,
+      acknowledgedCount,
+      resolvedCount,
+    ] = await Promise.all([
+      prisma.reconciliationAlert.count(),
+      prisma.reconciliationAlert.count({ where: { severity: "CRITICAL" } }),
+      prisma.reconciliationAlert.count({ where: { severity: "HIGH" } }),
+      prisma.reconciliationAlert.count({ where: { severity: "MEDIUM" } }),
+      prisma.reconciliationAlert.count({ where: { severity: "LOW" } }),
+      prisma.reconciliationAlert.count({ where: { status: "NEW" } }),
+      prisma.reconciliationAlert.count({ where: { status: "ACKNOWLEDGED" } }),
+      prisma.reconciliationAlert.count({ where: { status: "RESOLVED" } }),
+    ]);
+
+    return {
+      total: totalAlerts,
+      bySeverity: {
+        CRITICAL: criticalCount,
+        HIGH: highCount,
+        MEDIUM: mediumCount,
+        LOW: lowCount,
+      },
+      byStatus: {
+        NEW: newCount,
+        ACKNOWLEDGED: acknowledgedCount,
+        RESOLVED: resolvedCount,
+      },
+      requiresAction: newCount + acknowledgedCount,
+    };
+  },
+
+  /**
+   * Bulk acknowledge alerts
+   */
+  async bulkAcknowledgeAlerts(alertIds: string[], acknowledgedBy?: string) {
+    return prisma.reconciliationAlert.updateMany({
+      where: { id: { in: alertIds } },
+      data: {
+        status: "ACKNOWLEDGED",
+        acknowledgedAt: new Date(),
+        acknowledgedBy: acknowledgedBy || "SYSTEM",
+      },
+    });
+  },
+
+  /**
+   * Get unresolved alerts by severity (for dashboard)
+   */
+  async getUnresolvedAlertsSummary() {
+    const alerts = await prisma.reconciliationAlert.findMany({
+      where: { status: { not: "RESOLVED" } },
+      select: {
+        id: true,
+        severity: true,
+        type: true,
+        status: true,
+        message: true,
+        diffCents: true,
+        walletId: true,
+        createdAt: true,
+      },
+    });
+
+    return {
+      total: alerts.length,
+      alerts,
+      groupedBySeverity: {
+        CRITICAL: alerts.filter((a) => a.severity === "CRITICAL"),
+        HIGH: alerts.filter((a) => a.severity === "HIGH"),
+        MEDIUM: alerts.filter((a) => a.severity === "MEDIUM"),
+        LOW: alerts.filter((a) => a.severity === "LOW"),
+      },
+    };
+  },
+
+  // =========================
+  // CLEANUP & MAINTENANCE
+  // =========================
+
+  /**
+   * Delete old reconciliation records to keep DB clean
+   * Keeps:
+   *   - All unresolved alerts (NEW, ACKNOWLEDGED)
+   *   - All problem records (MISMATCH_ALERT, BANK_MISMATCH, ERROR) regardless of age
+   *   - Recent OK/RECONCILED records (< 1 day old)
+   * Deletes:
+   *   - OK/RECONCILED logs older than 1 day
+   *   - RESOLVED alerts older than 7 days
+   */
+  async cleanupOldReconciliations() {
+    const now = new Date();
+    const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+    // Delete old OK/RECONCILED logs (keep problem records forever)
+    const deletedLogs = await prisma.reconciliationLog.deleteMany({
+      where: {
+        createdAt: { lt: oneDayAgo },
+        status: { in: ["OK", "RECONCILED"] }, // Only delete clean records
+      },
+    });
+
+    // Delete old RESOLVED alerts (keep unresolved ones forever for investigation)
+    const deletedAlerts = await prisma.reconciliationAlert.deleteMany({
+      where: {
+        createdAt: { lt: sevenDaysAgo },
+        status: "RESOLVED", // Only delete resolved alerts
+      },
+    });
+
+    return {
+      logsDeleted: deletedLogs.count,
+      alertsDeleted: deletedAlerts.count,
+      message: `Cleanup complete: Deleted ${deletedLogs.count} old reconciliation logs and ${deletedAlerts.count} old resolved alerts`,
+    };
+  },
+
+  /**
+   * Run full scheduled reconciliation with cleanup
+   * Safe for cron jobs - runs reconciliation on ALL wallets + cleans old records
+   * Returns summary of what was found and cleaned up
+   */
+  async runScheduledReconciliation() {
+    console.log("[CRON] Starting scheduled reconciliation...");
+    const startTime = Date.now();
+
+    try {
+      // Step 1: Run reconciliation on all wallets
+      const reconciliationResults = await this.reconcileAllWallets();
+
+      // Count results by status
+      const stats = {
+        ok: reconciliationResults.filter((r) => r.status === "OK").length,
+        mismatches: reconciliationResults.filter(
+          (r) => r.status === "MISMATCH_DETECTED"
+        ).length,
+        errors: reconciliationResults.filter((r) => r.status === "ERROR").length,
+        total: reconciliationResults.length,
+      };
+
+      // Step 2: Get alerts before cleanup (for reporting)
+      const alertsBefore = await this.getAlertStats();
+
+      // Step 3: Cleanup old records
+      const cleanup = await this.cleanupOldReconciliations();
+
+      // Step 4: Get alerts after cleanup
+      const alertsAfter = await this.getAlertStats();
+
+      const duration = Date.now() - startTime;
+
+      const summary = {
+        timestamp: new Date(),
+        duration: `${duration}ms`,
+        reconciliation: stats,
+        alerts: {
+          before: alertsBefore,
+          after: alertsAfter,
+        },
+        cleanup: cleanup,
+        nextRun: new Date(Date.now() + 6 * 60 * 60 * 1000), // Next run in 6 hours
+      };
+
+      console.log("[CRON] Scheduled reconciliation complete:", summary);
+
+      return summary;
+    } catch (error: any) {
+      console.error("[CRON] Scheduled reconciliation failed:", error);
+      return {
+        status: "ERROR",
+        error: error.message,
+        timestamp: new Date(),
+      };
+    }
+  },
+
+  /**
+   * Get database size of reconciliation tables
+   * Helps monitor if cleanup is working
+   */
+  async getReconciliationDbStats() {
+    const [logCount, alertCount, totalLogSize, totalAlertSize] = await Promise.all(
+      [
+        prisma.reconciliationLog.count(),
+        prisma.reconciliationAlert.count(),
+        prisma.$queryRaw`
+          SELECT pg_total_relation_size('"ReconciliationLog"') as size
+        `,
+        prisma.$queryRaw`
+          SELECT pg_total_relation_size('"ReconciliationAlert"') as size
+        `,
+      ]
+    );
+
+    return {
+      reconciliationLogs: {
+        count: logCount,
+        sizeBytes: (totalLogSize as any)?.[0]?.size || 0,
+        sizeMB: (((totalLogSize as any)?.[0]?.size || 0) / 1024 / 1024).toFixed(2),
+      },
+      reconciliationAlerts: {
+        count: alertCount,
+        sizeBytes: (totalAlertSize as any)?.[0]?.size || 0,
+        sizeMB: (((totalAlertSize as any)?.[0]?.size || 0) / 1024 / 1024).toFixed(2),
+      },
+    };
   },
 };
