@@ -2,15 +2,17 @@
 
 import { useState } from 'react';
 import { Card } from '@fastship/ui';
-import { CheckCircle2, Circle, ChevronDown } from 'lucide-react';
+import { CheckCircle2, ChevronDown, Zap, Shield, Clock, Users, TrendingUp, Lock } from 'lucide-react';
 
 export default function OrderProcessPage() {
-  const [expandedPhase, setExpandedPhase] = useState<string | null>(null);
+  const [expandedPhase, setExpandedPhase] = useState<string | null>('phase1');
 
   const phases = [
     {
       id: 'phase1',
+      number: '01',
       title: 'Order Creation & Escrow Lock',
+      icon: Lock,
       steps: [
         'Buyer places order on platform',
         'Order details and payment collected',
@@ -21,7 +23,9 @@ export default function OrderProcessPage() {
     },
     {
       id: 'phase2',
+      number: '02',
       title: 'Payment Processing',
+      icon: TrendingUp,
       steps: [
         'Seller confirms order receipt',
         'Payment verification completed',
@@ -32,7 +36,9 @@ export default function OrderProcessPage() {
     },
     {
       id: 'phase3',
+      number: '03',
       title: 'Fulfillment & Shipment',
+      icon: Zap,
       steps: [
         'Seller prepares order',
         'Quality check performed',
@@ -43,7 +49,9 @@ export default function OrderProcessPage() {
     },
     {
       id: 'phase4',
+      number: '04',
       title: 'Transit & Delivery',
+      icon: Users,
       steps: [
         'Driver assigned to order',
         'Real-time GPS tracking active',
@@ -54,7 +62,9 @@ export default function OrderProcessPage() {
     },
     {
       id: 'phase5',
+      number: '05',
       title: 'Delivery Confirmation',
+      icon: Clock,
       steps: [
         'Order delivered',
         'Buyer signs for receipt',
@@ -65,7 +75,9 @@ export default function OrderProcessPage() {
     },
     {
       id: 'phase6',
-      title: 'Settlement',
+      number: '06',
+      title: 'Settlement & Funds Release',
+      icon: Shield,
       steps: [
         '7-day hold period begins',
         'Buyer can open dispute',
@@ -81,98 +93,141 @@ export default function OrderProcessPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background py-12 px-6">
-      <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="mb-12">
-          <h1 className="text-4xl font-bold text-foreground mb-4">Complete Order Process</h1>
-          <p className="text-lg text-muted-foreground">From creation to delivery and settlement</p>
+    <div className="w-full bg-background">
+      {/* Hero Section */}
+      <section className="border-b border-border/40">
+        <div className="mx-auto max-w-7xl px-6 py-20 sm:py-28">
+          <div className="text-center">
+            <div className="inline-block rounded-full bg-accent/10 px-4 py-2 mb-6">
+              <p className="text-sm font-semibold text-accent">Order Management</p>
+            </div>
+            <h1 className="text-5xl sm:text-6xl font-bold tracking-tight text-foreground mb-6">
+              Complete Order <span className="text-accent">Lifecycle</span>
+            </h1>
+            <p className="mx-auto max-w-3xl text-lg text-muted-foreground">
+              Understand how FastShip handles orders from creation to settlement, ensuring security and transparency at every step
+            </p>
+          </div>
         </div>
+      </section>
 
-        {/* Timeline Overview */}
-        <Card className="p-8 mb-12 border border-border">
-          <h2 className="text-2xl font-bold text-foreground mb-8">Order Lifecycle</h2>
+      {/* Visual Timeline */}
+      <section className="border-b border-border/40 bg-secondary/30">
+        <div className="mx-auto max-w-7xl px-6 py-16 sm:py-24">
+          <h2 className="text-3xl font-bold text-foreground mb-12 text-center">Six-Phase Process</h2>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {[
-              { num: '1', title: 'Creation', desc: 'Order placed & escrow locked' },
-              { num: '2', title: 'Fulfillment', desc: 'Seller prepares order' },
-              { num: '3', title: 'Transit', desc: 'Driver delivers order' },
-              { num: '4', title: 'Confirmation', desc: 'Buyer confirms delivery' },
-              { num: '5', title: 'Hold Period', desc: '7-day protection period' },
-              { num: '6', title: 'Settlement', desc: 'Funds released' },
-            ].map((item, idx) => (
-              <div key={idx} className="flex flex-col items-center text-center">
-                <div className="w-12 h-12 rounded-full bg-accent text-accent-foreground font-bold flex items-center justify-center mb-3">
-                  {item.num}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {phases.map((phase, idx) => {
+              const Icon = phase.icon;
+              return (
+                <div key={phase.id} className="relative">
+                  <Card className="p-6 border border-border/40 hover:border-accent/20 transition-colors h-full">
+                    <div className="flex items-start gap-4 mb-4">
+                      <div className="h-12 w-12 rounded-lg bg-accent/10 flex items-center justify-center flex-shrink-0">
+                        <Icon className="h-6 w-6 text-accent" />
+                      </div>
+                      <div className="inline-flex items-center justify-center h-8 w-8 rounded-full bg-accent text-background font-bold text-sm">
+                        {phase.number}
+                      </div>
+                    </div>
+                    <h3 className="font-bold text-foreground text-lg mb-2">{phase.title}</h3>
+                    <p className="text-sm text-muted-foreground">{phase.details.substring(0, 100)}...</p>
+                  </Card>
                 </div>
-                <h3 className="font-semibold text-foreground mb-1">{item.title}</h3>
-                <p className="text-xs text-muted-foreground">{item.desc}</p>
-              </div>
-            ))}
+              );
+            })}
           </div>
-        </Card>
-
-        {/* Phases */}
-        <div className="space-y-4">
-          {phases.map((phase) => (
-            <Card key={phase.id} className="border border-border overflow-hidden">
-              <button
-                onClick={() => togglePhase(phase.id)}
-                className="w-full p-6 flex items-center justify-between hover:bg-secondary/20 transition-colors"
-              >
-                <div className="flex items-center gap-4 text-left">
-                  <Circle className="h-6 w-6 text-accent flex-shrink-0" />
-                  <h3 className="text-lg font-bold text-foreground">{phase.title}</h3>
-                </div>
-                <ChevronDown
-                  className={`h-5 w-5 text-muted-foreground transition-transform ${
-                    expandedPhase === phase.id ? 'rotate-180' : ''
-                  }`}
-                />
-              </button>
-
-              {expandedPhase === phase.id && (
-                <div className="border-t border-border px-6 py-6 bg-secondary/10">
-                  <p className="text-muted-foreground mb-6">{phase.details}</p>
-                  <h4 className="font-semibold text-foreground mb-4">Steps:</h4>
-                  <ul className="space-y-3">
-                    {phase.steps.map((step, idx) => (
-                      <li key={idx} className="flex items-start gap-3">
-                        <CheckCircle2 className="h-5 w-5 text-accent flex-shrink-0 mt-0.5" />
-                        <span className="text-foreground">{step}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </Card>
-          ))}
         </div>
+      </section>
 
-        {/* Key Features */}
-        <Card className="p-8 mt-12 border border-border bg-accent/5">
-          <h2 className="text-2xl font-bold text-foreground mb-6">Key Features</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {[
-              { title: 'Escrow Protection', desc: 'Funds are held securely and only released after delivery confirmation' },
-              { title: 'Real-Time Tracking', desc: 'GPS tracking keeps both parties informed throughout the journey' },
-              { title: '7-Day Hold Period', desc: 'Buyers have time to report issues without losing their money' },
-              { title: 'Dispute Resolution', desc: 'Our system handles conflicts fairly for both parties' },
-              { title: 'Transparent Pricing', desc: 'No hidden fees or surprise charges' },
-              { title: '24/7 Support', desc: 'Round-the-clock assistance for any order issues' },
-            ].map((feature, idx) => (
-              <div key={idx} className="flex gap-4">
-                <CheckCircle2 className="h-6 w-6 text-accent flex-shrink-0 mt-0.5" />
-                <div>
-                  <h3 className="font-semibold text-foreground mb-1">{feature.title}</h3>
-                  <p className="text-sm text-muted-foreground">{feature.desc}</p>
-                </div>
-              </div>
-            ))}
+      {/* Detailed Phases */}
+      <section className="border-b border-border/40">
+        <div className="mx-auto max-w-4xl px-6 py-16 sm:py-24">
+          <h2 className="text-3xl font-bold text-foreground mb-12">Phase Details</h2>
+          
+          <div className="space-y-4">
+            {phases.map((phase) => {
+              const Icon = phase.icon;
+              return (
+                <Card key={phase.id} className="border border-border/40 overflow-hidden">
+                  <button
+                    onClick={() => togglePhase(phase.id)}
+                    className="w-full p-6 flex items-center justify-between hover:bg-secondary/20 transition-colors"
+                  >
+                    <div className="flex items-center gap-4 text-left">
+                      <div className="flex items-center justify-center h-10 w-10 rounded-lg bg-accent/10">
+                        <Icon className="h-5 w-5 text-accent" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-accent">{phase.number}</p>
+                        <h3 className="text-lg font-bold text-foreground">{phase.title}</h3>
+                      </div>
+                    </div>
+                    <ChevronDown
+                      className={`h-5 w-5 text-muted-foreground transition-transform flex-shrink-0 ${
+                        expandedPhase === phase.id ? 'rotate-180' : ''
+                      }`}
+                    />
+                  </button>
+
+                  {expandedPhase === phase.id && (
+                    <div className="border-t border-border/40 px-6 py-6 bg-secondary/10">
+                      <p className="text-muted-foreground mb-6">{phase.details}</p>
+                      <h4 className="font-semibold text-foreground mb-4">Steps in this phase:</h4>
+                      <ul className="space-y-3">
+                        {phase.steps.map((step, idx) => (
+                          <li key={idx} className="flex items-start gap-3">
+                            <CheckCircle2 className="h-5 w-5 text-accent flex-shrink-0 mt-0.5" />
+                            <span className="text-foreground">{step}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </Card>
+              );
+            })}
           </div>
-        </Card>
-      </div>
+        </div>
+      </section>
+
+      {/* Key Benefits */}
+      <section className="bg-secondary/30 border-b border-border/40">
+        <div className="mx-auto max-w-7xl px-6 py-16 sm:py-24">
+          <h2 className="text-3xl font-bold text-foreground mb-12 text-center">Why This Process Works</h2>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="flex gap-4">
+              <Shield className="h-6 w-6 text-accent flex-shrink-0" />
+              <div>
+                <h3 className="font-bold text-foreground mb-2">Escrow Protection</h3>
+                <p className="text-muted-foreground">Funds are held in escrow until delivery is confirmed, protecting both buyers and sellers from fraud</p>
+              </div>
+            </div>
+            <div className="flex gap-4">
+              <Clock className="h-6 w-6 text-accent flex-shrink-0" />
+              <div>
+                <h3 className="font-bold text-foreground mb-2">7-Day Protection Period</h3>
+                <p className="text-muted-foreground">Buyers have a full week to report issues or request refunds before funds are released</p>
+              </div>
+            </div>
+            <div className="flex gap-4">
+              <Zap className="h-6 w-6 text-accent flex-shrink-0" />
+              <div>
+                <h3 className="font-bold text-foreground mb-2">Real-Time Tracking</h3>
+                <p className="text-muted-foreground">GPS tracking provides complete transparency throughout the delivery process</p>
+              </div>
+            </div>
+            <div className="flex gap-4">
+              <Users className="h-6 w-6 text-accent flex-shrink-0" />
+              <div>
+                <h3 className="font-bold text-foreground mb-2">Photo Proof</h3>
+                <p className="text-muted-foreground">Delivery photos create an undisputable record of order completion</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }
