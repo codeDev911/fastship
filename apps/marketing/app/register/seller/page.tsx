@@ -55,7 +55,7 @@ export default function SellerApplyPage() {
     setIsLoading(true);
 
     try {
-      const response = await secureFetch('/api/register/seller/apply', {
+      const response = await secureFetch('/api/register/seller', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),

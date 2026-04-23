@@ -138,12 +138,8 @@ export async function secureFetch(
   const isStateChanging = ['POST', 'PUT', 'DELETE', 'PATCH'].includes(method);
   
   if (isStateChanging && !skipCSRF) {
-    let csrfToken = getCSRFToken();
     
-    // If no CSRF token, try to refresh it
-    if (!csrfToken) {
-      csrfToken = await refreshCSRFToken();
-    }
+     let csrfToken = await refreshCSRFToken();
     
     if (csrfToken) {
       headers.set('x-csrf-token', csrfToken);
@@ -156,6 +152,7 @@ export async function secureFetch(
       headers,
       credentials: 'include', // Include cookies for CSRF
     });
+
 
     // Handle 401 Unauthorized (token expired)
     if (response.status === 401 && !skipAuth) {
@@ -172,6 +169,7 @@ export async function secureFetch(
         );
       }
     }
+ 
 
     return response;
   } catch (error) {
