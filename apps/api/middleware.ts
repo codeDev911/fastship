@@ -72,6 +72,7 @@ const publicRoutes = [
   "/api/auth/seller",
   "/api/locations",
   "/api/rate-cards",
+  "/api/cron/reconciliation",
   "/api/rate/calculate",
   "/api/distance/calculate",
   "/api/locations/cities",
