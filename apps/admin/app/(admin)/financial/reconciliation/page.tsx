@@ -306,10 +306,10 @@ export default function ReconciliationPage() {
                 <p className="text-sm text-gray-600">Reconciliation Logs</p>
                 <div className="mt-2 space-y-1">
                   <p className="text-lg font-semibold">
-                    {dbStats.reconciliationLogs.count} records
+                    {dbStats?.reconciliationLogs?.count} records
                   </p>
                   <p className="text-sm text-gray-500">
-                    {dbStats.reconciliationLogs.sizeMB} MB
+                    {dbStats?.reconciliationLogs?.sizeMB} MB
                   </p>
                 </div>
               </div>
@@ -317,10 +317,10 @@ export default function ReconciliationPage() {
                 <p className="text-sm text-gray-600">Reconciliation Alerts</p>
                 <div className="mt-2 space-y-1">
                   <p className="text-lg font-semibold">
-                    {dbStats.reconciliationAlerts.count} records
+                    {dbStats?.reconciliationAlerts?.count} records
                   </p>
                   <p className="text-sm text-gray-500">
-                    {dbStats.reconciliationAlerts.sizeMB} MB
+                    {dbStats?.reconciliationAlerts?.sizeMB} MB
                   </p>
                 </div>
               </div>
