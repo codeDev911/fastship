@@ -5,34 +5,9 @@ import { generateCSRFToken } from '@/lib/csrf';
 export async function GET(request: NextRequest) {
   try {
     // Get authentication token from cookies
-       let token = request.cookies.get('auth_token')?.value|| "";
+      
     
-    // If no cookie, try Authorization header (cross-origin requests)
-    if (!token) {
-      const authHeader = request.headers.get('Authorization');
-      if (authHeader?.startsWith('Bearer ')) {
-        token = authHeader.substring(7); // Remove 'Bearer ' prefix
-      }
-    }
-    
-     // If still no token, return 401
-    if (!token) {
-      return NextResponse.json(
-        { message: 'Unauthorized - No auth token' },
-        { status: 401 }
-      );
-    }
-
-    // Verify JWT token
-    const secret = new TextEncoder().encode(
-      process.env.JWT_SECRET || 'your-secret-key'
-    );
-    const verified = await jwtVerify(token, secret);
-    const userId = (verified.payload as any).id;
-    console.log({userId});
-    
-    // Generate CSRF token
-    const csrfToken = await generateCSRFToken(userId);
+    const csrfToken = await generateCSRFToken("random-user");
 
     // Return CSRF token
     const response = NextResponse.json({
