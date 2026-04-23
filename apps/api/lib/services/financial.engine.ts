@@ -371,10 +371,10 @@ export const reconciliationService = {
       // Calculate ledger balance from all entries (in cents)
       const ledgerSumResult = await tx.ledgerEntry.aggregate({
         where: { walletId },
-        _sum: { amount: true },
+        _sum: { amount_cents: true },
       });
 
-      const ledgerBalanceCents = ledgerSumResult._sum.amount || 0;
+      const ledgerBalanceCents = ledgerSumResult._sum?.amount_cents || 0;
       const diffCents = ledgerBalanceCents - bankBalanceCents;
 
       // If balanced, just log it
