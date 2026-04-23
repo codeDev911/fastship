@@ -120,12 +120,67 @@ export async function middleware(request: NextRequest) {
     return response;
   }
 
-  // For state-changing requests on protected routes, validate CSRF
+  // =============== AUTHENTICATE ALL PROTECTED ROUTES ===============
+  // Check authentication for ALL methods (GET, POST, PUT, DELETE, PATCH)
+  
+  let userId: any = "";
+
+  // Get authentication token from cookies
+  let token = request.cookies.get("auth_token")?.value || "";
+
+  // If no cookie, try Authorization header (cross-origin requests)
+  if (!token) {
+    const authHeader = request.headers.get("Authorization");
+    if (authHeader?.startsWith("Bearer ")) {
+      token = authHeader.substring(7); // Remove 'Bearer ' prefix
+    }
+  }
+
+  if (!token) {
+    // If no token, return 401 with CORS headers
+    let errorResponse = NextResponse.json(
+      { message: "Unauthorized - No authentication token provided" },
+      { status: 401 },
+    );
+
+    const corsHeaders = getCORSHeaders(origin);
+
+    Object.entries(corsHeaders).forEach(([key, value]) => {
+      errorResponse.headers.set(key, value);
+    });
+
+    return errorResponse;
+  }
+
+  // Verify token
+  const secret = new TextEncoder().encode(
+    process.env.JWT_SECRET || "your-secret-key",
+  );
+
+  try {
+    const verified = await jwtVerify(token, secret);
+    userId = (verified.payload as any).jobId;
+    (request as NextRequest & { user?: string }).user = userId;
+  } catch (error) {
+    // Invalid token
+    let errorResponse = NextResponse.json(
+      { message: "Unauthorized - Invalid token" },
+      { status: 401 },
+    );
+
+    const corsHeaders = getCORSHeaders(origin);
+
+    Object.entries(corsHeaders).forEach(([key, value]) => {
+      errorResponse.headers.set(key, value);
+    });
+
+    return errorResponse;
+  }
+
+  // =============== VALIDATE CSRF FOR STATE-CHANGING METHODS ===============
   const isStateChangingMethod = ["POST", "PUT", "DELETE", "PATCH"].includes(
     request.method.toUpperCase(),
   );
-
-  let userId : any =""
 
   if (isStateChangingMethod) {
     if (!(await validateCSRFMiddleware(request))) {
@@ -138,50 +193,10 @@ export async function middleware(request: NextRequest) {
       
       return errorResponse;
     }
-    console.log("CSRF checked : TRUE");
-
-
-    // Skip checking auth for public apis
-
-
-    //=============== check auth ===============
-
-    // Get authentication token from cookies
-    let token = request.cookies.get("auth_token")?.value || "";
-
-    // If no cookie, try Authorization header (cross-origin requests)
-    if (!token) {
-      const authHeader = request.headers.get("Authorization");
-      if (authHeader?.startsWith("Bearer ")) {
-        token = authHeader.substring(7); // Remove 'Bearer ' prefix
-      }
-    }
-
-    if (!token) {
-      // If no token, return 401 with CORS headers
-      let errorResponse = NextResponse.json(
-        { message: "Unauthorized - No authentication token provided" },
-        { status: 401 },
-      );
-
-      const corsHeaders = getCORSHeaders(origin);
-
-      Object.entries(corsHeaders).forEach(([key, value]) => {
-        errorResponse.headers.set(key, value);
-      });
-
-      return errorResponse;
-    }
-    const secret = new TextEncoder().encode(
-      process.env.JWT_SECRET || "your-secret-key",
-    );
-
-    const verified = await jwtVerify(token, secret);
-    userId = (verified.payload as any).jobId;
-    (request as NextRequest & { user?: string }).user = userId;
+    console.log("CSRF checked: TRUE");
   }
   
-  // For other methods, add CORS headers
+  // =============== CONTINUE WITH AUTHENTICATED REQUEST ===============
   const response = NextResponse.next();
   response.headers.set("X-User-Id", userId);
   const corsHeaders = getCORSHeaders(origin);
