@@ -58,13 +58,12 @@ export const runIdempotent = async (
   // Store the idempotency record
   await tx.idempotencyKey.upsert({
     where: { key: uniqueKey },
-    update: { response: result, updatedAt: new Date() },
+    update: { response: result },
     create: {
       key: uniqueKey,
       scope,
       response: result,
       createdAt: new Date(),
-      updatedAt: new Date(),
     },
   });
 
@@ -82,11 +81,6 @@ export const withWalletLock = async (
 };
 
 export const addLedger = async (tx: any, data: any) => {
-  // CRITICAL: Use database SUM to calculate balance, NOT application logic
-  // This prevents race conditions and floating-point errors
-  // All amounts are stored and calculated in cents (integers) for accuracy
-
-  // Validate amount is integer cents
   if (typeof data.amount !== "number" || !Number.isInteger(data.amount)) {
     throw new Error(
       `Ledger amount must be an integer (cents/paise). Got: ${data.amount}. ` +
@@ -94,24 +88,26 @@ export const addLedger = async (tx: any, data: any) => {
     );
   }
 
-  // Calculate decimal value from cents
   const amountDecimal = toDecimal(data.amount);
 
-  // Use raw SQL to atomically insert and calculate balance in one operation
-  // Save both decimal and cents values for dual-field strategy
+  // Calculate balance BEFORE insert (include this new entry)
+  const balanceResult = await tx.$queryRaw`
+    SELECT COALESCE(SUM("amount_cents"), 0) as "totalCents" FROM "LedgerEntry" WHERE "walletId" = ${data.walletId}
+  `;
+  
+  const newBalanceCents = Number(balanceResult[0]?.totalCents) + data.amount;
+  const newBalanceDecimal = toDecimal(newBalanceCents);
+
   const result = await tx.$queryRaw`
     INSERT INTO "LedgerEntry" 
-      ("walletId", "amount", "amount_cents", "type", "category", "referenceId", "createdAt", "updatedAt")
+      ("id", "walletId", "amount", "amount_cents", "type", "category", "referenceId", "balanceAfter", "balanceAfter_cents", "createdAt")
     VALUES 
-      (${data.walletId}, ${amountDecimal}, ${data.amount}, ${data.type}, ${data.category}, ${data.referenceId}, NOW(), NOW())
-    RETURNING 
-      *,
-      (SELECT COALESCE(SUM("amount_cents"), 0) FROM "LedgerEntry" WHERE "walletId" = ${data.walletId}) as "balanceAfterCents"
+      (gen_random_uuid(), ${data.walletId}, ${amountDecimal}, ${data.amount}, ${data.type}, ${data.category}, ${data.referenceId}, ${newBalanceDecimal}, ${newBalanceCents}, NOW())
+    RETURNING *
   `;
 
   return result[0];
 };
-
 import { prisma } from "@fastship/lib";
 
 // =========================

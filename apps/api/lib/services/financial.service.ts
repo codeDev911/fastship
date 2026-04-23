@@ -51,7 +51,7 @@ export const financialService = {
         "Wallet top-up",
         `topup-${walletId}-${amount}-${Date.now()}`,
       );
-    });
+    },{timeout:10000});
   },
 
   // =========================
