@@ -297,7 +297,7 @@ export async function calculateDistanceByCities(
  
   // Create cache key
   const cacheKey = `${pickupCity}_${pickupState}__${deliveryCity}_${deliveryState}`;
-
+  
   try {
     // 2. Check in-memory cache and/or fetch from API
     const result = await getCachedOrFetchDistance(cacheKey, async () => {

@@ -726,18 +726,18 @@ export const reconciliationService = {
       ]);
 
     return {
-      reconciliationLogs: {
+      reconciliationLogss: {
         count: logCount,
-        sizeBytes: (totalLogSize as any)?.[0]?.size || 0,
-        sizeMB: (((totalLogSize as any)?.[0]?.size || 0) / 1024 / 1024).toFixed(
+        sizeBytes: (Number(totalLogSize) as any)?.[0]?.size || 0,
+        sizeMB: Number(((Number(totalLogSize) as any)?.[0]?.size || 0) / 1024 / 1024).toFixed(
           2,
         ),
       },
       reconciliationAlerts: {
         count: alertCount,
-        sizeBytes: (totalAlertSize as any)?.[0]?.size || 0,
-        sizeMB: (
-          ((totalAlertSize as any)?.[0]?.size || 0) /
+        sizeBytes: (Number(totalAlertSize) as any)?.[0]?.size || 0,
+        sizeMB: Number(
+          ((Number(totalAlertSize) as any)?.[0]?.size || 0) /
           1024 /
           1024
         ).toFixed(2),

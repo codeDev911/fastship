@@ -6,7 +6,7 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
-    const alertId = params.id;
+    const alertId = (await params).id;
     const userId = request.headers.get('x-user-id') || 'SYSTEM';
     const { resolution } = await request.json();
 
