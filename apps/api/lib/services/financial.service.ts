@@ -258,17 +258,21 @@ export const financialService = {
       async () => {
         const shipment = await tx.shipment.findUnique({
           where: { id: shipmentId },
+          select:{
+            id:true,
+            actualRate_cents:true,
+          }
         });
 
         if (!shipment) throw new Error("Shipment not found");
 
         // Calculate fees using integer math with cents
         let taxCents = 0;
-        let commissionCents = amountCents;
+        let commissionCents = Math.floor((shipment.actualRate_cents*10)/100); // 10% commission
         let driverPayableCents = 0;
 
         if (paymentMethod === "COD") {
-          driverPayableCents = Math.floor((commissionCents * 80) / 100); // 80% with proper rounding
+          driverPayableCents = Math.floor((shipment.actualRate_cents * 80) / 100); // 80% with proper rounding
         }
 
         return tx.payment.create({

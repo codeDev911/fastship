@@ -26,56 +26,55 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    // get unique driverIds
-
-  
-    const driverDebts = [];
-
-    for (const driver of business?.drivers || []) {
-      const debt = await prisma.driver.findMany({
-        where: {
-          AND: [
-            { id: driver.id },
-            {
-              OR:[
-                {debts: {
-                some: {
-                  isSettled: {
-                    equals:false
-                  },
-                },
-              },},
-              {
-                currentDebt:{
-                    not:{
-                        equals:0.0000
-                    }
-                }
-              }
-              ]
-            },
-          ],
-        },
-        select: {
-          id: true,
-          currentDebt: true,
-          totalDeliveries: true,
-          debts: true,
-          totalEarnings: true,
-          user: {
-            select: {
-              name: true,
-              id: true,
-              phone: true,
-              email: true,
-            },
-          },
-        },
-      });
-      driverDebts.push(...debt);
+    if (!business) {
+      return NextResponse.json({ data: [] });
     }
 
+    const shipmentIds = (
+      await prisma.shipment.findMany({
+      where: { businessId },
+      select: { id: true },
+      })
+    ).map((s) => s.id);
+
+    if (shipmentIds.length === 0) {
+      return NextResponse.json({ data: [] });
+    }
+
+    const driverIds = [...new Set(business.drivers.map((d) => d.id))];
+
+    const driverDebts = await prisma.driver.findMany({
+      where: {
+      id: { in: driverIds },
+      OR: [
+        {
+        debts: {
+          some: {
+          shipmentId: { in: shipmentIds },
+          isSettled: false,
+          },
+        },
+        },
+        { currentDebt: { not: 0 } },
+      ],
+      },
+      select: {
+      id: true,
+      currentDebt: true,
+      totalDeliveries: true,
+      totalEarnings: true,
+      user: {
+        select: { id: true, name: true, phone: true, email: true },
+      },
+      debts: {
+        where: { shipmentId: { in: shipmentIds } },
+      },
+      },
+    });
+
     return NextResponse.json({ data: driverDebts });
+
+    
   } catch (error) {
     console.error("Error fetching driver departments:", error);
     return NextResponse.json(
