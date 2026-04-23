@@ -60,7 +60,7 @@ const CreateOrderForm = () => {
   useEffect(() => {
     const fetchStates = async () => {
       try {
-        const response = await fetch('/api/locations/states');
+        const response = await secureFetch('/api/locations/states');
         const data = await response.json();
         if (data.states) {
           setStates(data.states);
@@ -88,7 +88,7 @@ const CreateOrderForm = () => {
         if (!sellerId) return;
 
                 // Now fetch warehouse data using the new endpoint
-        const warehouseResponse = await fetch(`/api/sellers/${sellerId}/warehouse`);
+        const warehouseResponse = await secureFetch(`/api/sellers/${sellerId}/warehouse`);
         if (warehouseResponse.ok) {
           const warehouseData = await warehouseResponse.json();
           const warehouseInfo = warehouseData.seller;
@@ -228,7 +228,7 @@ const CreateOrderForm = () => {
     const fetchCities = async () => {
       setLoadingPickupCities(true);
       try {
-        const response = await fetch(
+        const response = await secureFetch(
           `/api/locations/cities?state=${encodeURIComponent(formData.pickupState)}`
         );
         const data = await response.json();
@@ -254,7 +254,7 @@ const CreateOrderForm = () => {
     const fetchCities = async () => {
       setLoadingDeliveryCities(true);
       try {
-        const response = await fetch(
+        const response = await secureFetch(
           `/api/locations/cities?state=${encodeURIComponent(formData.deliveryState)}`
         );
         const data = await response.json();
