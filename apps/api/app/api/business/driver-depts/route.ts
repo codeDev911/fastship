@@ -40,13 +40,16 @@ export async function GET(request: NextRequest) {
     if (shipmentIds.length === 0) {
       return NextResponse.json({ data: [] });
     }
-
+    console.log({shipmentIds});
+    
+    
     const driverIds = [...new Set(business.drivers.map((d) => d.id))];
+    console.log({driverIds});
 
     const driverDebts = await prisma.driver.findMany({
       where: {
-      id: { in: driverIds },
-      OR: [
+        OR: [
+          {id: { in: driverIds }},
         {
         debts: {
           some: {
