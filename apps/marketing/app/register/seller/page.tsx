@@ -29,7 +29,10 @@ export default function SellerApplyPage() {
   const [formData, setFormData] = useState({
     email: '',
     phone: '',
+    name:"",
     businessName: '',
+    password:"",
+    cpassword:"",
     businessType: 'RETAIL',
     city: '',
   });
@@ -49,6 +52,11 @@ export default function SellerApplyPage() {
 
     if (!formData.email || !formData.phone || !formData.businessName || !formData.city) {
       setError('Please fill in all fields');
+      return;
+    }
+
+    if(formData.password !== formData.cpassword){
+      setError('Passwords do not match');
       return;
     }
 
@@ -175,6 +183,18 @@ export default function SellerApplyPage() {
                 disabled={isLoading}
               />
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="name">User Full Name *</Label>
+              <Input
+                id="name"
+                type="name"
+                name="name"
+                placeholder="Afnan Khan"
+                value={formData.name}
+                onChange={handleChange}
+                disabled={isLoading}
+              />
+            </div>
 
             <div className="space-y-2">
               <Label htmlFor="phone">Phone Number *</Label>
@@ -211,6 +231,28 @@ export default function SellerApplyPage() {
                 name="city"
                 placeholder="Your City"
                 value={formData.city}
+                onChange={handleChange}
+                disabled={isLoading}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="city">Password *</Label>
+              <Input
+                id="password"
+                name="password"
+                placeholder="Create a password"
+                value={formData.password}
+                onChange={handleChange}
+                disabled={isLoading}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="city">Confirm Password *</Label>
+              <Input
+                id="cpassword"
+                name="cpassword"
+                placeholder="Create a password"
+                value={formData.cpassword}
                 onChange={handleChange}
                 disabled={isLoading}
               />

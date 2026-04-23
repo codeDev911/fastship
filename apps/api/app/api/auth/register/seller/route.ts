@@ -9,15 +9,14 @@ export async function POST(request: NextRequest) {
       email,
       password,
       name,
+      businessType,
       phone,
-      shopName,
-      shopAddress,
+      businessName,
       city,
-      province,
     } = await request.json();
 
     // Validate input
-    if (!email || !password || !name || !phone || !shopName || !shopAddress || !city) {
+    if (!email || !password || !name || !phone || !businessName  || !city) {
       return NextResponse.json(
         { message: 'All fields are required' },
         { status: 400 }
@@ -55,12 +54,12 @@ export async function POST(request: NextRequest) {
     const seller = await prisma.seller.create({
       data: {
         userId: user.id,
-        companyName: shopName,
-        businessType: 'RETAIL',
+        companyName: businessName,
+        businessType: businessType,
         taxId: `TAX-${user.id.substring(0, 8)}`, // Placeholder
-        address: shopAddress,
+        address: "Unknown Street",
         city,
-        state: province || 'Unknown',
+        state:  'Unknown',
         zipCode: '00000', // Default placeholder
       },
     });
@@ -70,6 +69,8 @@ export async function POST(request: NextRequest) {
       data: {
         sellerId: seller.id,
         balance: 0,
+        balance_cents:0,
+        escrowBalance_cents:0,
         escrowBalance: 0,
       },
     });
