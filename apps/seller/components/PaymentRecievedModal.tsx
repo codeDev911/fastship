@@ -11,6 +11,7 @@ import {
   ExternalLink
 } from 'lucide-react';
 import { Button } from '../../../packages/ui/shared/Button';
+import { secureFetch } from '@fastship/lib';
 
 interface PaymentReceivedModalProps {
   isOpen: boolean;
@@ -26,7 +27,7 @@ const PaymentReceivedModal = ({ isOpen, onClose, data }: PaymentReceivedModalPro
   const handleConfirm = async()=>{
     try {
         setLoading(true)
-        let res = await fetch("/api/payments",{
+        let res = await secureFetch("/api/payments",{
             method:"PATCH",
             body:JSON.stringify({
                 status:"COMPLETED",

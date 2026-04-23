@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import { MapPin, Loader2, AlertCircle, Route } from 'lucide-react';
 import { Button } from '@fastship/ui';
-import { parseAddress } from '@fastship/lib';
+import { parseAddress, secureFetch } from '@fastship/lib';
 
 const OpenRouteMapPicker = dynamic(() => import('./OpenRouteMapPicker'), {
     ssr: false,
@@ -77,7 +77,7 @@ export function InCityLocationPicker({
 
     const reverseGeocode = async (lat: number, lng: number): Promise<string> => {
         try {
-            const response = await fetch(
+            const response = await secureFetch(
                 `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`,
                 {
                     headers: { Accept: 'application/json' },
@@ -104,7 +104,7 @@ export function InCityLocationPicker({
         setLoadingDistance(true);
         setError(null);
         try {
-            const response = await fetch('/api/locations/in-city-distance', {
+            const response = await secureFetch('/api/locations/in-city-distance', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

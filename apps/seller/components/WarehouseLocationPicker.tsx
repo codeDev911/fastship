@@ -128,7 +128,7 @@ export function WarehouseLocationPicker({
 
     const reverseGeocode = async (lat: number, lng: number): Promise<string> => {
         try {
-            const response = await fetch(
+            const response = await secureFetch(
                 `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`,
                 {
                     headers: { Accept: 'application/json' },

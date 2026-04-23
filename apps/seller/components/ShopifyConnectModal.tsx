@@ -14,6 +14,7 @@ import { Label } from '@fastship/ui';
 import { Alert, AlertDescription } from '@fastship/ui';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@fastship/ui';
 import { Loader2, AlertCircle, ExternalLink, Info } from 'lucide-react';
+import { secureFetch } from '@fastship/lib';
 
 interface ShopifyConnectModalProps {
   open: boolean;
@@ -47,7 +48,7 @@ export function ShopifyConnectModal({
 
     try {
       // Call API to connect custom app
-      const response = await fetch('/api/integrations/shopify/connect-custom-app', {
+      const response = await secureFetch('/api/integrations/shopify/connect-custom-app', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -90,7 +91,7 @@ export function ShopifyConnectModal({
 
     try {
       // Call API to initiate OAuth flow
-      const response = await fetch('/api/integrations/shopify/connect', {
+      const response = await secureFetch('/api/integrations/shopify/connect', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -12,6 +12,7 @@ import {
     InfoIcon
 } from 'lucide-react';
 import { Button } from '../../../packages/ui/shared/Button';
+import { secureFetch } from '@fastship/lib';
 
 const CancelShipmentModal = ({ isOpen, onClose, data }: any) => {
     const [step, setStep] = useState(1); // 1: Warning/Terms, 2: Success, 3: Error
@@ -25,7 +26,7 @@ const CancelShipmentModal = ({ isOpen, onClose, data }: any) => {
         try {
             setIsLoading(true);
 
-            let res = await fetch(`/api/driver/delivery?shipmentId=${data.id}&status=CANCELED&canceledBy=seller`,{
+            let res = await secureFetch(`/api/driver/delivery?shipmentId=${data.id}&status=CANCELED&canceledBy=seller`,{
                 method:"PATCH"
             })
             let resdata = await res.json()
