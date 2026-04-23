@@ -234,11 +234,11 @@ export const reconciliationService = {
         // Calculate ledger balance in cents (integer arithmetic)
         const ledgerSumResult = await tx.ledgerEntry.aggregate({
           where: { walletId },
-          _sum: { amount: true },
+          _sum: { amount_cents: true },
         });
 
         // Ledger balance is in cents (integers)
-        const ledgerBalanceCents = ledgerSumResult._sum.amount || 0;
+        const ledgerBalanceCents = ledgerSumResult._sum.amount_cents || 0;
         // Wallet balance_cents is the source of truth for reconciliation
         const walletBalanceCents = wallet.balance_cents || 0;
         const diffCents = ledgerBalanceCents - walletBalanceCents;
