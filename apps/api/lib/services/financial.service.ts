@@ -146,7 +146,13 @@ export const financialService = {
         }
 
         return withWalletLock(tx, walletId, async () => {
-          // Skipping addLedger here because lock is just a state change, not a real debit yet. Funds are still in the wallet but marked as escrowed.
+          await addLedger(tx, {
+            walletId,
+            amount: -amountCents,  // IMPORTANT: pass amount in cents (integer)
+            type: "ESCROW_LOCK",
+            category: "ESCROW_LOCK",
+            referenceId: referenceId,
+          });
           await tx.wallet.update({
             where: { id: walletId },
             data: {
@@ -557,7 +563,7 @@ export const financialService = {
         return withWalletLock(tx, walletId, async () => {
           await addLedger(tx, {
             walletId,
-            amount: -amountCents,  
+            amount: 0, // we've sent 0 , because escorw has already been deducted from balance during lock, this is just a ledger entry to record the cut with proper category   
             type: "DEBIT",
             category: "ESCROW_CUT",
             referenceId: reason,
