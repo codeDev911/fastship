@@ -240,7 +240,7 @@ export const reconciliationService = {
         // Ledger balance is in cents (integers)
         const ledgerBalanceCents = ledgerSumResult._sum.amount_cents || 0;
         // Wallet balance_cents is the source of truth for reconciliation
-        const walletBalanceCents = wallet.balance_cents !== null && wallet?.escrowBalance_cents !==null ?wallet?.balance_cents - wallet?.escrowBalance_cents : 0;
+        const walletBalanceCents = wallet.balance_cents !== null && wallet?.escrowBalance_cents !==null ?wallet?.balance_cents - wallet?.escrowBalance_cents : wallet?.balance_cents||0;
         const diffCents = ledgerBalanceCents - walletBalanceCents;
 
         // ✅ No issue - balances match perfectly

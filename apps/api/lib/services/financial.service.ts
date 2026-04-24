@@ -427,17 +427,17 @@ export const financialService = {
         await withWalletLock(tx, businessWallet.id, async () => {
           await addLedger(tx, {
             walletId: businessWallet.id,
-            amount: businessFeeCents,  // IMPORTANT: pass amount in cents (integer)
+            amount: businessFeeCents + platformFeeCents,  // beacause we already deducted the platformFreeCents from seller in escrow lock , so here we'll release their escrow_locked (platformFee) and credit their deliver fee
             type: "CREDIT",
-            category: "DELIVERY_FEE",
+            category: "DELIVERY_FEE + ESCROW_RELEASE",
             referenceId: shipment.id,
           });
 
           await tx.wallet.update({
             where: { id: businessWallet.id },
             data: {
-              balance: { increment: businessFee },
-              balance_cents: { increment: businessFeeCents },
+              balance: { increment: businessFee  }, 
+              balance_cents: { increment: businessFeeCents  }, 
               escrowBalance: { decrement: platformFee },
               escrowBalance_cents: { decrement: platformFeeCents },
             },
@@ -447,7 +447,7 @@ export const financialService = {
             data: {
               amount: businessFee,
               amount_cents: businessFeeCents,
-              description: "Delivery fee received",
+              description: "Delivery fee received & Escrow released",
               type: "CREDIT",
               completedAt: new Date(),
               referenceId: shipment.id,
