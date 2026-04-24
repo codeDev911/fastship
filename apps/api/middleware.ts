@@ -106,7 +106,7 @@ export async function middleware(request: NextRequest) {
       status: 204,
       headers: corsHeaders,
     });
-  }
+  }   
 
   // For public routes, just add CORS headers
   if (isPublicRoute(pathname) || pathname.includes("/api/admin")) {
