@@ -415,38 +415,8 @@ export const financialService = {
       "shipmentProcess",
       async () => {
         // Deduct fee from seller
-        await withWalletLock(tx, shipment.seller.wallet.id, async () => {
-          await addLedger(tx, {
-            walletId: shipment.seller.wallet.id,
-            amount: -amountCents,  // IMPORTANT: pass amount in cents (integer)
-            type: "DEBIT",
-            category: "SHIPMENT_CLEAR",
-            referenceId: shipment.id,
-          });
-
-          await tx.wallet.update({
-            where: { id: shipment.seller.wallet.id },
-            data: {
-              balance: { decrement: totalAmount },
-              balance_cents: { decrement: amountCents },
-              escrowBalance: { decrement: totalAmount },
-              escrowBalance_cents: { decrement: amountCents },
-            },
-          });
-
-          await tx.transaction.create({
-            data: {
-              amount: totalAmount,
-              amount_cents: amountCents,
-              description: "Shipping fee deducted",
-              type: "DEBIT",
-              completedAt: new Date(),
-              referenceId: shipment.id,
-              status: "COMPLETED",
-              walletId: shipment?.seller?.wallet.id,
-            },
-          });
-        });
+        this.cutEscrow(tx, shipment.seller.wallet.id,totalAmount, "Shipment fee deducted", shipment.id);
+        
 
         const businessWallet = await tx.wallet.findUnique({
           where: { businessId: shipment.businessId },
