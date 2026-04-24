@@ -208,7 +208,7 @@ export const financialService = {
           await addLedger(tx, {
             walletId,
             amount: amountCents,  // IMPORTANT: pass amount in cents (integer)
-            type: "CREDIT",
+            type: "ESCROW_RELEASE",
             category: "ESCROW_RELEASE",
             referenceId: reason,
           });
@@ -564,7 +564,7 @@ export const financialService = {
           await addLedger(tx, {
             walletId,
             amount: 0, // we've sent 0 , because escorw has already been deducted from balance during lock, this is just a ledger entry to record the cut with proper category   
-            type: "DEBIT",
+            type: "ESCROW_CUT",
             category: "ESCROW_CUT",
             referenceId: reason,
           });
@@ -582,7 +582,7 @@ export const financialService = {
           return tx.transaction.create({
             data: {
               walletId,
-              type: "COMMISSION",
+              type: "ESCROW_CUT",
               amount: toDecimal(amountCents),
               amount_cents: amountCents,
               referenceId,

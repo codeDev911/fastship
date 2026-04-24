@@ -153,7 +153,7 @@ export default function AdminDashboard() {
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-sm text-slate-600 font-medium">Total Revenue</p>
-                <p className="text-3xl font-bold text-slate-900 mt-2">Rs {(metrics.totalRevenue / 100000).toFixed(1)}L</p>
+                <p className="text-3xl font-bold text-slate-900 mt-2">Rs {(metrics.totalRevenue / 100000).toFixed(2)}L</p>
                 <p className="text-xs text-slate-500 mt-2">From completed payments</p>
               </div>
               <div className="bg-green-50 p-3 rounded-lg">

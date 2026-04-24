@@ -32,9 +32,9 @@ export async function GET(request: NextRequest) {
       prisma.dispute.count({ where: { status: 'OPEN' } }),
       // Failed payments
       prisma.payment.count({ where: { paymentStatus: 'FAILED' } }),
-      // Total revenue (sum of all completed payments)
-      prisma.payment.aggregate({
-        where: { paymentStatus: 'COMPLETED' },
+      // Total revenue (sum of all escrow cuts from businesses 10% of actual rate)
+      prisma.transaction.aggregate({
+        where: { type: "ESCROW_CUT", wallet:{business:{user:{role:"BUSINESS"}}}},
         _sum: { amount: true },
       }),
       // Pending settlements
