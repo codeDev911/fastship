@@ -148,7 +148,7 @@ export const financialService = {
         return withWalletLock(tx, walletId, async () => {
           await addLedger(tx, {
             walletId,
-            amount: amountCents,  // IMPORTANT: pass amount in cents (integer)
+            amount: -amountCents,  // IMPORTANT: pass amount in cents (integer)
             type: "ESCROW_LOCK",
             category: "ESCROW_LOCK",
             referenceId: referenceId,
