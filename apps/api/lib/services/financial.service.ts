@@ -148,7 +148,7 @@ export const financialService = {
         return withWalletLock(tx, walletId, async () => {
           await addLedger(tx, {
             walletId,
-            amount: -amountCents,  // IMPORTANT: pass amount in cents (integer)
+            amount: amountCents,  // IMPORTANT: pass amount in cents (integer)
             type: "ESCROW_LOCK",
             category: "ESCROW_LOCK",
             referenceId: referenceId,
@@ -563,7 +563,7 @@ export const financialService = {
         return withWalletLock(tx, walletId, async () => {
           await addLedger(tx, {
             walletId,
-            amount: amountCents,  // we didn't do -amountCents while is cutting the fee because we already -amountCetns in EscrowLock , if we -amountCeents here again will double cuts found and rise reconciliation issue
+            amount: -amountCents,  
             type: "DEBIT",
             category: "ESCROW_CUT",
             referenceId: reason,
