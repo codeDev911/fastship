@@ -146,13 +146,7 @@ export const financialService = {
         }
 
         return withWalletLock(tx, walletId, async () => {
-          await addLedger(tx, {
-            walletId,
-            amount: amountCents,  // IMPORTANT: pass amount in cents (integer)
-            type: "ESCROW_LOCK",
-            category: "ESCROW_LOCK",
-            referenceId: referenceId,
-          });
+          // Skipping addLedger here because lock is just a state change, not a real debit yet. Funds are still in the wallet but marked as escrowed.
           await tx.wallet.update({
             where: { id: walletId },
             data: {
