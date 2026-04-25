@@ -7,6 +7,7 @@ import { Alert } from '../shared/Alert';
 import { Save, Mail, Phone, MapPin, Building, AlertCircle, Loader } from 'lucide-react';
 import { useToast } from '../../hooks/use-toast';
 import { ServiceAreasManager } from '../business/ServiceAreasManager';
+import { CurrencySettings } from '../../lib/components';
 import { secureFetch } from '@fastship/lib';
 
 interface SettingsPageProps {
@@ -348,6 +349,12 @@ export function SettingsPage({ isLoading: externalLoading = false, onSave }: Set
               </div>
             </CardContent>
           </Card>
+
+          {/* Currency Preferences */}
+          <CurrencySettings
+            userId={userId}
+            userType="business"
+          />
 
           {/* Insurance Information */}
           <Card>

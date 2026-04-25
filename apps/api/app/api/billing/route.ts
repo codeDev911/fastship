@@ -20,7 +20,6 @@ export async function GET(request: NextRequest) {
 
     
 
-
     let where : any ={}
 
     if(sellerId) where.wallet ={  sellerId };

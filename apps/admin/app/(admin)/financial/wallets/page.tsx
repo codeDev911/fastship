@@ -101,7 +101,7 @@ export default function WalletsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs font-medium text-slate-500 uppercase">Total Balance</p>
-                <p className="text-2xl font-bold text-green-600 mt-2">Rs {totalBalance.toFixed(0)}</p>
+                <p className="text-2xl font-bold text-green-600 mt-2">$ {totalBalance.toFixed(2)}</p>
               </div>
               <DollarSign className="w-8 h-8 text-green-500 opacity-80" />
             </div>
@@ -113,7 +113,7 @@ export default function WalletsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs font-medium text-slate-500 uppercase">Escrow (Locked)</p>
-                <p className="text-2xl font-bold text-yellow-600 mt-2">Rs {totalEscrow.toFixed(0)}</p>
+                <p className="text-2xl font-bold text-yellow-600 mt-2">$ {totalEscrow.toFixed(2)}</p>
               </div>
               <AlertCircle className="w-8 h-8 text-yellow-500 opacity-80" />
             </div>
@@ -125,7 +125,7 @@ export default function WalletsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs font-medium text-slate-500 uppercase">Total Earnings</p>
-                <p className="text-2xl font-bold text-blue-600 mt-2">Rs {totalEarnings.toFixed(0)}</p>
+                <p className="text-2xl font-bold text-blue-600 mt-2">$ {totalEarnings.toFixed(2)}</p>
               </div>
               <TrendingUp className="w-8 h-8 text-blue-500 opacity-80" />
             </div>
@@ -226,16 +226,16 @@ export default function WalletsPage() {
                         </span>
                       </td>
                       <td className="py-4 px-4 text-right">
-                        <p className="font-semibold text-slate-900">Rs {wallet.balance.toFixed(0)}</p>
+                        <p className="font-semibold text-slate-900">$ {wallet.balance.toFixed(2)}</p>
                       </td>
                       <td className="py-4 px-4 text-right">
-                        <p className="font-semibold text-yellow-600">Rs {wallet.escrow.toFixed(0)}</p>
+                        <p className="font-semibold text-yellow-600">$ {wallet.escrow.toFixed(2)}</p>
                       </td>
                       <td className="py-4 px-4 text-right">
-                        <p className="font-semibold text-green-600">Rs {wallet.available.toFixed(0)}</p>
+                        <p className="font-semibold text-green-600">$ {wallet.available.toFixed(2)}</p>
                       </td>
                       <td className="py-4 px-4 text-right">
-                        <p className="font-semibold text-blue-600">Rs {wallet.totalEarnings.toFixed(0)}</p>
+                        <p className="font-semibold text-blue-600">$ {wallet.totalEarnings.toFixed(2)}</p>
                       </td>
                       <td className="py-4 px-4 text-right">
                         <p className="text-sm text-slate-600">{new Date(wallet.createdAt).toLocaleDateString()}</p>

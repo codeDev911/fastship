@@ -269,3 +269,6 @@ export {
   useLogout,
   useTokenExpirationCheck,
 } from './hooks/auth.hooks';
+
+// Currency hooks
+export { useCurrencyPreference, useOnCurrencyChange } from './hooks/useCurrencyPreference';

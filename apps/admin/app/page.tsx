@@ -153,7 +153,7 @@ export default function AdminDashboard() {
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-sm text-slate-600 font-medium">Total Revenue</p>
-                <p className="text-3xl font-bold text-slate-900 mt-2">Rs {(metrics.totalRevenue / 100000).toFixed(2)}L</p>
+                <p className="text-3xl font-bold text-slate-900 mt-2">$ {(metrics.totalRevenue / 100000).toFixed(2)}L</p>
                 <p className="text-xs text-slate-500 mt-2">From completed payments</p>
               </div>
               <div className="bg-green-50 p-3 rounded-lg">
@@ -310,7 +310,7 @@ export default function AdminDashboard() {
                           }`}>
                             {shipment.status}
                           </span>
-                          <p className="text-sm font-medium text-slate-900 mt-1">Rs {shipment.actualRate?.toFixed(0) || '0'}</p>
+                          <p className="text-sm font-medium text-slate-900 mt-1">$ {shipment.actualRate?.toFixed(2) || '0'}</p>
                         </div>
                       </div>
                     </button>
@@ -343,7 +343,7 @@ export default function AdminDashboard() {
                           }`}>
                             {dispute.status}
                           </span>
-                          <p className="text-sm font-medium text-red-600 mt-1">Rs {dispute.amount.toFixed(0)}</p>
+                          <p className="text-sm font-medium text-red-600 mt-1">$ {dispute.amount.toFixed(2)}</p>
                         </div>
                       </div>
                     </div>
@@ -454,7 +454,7 @@ export default function AdminDashboard() {
                       className="border rounded p-2 bg-orange-50"
                     >
                       <p className="text-xs font-medium text-slate-900">{settlement.business?.companyName}</p>
-                      <p className="text-xs text-orange-600 font-bold mt-1">Rs {settlement.totalAmount.toFixed(0)}</p>
+                      <p className="text-xs text-orange-600 font-bold mt-1">$ {settlement.totalAmount.toFixed(2)}</p>
                     </div>
                   ))}
                 </div>

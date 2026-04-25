@@ -248,7 +248,7 @@ export default function ShipmentDetailPage() {
               <p className="text-slate-500 mt-1">ID: {shipment.id}</p>
             </div>
             <div className="text-right">
-              <p className="text-2xl font-bold text-slate-900">Rs {shipment.actualRate?.toFixed(0) || '0'}</p>
+              <p className="text-2xl font-bold text-slate-900">${shipment.actualRate?.toFixed(2) || '0'}</p>
               <p className="text-sm text-slate-500">Actual Rate</p>
             </div>
           </div>
@@ -492,20 +492,20 @@ export default function ShipmentDetailPage() {
               <div className="space-y-6">
                 <div className="bg-slate-50 rounded-lg p-4">
                   <p className="text-xs font-medium text-slate-500 uppercase">Total Amount</p>
-                  <p className="text-3xl font-bold text-slate-900 mt-1">Rs {shipment.payment.amount.toFixed(0)}</p>
+                  <p className="text-3xl font-bold text-slate-900 mt-1">${shipment.payment.amount.toFixed(2)}</p>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="p-4 border border-slate-200 rounded-lg">
                     <p className="text-xs font-medium text-slate-500 uppercase mb-2">Tax</p>
-                    <p className="text-2xl font-bold text-slate-900">Rs {shipment.payment.tax.toFixed(0)}</p>
+                    <p className="text-2xl font-bold text-slate-900">${shipment.payment.tax.toFixed(2)}</p>
                   </div>
                   <div className="p-4 border border-slate-200 rounded-lg">
                     <p className="text-xs font-medium text-slate-500 uppercase mb-2">Commission</p>
-                    <p className="text-2xl font-bold text-slate-900">Rs {shipment.payment.commission.toFixed(0)}</p>
+                    <p className="text-2xl font-bold text-slate-900">${shipment.payment.commission.toFixed(2)}</p>
                   </div>
                   <div className="p-4 border border-blue-200 rounded-lg bg-blue-50">
                     <p className="text-xs font-medium text-slate-500 uppercase mb-2">Driver Payable</p>
-                    <p className="text-2xl font-bold text-blue-600">Rs {shipment.payment.driverPayable.toFixed(0)}</p>
+                    <p className="text-2xl font-bold text-blue-600">${shipment.payment.driverPayable.toFixed(2)}</p>
                   </div>
                 </div>
                 <div className="border-t pt-4">
@@ -604,7 +604,7 @@ export default function ShipmentDetailPage() {
                         <p className="text-xs text-slate-500">
                           {new Date(dispute.createdAt).toLocaleDateString()}
                         </p>
-                        <p className="text-xs font-medium text-red-600">Rs {dispute.amount.toFixed(0)}</p>
+                        <p className="text-xs font-medium text-red-600">${dispute.amount.toFixed(2)}</p>
                       </div>
                     </div>
                   ))}

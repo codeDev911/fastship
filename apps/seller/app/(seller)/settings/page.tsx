@@ -7,6 +7,7 @@ import { Card, CardHeader, CardContent } from '@fastship/ui';
 import { Alert } from '@fastship/ui';
 import { Save, MapPin, AlertCircle, Loader, Trash2, Building2, CreditCard } from 'lucide-react';
 import { useToast } from '@fastship/hooks';
+import { CurrencySettings } from '@fastship/lib';
 import dynamic from 'next/dynamic';
 import { secureFetch } from '@fastship/lib';
 
@@ -713,6 +714,12 @@ export default function SellerSettingsPage() {
                 </form>
               </CardContent>
             </Card>
+
+            {/* Currency Preferences */}
+            <CurrencySettings
+              userType="seller"
+              compact={false}
+            />
           </div>
         )}
       </div>

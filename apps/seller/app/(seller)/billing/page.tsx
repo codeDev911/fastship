@@ -5,13 +5,14 @@ import { SellerLayout } from '../../../components/SellerLayout';
 import { Card, CardHeader, CardContent } from '@fastship/ui';
 import { Button } from '@fastship/ui';
 import { Plus, Lock, Wallet, DollarSign, Send } from 'lucide-react';
-import {TopUpModal} from '@fastship/ui';
-import {TransferFundsModal} from '@fastship/ui';
+import { TopUpModal } from '@fastship/ui';
+import { TransferFundsModal } from '@fastship/ui';
 import { secureFetch } from '@fastship/lib';
+import { CurrencyDisplay } from '@fastship/lib';
+import {ExchangeRateModal} from "@fastship/ui"
 
 export default function BillingPage() {
   const [walletBalance, setWalletBalance] = useState(0);
-  const [transactions, setTransactions] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [autoTopUpEnabled, setAutoTopUpEnabled] = useState(false);
   const [wallet, setWallet]: any = useState({})
@@ -24,23 +25,16 @@ export default function BillingPage() {
     const fetchData = async () => {
       try {
         setIsLoading(true);
-        const [walletRes, billingRes] = await Promise.all([
+        const [walletRes] = await Promise.all([
           secureFetch(`/api/wallets?sellerId=${sellerId}`),
-          secureFetch(`/api/billing?sellerId=${sellerId}&limit=10`),
         ]);
 
         if (walletRes.ok) {
           const data = await walletRes.json();
           setWallet(data?.data)
-          console.log(data?.data);
-          
           setWalletBalance(data.data?.balance || 0);
         }
 
-        if (billingRes.ok) {
-          const data = await billingRes.json();
-          setTransactions(data.data);
-        }
       } catch (error) {
         console.error('[v0] Error fetching billing data:', error);
       } finally {
@@ -80,8 +74,10 @@ export default function BillingPage() {
             >
               Tarnsfer funds
             </Button>
+        <ExchangeRateModal/>
           </div>
         </div>
+
 
         {/* Escrow Visual - Three Prominent Metric Cards */}
         <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
@@ -96,7 +92,7 @@ export default function BillingPage() {
                 <p className="text-sm font-medium text-muted-foreground">Available Balance</p>
               </div>
               <p className="text-4xl font-bold text-green-600">
-                {(walletBalance - wallet?.escrowBalance || 0)?.toLocaleString() || "0"}
+                <CurrencyDisplay amount={wallet.display?.balance||walletBalance} currency={wallet.currency} />
               </p>
               <p className="mt-2 text-xs text-muted-foreground">Funds ready to use</p>
             </CardContent>
@@ -113,7 +109,8 @@ export default function BillingPage() {
                 <p className="text-sm font-medium text-muted-foreground">Locked in Escrow</p>
               </div>
               <p className="text-4xl font-bold text-orange-600">
-                {wallet.escrowBalance?.toLocaleString() || "0"}
+                <CurrencyDisplay amount={wallet?.display?.escrowBalance||wallet?.escrowBalance || 0} currency={wallet.currency} />
+
               </p>
               <p className="mt-2 text-xs text-muted-foreground">Reserved for active shipments</p>
             </CardContent>
@@ -130,7 +127,7 @@ export default function BillingPage() {
                 <p className="text-sm font-medium text-muted-foreground">Total Balance</p>
               </div>
               <p className="text-4xl font-bold text-accent">
-                {walletBalance?.toLocaleString() || "0"}
+                <CurrencyDisplay amount={wallet.display?.available||walletBalance} currency={wallet.currency} />
               </p>
               <p className="mt-2 text-xs text-muted-foreground">{wallet?.currency}</p>
             </CardContent>
@@ -154,7 +151,7 @@ export default function BillingPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {transactions?.length > 0 && transactions?.map((txn: any, idx: React.Key) => {
+                  {wallet.transactions?.length > 0 && wallet.transactions?.map((txn: any, idx: React.Key) => {
                     const isAddition = txn.type === 'TOPUP' || txn.type === 'REFUND' || txn.type === 'CREDIT' ? true : false;
                     const isEscrow = txn.type === "ESCROW_LOCK"
                     const isEscrowReleased = txn.type === "ESCROW_RELEASE"
@@ -166,7 +163,7 @@ export default function BillingPage() {
                         className={idx !== wallet?.recentTransactions?.length - 1 ? 'border-b border-border/50' : ''}
                       >
                         <td className="px-4 py-4 text-sm text-foreground">
-                          {new Date(txn.date)?.toLocaleDateString("en-US", {
+                          {new Date(txn.createdAt)?.toLocaleDateString("en-US", {
                             day: "2-digit",
                             month: "2-digit",
                             year: "2-digit",
@@ -191,14 +188,14 @@ export default function BillingPage() {
                           </span>
                         </td>
                         <td className="px-4 py-4 text-sm">
-                          <span className="text-muted-foreground">{txn.description}</span>
+                          <span className="text-muted-foreground">{txn.description} {txn.currency}</span>
                         </td>
                         <td className="px-4 py-4 text-sm">
-                          <span className="text-muted-foreground">{txn.referenceId||"N/A"}</span>
+                          <span className="text-muted-foreground">{txn.referenceId || "N/A"}</span>
                         </td>
                         <td className={`px-4 py-4 text-right text-sm font-semibold ${isAddition ? 'text-green-600' : isEscrow ? "text-yellow-600" : isEscrowReleased ? "text-blue-600" : 'text-red-600'
                           }`}>
-                          {isAddition ? '+' : isEscrow || isEscrowReleased ? "" : '-'} Rs.{txn?.amount?.toLocaleString()} {wallet?.currency}
+                          {isAddition ? '+' : isEscrow || isEscrowReleased ? "" : '-'} {txn.displayCurrency}{txn.amount} 
                         </td>
                       </tr>
                     );
@@ -258,7 +255,7 @@ export default function BillingPage() {
         </div>
       </div>
       <TopUpModal isOpen={isTopupModalOpen} onClose={() => setIsTopupModalOpen(false)} />
-      <TransferFundsModal isOpen={isTransferFundsModalOpen} onClose={() => setIsTransferFundsModalOpen(false)} />
+      <TransferFundsModal data={{currency:wallet.currency}} isOpen={isTransferFundsModalOpen} onClose={() => setIsTransferFundsModalOpen(false)} />
 
     </SellerLayout>
 

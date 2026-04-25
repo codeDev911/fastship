@@ -120,6 +120,36 @@ enum ApprovalStatus {
   REJECTED
 }
 
+// ============ MULTI-CURRENCY ENUMS ============
+enum Currency {
+  USD
+  EUR
+  GBP
+  INR
+  AED
+  PKR
+  SGD
+  MYR
+  THB
+  IDR
+}
+
+enum ReconciliationAlertSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum ReconciliationAlertType {
+  BALANCE_MISMATCH
+  CURRENCY_MISMATCH
+  EXCHANGE_RATE_ANOMALY
+  UNDERPAYMENT
+  OVERPAYMENT
+  PROCESSING_FAILURE
+}
+
 // ============ MODELS ============
 
 model User {
@@ -132,6 +162,7 @@ model User {
   profileImage String?
   isVerified   Boolean  @default(false)
   isActive     Boolean  @default(true)
+  preferredCurrency Currency @default(USD)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -361,6 +392,7 @@ model Wallet {
   id                     String   @id @default(cuid())
   balance                Float    @default(0) // Keep for backward compatibility, but will be generated from balance_cents
   balance_cents          Int?     @default(0) // Store balance in cents for accuracy (used for calculation in backed only)
+  currency               Currency @default(USD)
   escrowBalance          Float    @default(0) // Keep for backward compatibility, but will be generated from balance_cents
   escrowBalance_cents    Int?     @default(0)
   totalEarnings          Float    @default(0) // Keep for backward compatibility, but will be generated from balance_cents
@@ -388,16 +420,20 @@ model Wallet {
 }
 
 model Transaction {
-  id           String          @id @default(cuid())
-  walletId     String
-  type         TransactionType
-  amount       Float           @default(0) // Keep for backward compatibility, but will be generated from amount_cents
-  amount_cents Int?            @default(0) // Store amount in cents for accuracy (used for calculation in backed only)
-  description  String
-  referenceId  String?
-  status       PaymentStatus   @default(PENDING)
-  createdAt    DateTime        @default(now())
-  completedAt  DateTime?
+  id             String          @id @default(cuid())
+  walletId       String
+  type           TransactionType
+  amount         Float           @default(0) // Keep for backward compatibility, but will be generated from amount_cents
+  amount_cents   Int?            @default(0) // Store amount in cents for accuracy (used for calculation in backed only)
+  currency       Currency        @default(USD)
+  exchangeRate   Float           @default(1) // Exchange rate used for this transaction
+  displayAmount  Float?          // Amount in user's display currency
+  displayCurrency Currency?      // User's display currency
+  description    String
+  referenceId    String?
+  status         PaymentStatus   @default(PENDING)
+  createdAt      DateTime        @default(now())
+  completedAt    DateTime?
 
   wallet Wallet @relation(fields: [walletId], references: [id], onDelete: Cascade)
 
@@ -411,6 +447,8 @@ model Payment {
   shipmentId          String        @unique
   amount              Float         @default(0) // Keep for backward compatibility, but will be generated from amount_cents
   amount_cents        Int?          @default(0) // Store amount in cents for accuracy (used for calculation in backed only)
+  currency            Currency      @default(USD)
+  exchangeRate        Float         @default(1)
   tax                 Float         @default(0) // Keep for backward compatibility, but will be generated from amount_cents
   tax_cents           Int?          @default(0) // Store amount in cents for accuracy (used for calculation in backed only)
   commission          Float         @default(0) // Keep for backward compatibility, but will be generated from amount_cents
@@ -436,6 +474,7 @@ model LedgerEntry {
   walletId           String
   amount             Float    @default(0) // +credit / -debit
   amount_cents       Int?     @default(0) // Store amount in cents for accuracy (used for calculation in backed only)
+  currency           Currency @default(USD)
   type               String // CREDIT / DEBIT
   category           String // escrow, fee, transfer
   referenceId        String?
@@ -458,6 +497,7 @@ model ReconciliationLog {
   actual_cents     Int?     @default(0) // Store amount in cents for accuracy (used for calculation in backed only)
   difference       Float    @default(0) // Difference (expected - actual)
   difference_cents Int?     @default(0) // Store amount in cents for accuracy (used for calculation in backed only))
+  currency         Currency @default(USD)
   status           String // OK, FIXED, ERROR
   message          String? // Description of what happened
   createdAt        DateTime @default(now())
@@ -679,23 +719,45 @@ model ShopifyOrder {
 }
 
 model ReconciliationAlert {
-  id             String  @id @default(cuid())
+  id             String                         @id @default(cuid())
   walletId       String
   logId          String
-  severity       String // CRITICAL | HIGH | MEDIUM | LOW
-  type           String // WALLET_MISMATCH | BANK_MISMATCH
+  severity       ReconciliationAlertSeverity    @default(MEDIUM)
+  type           ReconciliationAlertType        @default(BALANCE_MISMATCH)
   message        String
   expectedCents  Int
   actualCents    Int
   diffCents      Int
+  currency       Currency                       @default(USD)
   status         String // NEW | ACKNOWLEDGED | RESOLVED
   resolution     String?
-  createdAt      DateTime
+  description    String?
+  createdAt      DateTime                       @default(now())
   acknowledgedAt DateTime?
   acknowledgedBy String?
   resolvedAt     DateTime?
   resolvedBy     String?
-  wallet         Wallet    @relation(fields: [walletId], references: [id])
+  wallet         Wallet                         @relation(fields: [walletId], references: [id])
+
+  @@index([walletId])
+  @@index([severity])
+  @@index([type])
+  @@index([status])
+}
+
+model ExchangeRate {
+  id        String   @id @default(cuid())
+  pair      String   @unique // e.g. "USD_EUR"
+  from      Currency
+  to        Currency
+  rate      Float
+  source    String   @default("exchangerate-api.com") // API source
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+
+  @@index([from])
+  @@index([to])
+  @@index([updatedAt])
 }
 
 model Notification {

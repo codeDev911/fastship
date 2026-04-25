@@ -202,12 +202,12 @@ export default function DriverDetailPage() {
             </div>
             <div className="bg-slate-50 rounded-lg p-4">
               <p className="text-xs font-medium text-slate-500 uppercase">Total Earnings</p>
-              <p className="text-2xl font-bold text-slate-900 mt-1">Rs {driver.totalEarnings?.toFixed(0)}</p>
+              <p className="text-2xl font-bold text-slate-900 mt-1">$ {driver.totalEarnings?.toFixed(2)}</p>
             </div>
             <div className="bg-slate-50 rounded-lg p-4">
               <p className="text-xs font-medium text-slate-500 uppercase">Current Debt</p>
               <p className={`text-2xl font-bold mt-1 ${driver.currentDebt > 0 ? 'text-red-600' : 'text-green-600'}`}>
-                Rs {driver.currentDebt?.toFixed(0)}
+                $ {driver.currentDebt?.toFixed(2)}
               </p>
             </div>
           </div>
@@ -305,16 +305,16 @@ export default function DriverDetailPage() {
                 <>
                   <div className="bg-green-50 rounded-lg p-4">
                     <p className="text-xs font-medium text-slate-500 uppercase">Available Balance</p>
-                    <p className="text-3xl font-bold text-green-600 mt-1">Rs {driver.wallet.balance?.toFixed(0)}</p>
+                    <p className="text-3xl font-bold text-green-600 mt-1">$ {driver.wallet.balance?.toFixed(2)}</p>
                   </div>
                   <div className="border-t pt-4 space-y-3">
                     <div className="flex justify-between">
                       <span className="text-sm text-slate-600">Total Earnings</span>
-                      <span className="font-medium text-slate-900">Rs {driver.wallet.totalEarnings?.toFixed(0)}</span>
+                      <span className="font-medium text-slate-900">$ {driver.wallet.totalEarnings?.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-sm text-slate-600">Total Withdrawals</span>
-                      <span className="font-medium text-slate-900">Rs {driver.wallet.totalWithdrawals?.toFixed(0)}</span>
+                      <span className="font-medium text-slate-900">$ {driver.wallet.totalWithdrawals?.toFixed(2)}</span>
                     </div>
                   </div>
                 </>
@@ -423,7 +423,7 @@ export default function DriverDetailPage() {
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
                           <TrendingUp className="w-4 h-4 text-green-600" />
-                          <p className="text-sm font-medium text-slate-900">Rs {earning.amount?.toFixed(0)}</p>
+                          <p className="text-sm font-medium text-slate-900">$ {earning.amount?.toFixed(2)}</p>
                         </div>
                         <p className="text-xs text-slate-500 mt-1">
                           {new Date(earning.createdAt).toLocaleDateString()}

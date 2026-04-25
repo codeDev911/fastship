@@ -205,7 +205,7 @@ export default function BusinessDetailPage() {
             <div className="bg-slate-50 rounded-lg p-4">
               <p className="text-xs font-medium text-slate-500 uppercase">Wallet Balance</p>
               <p className="text-2xl font-bold text-green-600 mt-1">
-                Rs {(business.wallet?.balance || 0).toFixed(2)}
+                ${(business.wallet?.balance || 0).toFixed(2)}
               </p>
             </div>
           </div>
@@ -337,20 +337,20 @@ export default function BusinessDetailPage() {
                 <>
                   <div className="bg-green-50 rounded-lg p-4">
                     <p className="text-xs font-medium text-slate-500 uppercase">Available Balance</p>
-                    <p className="text-3xl font-bold text-green-600 mt-1">Rs {Number(business.wallet.balance - business.wallet.escrowBalance).toFixed(2)}</p>
+                    <p className="text-3xl font-bold text-green-600 mt-1">${Number(business.wallet.balance - business.wallet.escrowBalance).toFixed(2)}</p>
                   </div>
                   <div className="border-t pt-4 space-y-3">
                     <div className="flex justify-between">
                       <span className="text-sm text-yellow-600">Escrow (locked)</span>
-                      <span className="font-medium text-yellow-600">Rs {business.wallet.escrowBalance?.toFixed(2)}</span>
+                      <span className="font-medium text-yellow-600">${business.wallet.escrowBalance?.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-sm text-slate-600">Total Earnings</span>
-                      <span className="font-medium text-slate-900">Rs {business.totalEarnings?.toFixed(2)}</span>
+                      <span className="font-medium text-slate-900">${business.totalEarnings?.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-sm text-slate-600">Total Withdrawals</span>
-                      <span className="font-medium text-slate-900">Rs {business.wallet?.totalWithdrawals?.toFixed(2)}</span>
+                      <span className="font-medium text-slate-900">${business.wallet?.totalWithdrawals?.toFixed(2)}</span>
                     </div>
                   </div>
                 </>
@@ -382,7 +382,7 @@ export default function BusinessDetailPage() {
                         className="w-full flex justify-between items-center p-3 bg-slate-50 hover:bg-slate-100 rounded cursor-pointer transition-colors"
                       >
                         <span className="text-sm font-medium text-slate-900">{card.name}</span>
-                        <span className="text-xs text-slate-600">Rs {card.baseRate} + Rs {card.perKmRate}/km</span>
+                        <span className="text-xs text-slate-600">${card.baseRate} + ${card.perKmRate}/km</span>
                       </button>
                     ))}
                   </div>
@@ -451,7 +451,7 @@ export default function BusinessDetailPage() {
                     <div key={settlement.id} className="p-3 bg-slate-50 rounded-lg">
                       <div className="flex items-center justify-between mb-1">
                         <p className="text-sm font-medium text-slate-900">
-                          Rs {settlement.amount.toFixed(2)}
+                          ${settlement.amount.toFixed(2)}
                         </p>
                         <span className={`text-xs font-medium px-2 py-1 rounded ${
                           settlement.status === 'COMPLETED'
@@ -483,11 +483,11 @@ export default function BusinessDetailPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-xs font-medium text-slate-500 uppercase mb-1">Base Fare</p>
-                  <p className="text-lg font-bold text-slate-900">Rs {selectedRateCard.baseRate.toFixed(0)}</p>
+                  <p className="text-lg font-bold text-slate-900">${selectedRateCard.baseRate.toFixed(2)}</p>
                 </div>
                 <div>
                   <p className="text-xs font-medium text-slate-500 uppercase mb-1">Per KM Rate</p>
-                  <p className="text-lg font-bold text-slate-900">Rs {selectedRateCard.perKmRate.toFixed(2)}/km</p>
+                  <p className="text-lg font-bold text-slate-900">${selectedRateCard.perKmRate.toFixed(2)}/km</p>
                 </div>
               </div>
 
@@ -525,7 +525,7 @@ export default function BusinessDetailPage() {
                   </div>
                   <div>
                     <p className="text-xs font-medium text-slate-500 uppercase mb-1">Surcharge/kg</p>
-                    <p className="text-sm text-slate-900">Rs {selectedRateCard.weightSurcharge.toFixed(2)}</p>
+                    <p className="text-sm text-slate-900">${selectedRateCard.weightSurcharge.toFixed(2)}</p>
                   </div>
                 </div>
               </div>

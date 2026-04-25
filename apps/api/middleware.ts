@@ -62,6 +62,7 @@ function getCORSHeaders(origin: string | null | undefined) {
 const publicRoutes = [
   "/api/auth/login",
   "/api/auth/register",
+  "/api/exchangeRates",
   "/api/auth/business",
   "/api/register/business/apply",
   "/api/register/business/complete",

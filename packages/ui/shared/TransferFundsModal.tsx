@@ -10,11 +10,12 @@ import {
 
 interface TransferModalProps {
   isOpen: boolean;
+  data:any;
   onClose: () => void;
 }
 import { secureFetch } from "@fastship/lib";
 
-export const TransferFundsModal = ({ isOpen, onClose }: TransferModalProps) => {
+export const TransferFundsModal = ({ isOpen, onClose,data }: TransferModalProps) => {
   // Navigation State: 1: Search, 2: Amount, 3: Review, 4: Success, 5: Error
   const [step, setStep] = useState(1);
 
@@ -211,10 +212,10 @@ export const TransferFundsModal = ({ isOpen, onClose }: TransferModalProps) => {
             </div>
 
             <div className="space-y-2">
-              <label className="text-[10px] uppercase font-bold text-slate-400 tracking-widest ml-4">Amount to send (PKR)</label>
+              <label className="text-[10px] uppercase font-bold text-slate-400 tracking-widest ml-4">Amount to send ({data?.currency})</label>
               <input
                 type="number"
-                placeholder="0.00"
+                placeholder={`${data.currency} 0.00`}
                 className={inputStyle}
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
@@ -243,12 +244,12 @@ export const TransferFundsModal = ({ isOpen, onClose }: TransferModalProps) => {
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-[10px] uppercase font-bold text-slate-400">Transfer Fee</span>
-                  <span className="text-xs font-bold text-green-600">PKR 0.00</span>
+                  <span className="text-xs font-bold text-green-600">{data?.currency} 0.00</span>
                 </div>
               </div>
               <div className="bg-red-600 p-8 flex justify-between items-center text-white">
                 <span className="text-xs opacity-70">Total transfer</span>
-                <span className="text-2xl font-bold font-mono">PKR {amount}</span>
+                <span className="text-2xl font-bold font-mono">{data.currency} {amount}</span>
               </div>
             </div>
 

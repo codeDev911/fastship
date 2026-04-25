@@ -105,7 +105,7 @@ export default function SettlementsPage() {
               <div>
                 <p className="text-sm text-slate-600">Total Settled</p>
                 <p className="text-3xl font-bold text-green-600 mt-1">
-                  PKR {(totalSettled / 1000).toFixed(0)}K
+                  $ {(totalSettled / 1000).toFixed(2)}K
                 </p>
               </div>
               <DollarSign className="w-8 h-8 text-green-500" />
@@ -119,7 +119,7 @@ export default function SettlementsPage() {
               <div>
                 <p className="text-sm text-slate-600">Pending Payouts</p>
                 <p className="text-3xl font-bold text-yellow-600 mt-1">
-                  PKR {(pendingAmount / 1000).toFixed(0)}K
+                  $ {(pendingAmount / 1000).toFixed(2)}K
                 </p>
               </div>
               <Calendar className="w-8 h-8 text-yellow-500" />
@@ -199,7 +199,7 @@ export default function SettlementsPage() {
                       <p className="font-medium text-slate-900">{settlement.sellerName}</p>
                     </td>
                     <td className="px-6 py-4 text-sm font-bold text-green-600">
-                      PKR {settlement.amount}
+                      $ {settlement.amount}
                     </td>
                     <td className="px-6 py-4 text-sm text-slate-600">
                       {settlement.bankAccount.slice(0, 4)}****{settlement.bankAccount.slice(-2)}

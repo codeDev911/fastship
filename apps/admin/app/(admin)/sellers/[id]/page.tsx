@@ -206,11 +206,11 @@ export default function SellerDetailPage() {
             </div>
             <div className="bg-slate-50 rounded-lg p-4">
               <p className="text-xs font-medium text-slate-500 uppercase">Total Revenue</p>
-              <p className="text-2xl font-bold text-slate-900 mt-1">Rs {totalRevenue?.toFixed(2)}</p>
+              <p className="text-2xl font-bold text-slate-900 mt-1">$ {totalRevenue?.toFixed(2)}</p>
             </div>
             <div className="bg-slate-50 rounded-lg p-4">
               <p className="text-xs font-medium text-slate-500 uppercase">Wallet Balance</p>
-              <p className="text-2xl font-bold text-green-600 mt-1">Rs {(seller.wallet?.balance || 0)?.toFixed(2)}</p>
+              <p className="text-2xl font-bold text-green-600 mt-1">$ {(seller.wallet?.balance || 0)?.toFixed(2)}</p>
             </div>
           </div>
         </CardContent>
@@ -323,20 +323,20 @@ export default function SellerDetailPage() {
                 <>
                   <div className="bg-green-50 rounded-lg p-4">
                     <p className="text-xs font-medium text-slate-500 uppercase">Available Balance</p>
-                    <p className="text-3xl font-bold text-green-600 mt-1">Rs {Number(seller.wallet?.balance-seller.wallet?.escrowBalance)?.toFixed(2)}</p>
+                    <p className="text-3xl font-bold text-green-600 mt-1">$ {Number(seller.wallet?.balance-seller.wallet?.escrowBalance)?.toFixed(2)}</p>
                   </div>
                   <div className="border-t pt-4 space-y-3">
                     <div className="flex justify-between">
                       <span className="text-sm text-yellow-600">Escrow (locked)</span>
-                      <span className="font-medium text-yellow-600">Rs {seller.wallet.escrowBalance?.toFixed(2)}</span>
+                      <span className="font-medium text-yellow-600">$ {seller.wallet.escrowBalance?.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-sm text-slate-600">Total Earnings</span>
-                      <span className="font-medium text-slate-900">Rs {seller.wallet.totalEarnings?.toFixed(2)}</span>
+                      <span className="font-medium text-slate-900">$ {seller.wallet.totalEarnings?.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-sm text-slate-600">Total Withdrawals</span>
-                      <span className="font-medium text-slate-900">Rs {seller.wallet.totalWithdrawals?.toFixed(2)}</span>
+                      <span className="font-medium text-slate-900">$ {seller.wallet.totalWithdrawals?.toFixed(2)}</span>
                     </div>
                   </div>
                 </>
@@ -433,7 +433,7 @@ export default function SellerDetailPage() {
                       </div>
                       <div className="flex items-center justify-between">
                         <p className="text-xs text-slate-500">{shipment.distance?.toFixed(1)} km</p>
-                        <p className="text-xs font-medium text-slate-900">Rs {shipment.actualRate?.toFixed(2)}</p>
+                        <p className="text-xs font-medium text-slate-900">$ {shipment.actualRate?.toFixed(2)}</p>
                       </div>
                       <p className="text-xs text-slate-500 mt-1">
                         {new Date(shipment.createdAt).toLocaleDateString()}
@@ -469,7 +469,7 @@ export default function SellerDetailPage() {
                         <p className="text-xs text-slate-500">
                           {new Date(dispute.createdAt).toLocaleDateString()}
                         </p>
-                        <p className="text-xs font-medium text-red-600">Rs {dispute.amount?.toFixed(2)}</p>
+                        <p className="text-xs font-medium text-red-600">$ {dispute.amount?.toFixed(2)}</p>
                       </div>
                     </div>
                   ))}

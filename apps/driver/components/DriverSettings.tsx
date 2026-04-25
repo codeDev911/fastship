@@ -5,6 +5,7 @@ import { Card, CardHeader, CardContent, CardFooter } from '@fastship/ui';
 import { Button } from '@fastship/ui';
 import { Alert } from '@fastship/ui';
 import { Save, Mail, Phone, Lock, MapPin, Truck } from 'lucide-react';
+import { CurrencySettings } from '@fastship/lib';
 
 interface DriverSettingsProps {
   isLoading?: boolean;
@@ -283,6 +284,12 @@ export function DriverSettings({ isLoading = false, onSave }: DriverSettingsProp
           </Button>
         </CardFooter>
       </Card>
+
+      {/* Currency Preferences */}
+      <CurrencySettings
+        userType="driver"
+        compact={false}
+      />
 
       {/* Account Security */}
       <Card>

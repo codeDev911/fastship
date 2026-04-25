@@ -168,7 +168,7 @@ export default function ShipmentsPage() {
                     </td>
                     <td className="px-6 py-4 text-sm text-slate-600">{shipment.weight} kg</td>
                     <td className="px-6 py-4 text-sm font-medium text-slate-900">
-                      {shipment.actualRate ? `PKR ${shipment.actualRate}` : 'N/A'}
+                      {shipment.actualRate ? `$${shipment.actualRate}` : 'N/A'}
                     </td>
                     <td className="px-6 py-4 text-sm text-slate-600">{shipment.paymentMethod}</td>
                     <td className="px-6 py-4">

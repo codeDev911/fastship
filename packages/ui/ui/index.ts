@@ -12,3 +12,4 @@ export {buttonVariants} from "./button"
 export * from "./toggle"
 export * from './select'
 export {Textarea} from "./textarea"
+export * from "./skeleton"

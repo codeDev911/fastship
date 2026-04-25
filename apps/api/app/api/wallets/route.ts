@@ -1,33 +1,32 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import currencyService from "@/lib/services/currency.service";
 
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
-    const userId = searchParams.get("userId") || searchParams.get("sellerId") || searchParams.get("driverId") || searchParams.get("businessId");
+    const userId =
+      searchParams.get("userId") ||
+      searchParams.get("sellerId") ||
+      searchParams.get("driverId") ||
+      searchParams.get("businessId");
 
-
-   
-
-       if (!userId) {
-      return NextResponse.json(
-        { error: "User ID required" },
-        { status: 400 }
-      );
+    if (!userId) {
+      return NextResponse.json({ error: "User ID required" }, { status: 400 });
     }
-    let where : any = {}
-    if(searchParams.get("sellerId")){
+    let where: any = {};
+    if (searchParams.get("sellerId")) {
       where = {
-        sellerId: userId
-      }
-    }else if(searchParams.get("businessId")){
+        sellerId: userId,
+      };
+    } else if (searchParams.get("businessId")) {
       where = {
-        businessId: userId
-      }
-    }else if(searchParams.get("driverId")){
+        businessId: userId,
+      };
+    } else if (searchParams.get("driverId")) {
       where = {
-        driverId: userId
-      }
+        driverId: userId,
+      };
     }
 
     const wallet = await prisma.wallet.findUnique({
@@ -43,20 +42,24 @@ export async function GET(request: NextRequest) {
     });
 
     if (!wallet) {
-      return NextResponse.json(
-        { error: "Wallet not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Wallet not found" }, { status: 404 });
+    }
+
+    const display = {
+      balance: await currencyService.convert(wallet.balance||0,"USD",wallet.currency) || wallet.balance,
+      escorwBalance: await currencyService.convert(wallet.escrowBalance||0,"USD",wallet.currency) || wallet.escrowBalance,
+      currency: wallet.currency || "USD",
+      available: await currencyService.convert(wallet.balance-wallet.escrowBalance||0,"USD",wallet.currency) || wallet.balance-wallet.escrowBalance,
     }
 
     return NextResponse.json({
-      data: wallet,
+      data: {...wallet,display},
     });
   } catch (error) {
     console.error("Get wallet error:", error);
     return NextResponse.json(
       { error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

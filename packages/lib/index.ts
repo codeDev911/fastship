@@ -19,8 +19,11 @@ export * from "./auth"
 export { AuthService } from "./services/auth.service"
 export { ProtectedLayout } from "./components/ProtectedLayout"
 export { ProtectedRoute } from "./components/ProtectedRoute"
+export {CurrencySettings} from "./components/CurrencySettings"
+export {CurrencyDisplay} from "./components/CurrencyDisplay"
 export * from "./middleware"
 export * from "./utils/utils"
 export * from "./hooks/useTokenFromUrl"
 export * from './components/TokenExtractor'
+export * from './hooks'
 // Mock data

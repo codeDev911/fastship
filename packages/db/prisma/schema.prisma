@@ -99,6 +99,33 @@ enum IntegrationType {
   SQUARE
 }
 
+// ============ CURRENCY ENUMS ============
+enum Currency {
+  USD
+  EUR
+  GBP
+  INR
+  AED
+  PKR
+  SGD
+  MYR
+  THB
+  IDR
+}
+
+enum ReconciliationAlertSeverity {
+  CRITICAL
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum ReconciliationAlertType {
+  WALLET_MISMATCH
+  BANK_MISMATCH
+  CURRENCY_MISMATCH
+}
+
 enum IntegrationSyncStatus {
   IDLE
   SYNCING
@@ -122,17 +149,18 @@ enum ApprovalStatus {
 // ============ MODELS ============
 
 model User {
-  id           String   @id @default(cuid())
-  email        String   @unique
-  phone        String   @unique
-  name         String
-  password     String
-  role         UserRole
-  profileImage String?
-  isVerified   Boolean  @default(false)
-  isActive     Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id                   String   @id @default(cuid())
+  email                String   @unique
+  phone                String   @unique
+  name                 String
+  password             String
+  role                 UserRole
+  profileImage         String?
+  isVerified           Boolean  @default(false)
+  isActive             Boolean  @default(true)
+  preferredCurrency    Currency @default(USD)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
 
   // Relations
   seller        Seller?
@@ -356,95 +384,117 @@ model RateCard {
 }
 
 model Wallet {
-  id               String   @id @default(cuid())
-  balance          Float    @default(0)
-  escrowBalance    Float    @default(0)
-  totalEarnings    Float    @default(0)
-  totalWithdrawals Float    @default(0)
-  lastUpdated      DateTime @updatedAt
-  createdAt        DateTime @default(now())
+  id                   String   @id @default(cuid())
+  balance              Float    @default(0)
+  balance_cents        Int      @default(0)       // Balance in cents (integer arithmetic)
+  currency             Currency @default(USD)    // Base currency for this wallet
+  escrowBalance        Float    @default(0)
+  escrowBalance_cents  Int      @default(0)
+  totalEarnings        Float    @default(0)
+  totalWithdrawals     Float    @default(0)
+  lastUpdated          DateTime @updatedAt
+  createdAt            DateTime @default(now())
 
   sellerId   String? @unique
   driverId   String? @unique
   businessId String? @unique
 
-  seller                Seller?              @relation(fields: [sellerId], references: [id], onDelete: Cascade)
-  driver                Driver?              @relation(fields: [driverId], references: [id], onDelete: Cascade)
-  business              Business?            @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  transactions          Transaction[]
-  ledgerEntries         LedgerEntry[]
-  reconciliationLogs    ReconciliationLog[]
+  seller                   Seller?                  @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  driver                   Driver?                  @relation(fields: [driverId], references: [id], onDelete: Cascade)
+  business                 Business?                @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  transactions             Transaction[]
+  ledgerEntries            LedgerEntry[]
+  reconciliationLogs       ReconciliationLog[]
+  reconciliationAlerts     ReconciliationAlert[]
 
   @@index([sellerId])
   @@index([driverId])
   @@index([businessId])
+  @@index([currency])
 }
 
 model Transaction {
-  id          String          @id @default(cuid())
-  walletId    String
-  type        TransactionType
-  amount      Float
-  description String
-  referenceId String?
-  status      PaymentStatus   @default(PENDING)
-  createdAt   DateTime        @default(now())
-  completedAt DateTime?
+  id                    String          @id @default(cuid())
+  walletId              String
+  type                  TransactionType
+  amount_cents          Int             // Amount in cents (base currency)
+  amount                Float           // Amount in decimal (for display)
+  currency              Currency        @default(USD)
+  displayAmount         Float?          // Amount shown to user in their currency
+  displayCurrency       Currency?       // User's selected currency
+  exchangeRate          Float           @default(1) // Exchange rate used for conversion
+  description           String
+  referenceId           String?
+  status                PaymentStatus   @default(PENDING)
+  createdAt             DateTime        @default(now())
+  completedAt           DateTime?
 
   wallet Wallet @relation(fields: [walletId], references: [id], onDelete: Cascade)
 
   @@index([walletId])
   @@index([createdAt])
   @@index([type])
+  @@index([currency])
 }
 
 model Payment {
-  id            String        @id @default(cuid())
-  shipmentId    String        @unique
-  amount        Float
-  tax           Float         @default(0)
-  commission    Float         @default(0)
-  driverPayable Float
-  paymentMethod PaymentMethod
-  paymentStatus PaymentStatus @default(PENDING)
-  transactionId String?
-  notes         String?
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-  paidAt        DateTime?
+  id                String        @id @default(cuid())
+  shipmentId        String        @unique
+  amount            Float
+  amount_cents      Int
+  currency          Currency      @default(USD)
+  exchangeRate      Float         @default(1)
+  tax               Float         @default(0)
+  commission        Float         @default(0)
+  driverPayable     Float
+  paymentMethod     PaymentMethod
+  paymentStatus     PaymentStatus @default(PENDING)
+  transactionId     String?
+  notes             String?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  paidAt            DateTime?
 
   shipment Shipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
 
   @@index([shipmentId])
   @@index([paymentStatus])
+  @@index([currency])
 }
 
 model LedgerEntry {
-  id           String  @id @default(uuid())
-  walletId     String
-  amount       Float // +credit / -debit
-  type         String // CREDIT / DEBIT
-  category     String // escrow, fee, transfer
-  referenceId  String?
-  balanceAfter Float
-
-  createdAt DateTime @default(now())
+  id                 String   @id @default(uuid())
+  walletId           String
+  amount             Float    // +credit / -debit
+  amount_cents       Int      // Amount in cents (integers for precision)
+  currency           Currency @default(USD)
+  type               String   // CREDIT / DEBIT
+  category           String   // escrow, fee, transfer, payment, commission
+  referenceId        String?
+  balanceAfter       Float
+  balanceAfter_cents Int
+  createdAt          DateTime @default(now())
 
   wallet Wallet @relation(fields: [walletId], references: [id])
 
   @@index([walletId])
   @@index([referenceId])
+  @@index([createdAt])
 }
 
 model ReconciliationLog {
-  id         String   @id @default(cuid())
-  walletId   String
-  expected   Float // Expected balance from ledger
-  actual     Float // Actual balance in wallet
-  difference Float // Difference (expected - actual)
-  status     String // OK, FIXED, ERROR
-  message    String? // Description of what happened
-  createdAt  DateTime @default(now())
+  id                  String   @id @default(cuid())
+  walletId            String
+  expected            Float    // Expected balance from ledger
+  expected_cents      Int
+  actual              Float    // Actual balance in wallet
+  actual_cents        Int
+  difference          Float    // Difference (expected - actual)
+  difference_cents    Int
+  currency            Currency @default(USD)
+  status              String   // OK, FIXED, ERROR, MISMATCH_ALERT
+  message             String?  // Description of what happened
+  createdAt           DateTime @default(now())
 
   wallet Wallet @relation(fields: [walletId], references: [id], onDelete: Cascade)
 
@@ -781,6 +831,51 @@ model Dispute {
   @@index([shipmentId])
   @@index([sellerId])
   @@index([driverId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+// ============ CURRENCY & EXCHANGE RATE MODELS ============
+
+model ExchangeRate {
+  id        String   @id @default(cuid())
+  pair      String   @unique // "USD_EUR"
+  from      Currency
+  to        Currency
+  rate      Float
+  source    String   @default("exchangerate-api.com") // API source
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+
+  @@index([from])
+  @@index([to])
+  @@index([updatedAt])
+}
+
+model ReconciliationAlert {
+  id              String                         @id @default(cuid())
+  walletId        String
+  logId           String?
+  severity        ReconciliationAlertSeverity
+  type            ReconciliationAlertType
+  message         String
+  expectedCents   Int
+  actualCents     Int
+  diffCents       Int
+  currency        Currency                       @default(USD)
+  status          String                         @default("NEW") // NEW, ACKNOWLEDGED, RESOLVED
+  resolution      String?
+  createdAt       DateTime                       @default(now())
+  resolvedAt      DateTime?
+  acknowledgedAt  DateTime?
+  acknowledgedBy  String?
+  resolvedBy      String?
+  
+  wallet Wallet @relation(fields: [walletId], references: [id], onDelete: Cascade)
+
+  @@index([walletId])
+  @@index([severity])
+  @@index([type])
   @@index([status])
   @@index([createdAt])
 }

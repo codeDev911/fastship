@@ -745,3 +745,284 @@ export const reconciliationService = {
     };
   },
 };
+
+// =========================
+// CURRENCY-AWARE FINANCIAL FUNCTIONS
+// =========================
+// These functions integrate with currencyService for multi-currency support
+
+import { currencyService } from "./currency.service";
+import { Currency } from "@prisma/client";
+
+/**
+ * Add ledger entry with currency conversion
+ * Converts to base currency and saves exchange rate for audit trail
+ * INDUSTRY STANDARD: Always store base amount + rate for reconstruction
+ */
+export const addLedgerWithCurrency = async (
+  tx: any,
+  data: {
+    walletId: string;
+    amountDecimal: number;
+    amountCents: number;
+    currency: Currency;
+    type: string; // CREDIT or DEBIT
+    category: string;
+    referenceId?: string;
+  }
+) => {
+  validateCents(data.amountCents, "amountCents");
+
+  // Convert to base currency (USD) for canonical storage
+  const { baseCents, rate } = await currencyService.toBaseCurrency(
+    data.amountDecimal,
+    data.currency
+  );
+
+  // Get current balance in base currency
+  const wallet = await tx.wallet.findUnique({
+    where: { id: data.walletId },
+    select: { balance_cents: true },
+  });
+
+  const newBalanceCents =
+    (wallet?.balance_cents || 0) + (data.type === "CREDIT" ? baseCents : -baseCents);
+
+  // Create ledger entry in base currency with rate tracking
+  return tx.ledgerEntry.create({
+    data: {
+      walletId: data.walletId,
+      amount: toDecimal(baseCents),
+      amount_cents: baseCents,
+      currency: Currency.USD, // Always store in base currency
+      type: data.type,
+      category: data.category,
+      referenceId: data.referenceId,
+      balanceAfter: toDecimal(newBalanceCents),
+      balanceAfter_cents: newBalanceCents,
+      createdAt: new Date(),
+    },
+  });
+};
+
+/**
+ * Create multi-currency transaction with exchange rate tracking
+ * Used when transaction currency differs from wallet currency
+ */
+export const createMultiCurrencyTransaction = async (data: {
+  walletId: string;
+  type: string;
+  amountDecimal: number;
+  amountCents: number;
+  currency: Currency;
+  displayCurrency?: Currency;
+  category: string;
+  description: string;
+  referenceId?: string;
+  status?: string;
+}) => {
+  validateCents(data.amountCents, "amountCents");
+
+  return prisma.$transaction(async (tx) => {
+    // Convert to base currency
+    const { baseCents, rate } = await currencyService.toBaseCurrency(
+      data.amountDecimal,
+      data.currency
+    );
+
+    // Create transaction with exchange rate
+    const transaction = await tx.transaction.create({
+      data: {
+        walletId: data.walletId,
+        type: data.type,
+        amount_cents: baseCents,
+        amount: toDecimal(baseCents),
+        currency: Currency.USD,
+        displayAmount: data.displayCurrency
+          ? await currencyService.convert(
+              toDecimal(baseCents),
+              Currency.USD,
+              data.displayCurrency
+            )
+          : undefined,
+        displayCurrency: data.displayCurrency || undefined,
+        exchangeRate: rate, // Save the rate for audit trail
+        category: data.category,
+        description: data.description,
+        referenceId: data.referenceId,
+        status: data.status || "PENDING",
+      },
+    });
+
+    return {
+      ...transaction,
+      originalAmount: data.amountDecimal,
+      originalCurrency: data.currency,
+      rateUsed: rate,
+      timestamp: new Date(),
+    };
+  });
+};
+
+/**
+ * Get transaction with conversion to user's preferred currency
+ * Useful for displaying transactions in user's currency
+ */
+export const getTransactionInUserCurrency = async (
+  transactionId: string,
+  userCurrency: Currency
+) => {
+  const transaction = await prisma.transaction.findUnique({
+    where: { id: transactionId },
+    include: { wallet: true },
+  });
+
+  if (!transaction) return null;
+
+  // Transaction stored in base currency, convert to user's currency
+  const convertedAmount = await currencyService.convert(
+    transaction.amount,
+    transaction.currency as Currency,
+    userCurrency
+  );
+
+  return {
+    id: transaction.id,
+    baseAmount: transaction.amount,
+    baseCurrency: transaction.currency,
+    displayAmount: convertedAmount,
+    displayCurrency: userCurrency,
+    exchangeRate: transaction.exchangeRate,
+    description: transaction.description,
+    type: transaction.type,
+    createdAt: transaction.createdAt,
+    status: transaction.status,
+  };
+};
+
+/**
+ * Reconcile wallet with currency awareness
+ * Enhanced version that tracks currency mismatches
+ */
+export const reconcileWalletWithCurrency = async (walletId: string) => {
+  return prisma.$transaction(
+    async (tx) => {
+      const wallet = await tx.wallet.findUnique({
+        where: { id: walletId },
+        include: { seller: true, driver: true, business: true },
+      });
+
+      if (!wallet) throw new Error("Wallet not found");
+
+      // Sum all ledger entries in their original currency
+      const ledgerSumResult = await tx.ledgerEntry.aggregate({
+        where: { walletId },
+        _sum: { amount_cents: true },
+      });
+
+      const ledgerBalanceCents = ledgerSumResult._sum.amount_cents || 0;
+      const walletBalanceCents =
+        wallet.balance_cents !== null && wallet.escrowBalance_cents !== null
+          ? wallet.balance_cents - wallet.escrowBalance_cents
+          : wallet.balance_cents || 0;
+
+      const diffCents = ledgerBalanceCents - walletBalanceCents;
+
+      // Create reconciliation log with currency info
+      if (diffCents === 0) {
+        await tx.reconciliationLog.create({
+          data: {
+            walletId,
+            expected: toDecimal(ledgerBalanceCents),
+            expected_cents: ledgerBalanceCents,
+            actual: toDecimal(walletBalanceCents),
+            actual_cents: walletBalanceCents,
+            difference: 0,
+            difference_cents: 0,
+            currency: wallet.currency,
+            status: "OK",
+            message: `Wallet reconciliation OK. Balance: ${toDecimal(walletBalanceCents)} ${wallet.currency}`,
+          },
+        });
+
+        return {
+          status: "OK",
+          ledgerBalanceCents,
+          walletBalanceCents,
+          currency: wallet.currency,
+        };
+      }
+
+      // Mismatch detected - create alert with currency awareness
+      const log = await tx.reconciliationLog.create({
+        data: {
+          walletId,
+          expected: toDecimal(ledgerBalanceCents),
+          expected_cents: ledgerBalanceCents,
+          actual: toDecimal(walletBalanceCents),
+          actual_cents: walletBalanceCents,
+          difference: toDecimal(diffCents),
+          difference_cents: diffCents,
+          currency: wallet.currency,
+          status: "MISMATCH_ALERT",
+          message: `Currency-aware mismatch: Ledger=${toDecimal(ledgerBalanceCents)} ${wallet.currency}, Wallet=${toDecimal(walletBalanceCents)} ${wallet.currency}`,
+        },
+      });
+
+      // Create alert with severity calculation
+      const severity = calculateAlertSeverity(diffCents);
+      await createReconciliationAlert(tx, {
+        walletId,
+        logId: log.id,
+        severity,
+        type: "WALLET_MISMATCH",
+        message: log.message,
+        expectedCents: ledgerBalanceCents,
+        actualCents: walletBalanceCents,
+        diffCents,
+      });
+
+      return {
+        status: "MISMATCH_DETECTED",
+        ledgerBalance: toDecimal(ledgerBalanceCents),
+        walletBalance: toDecimal(walletBalanceCents),
+        discrepancy: toDecimal(diffCents),
+        currency: wallet.currency,
+        action: "ALERT_CREATED - Manual investigation required",
+      };
+    },
+    { timeout: 10000 }
+  );
+};
+
+/**
+ * Get wallet balance converted to any currency
+ */
+export const getWalletBalanceInCurrency = async (
+  walletId: string,
+  targetCurrency: Currency
+) => {
+  const wallet = await prisma.wallet.findUnique({
+    where: { id: walletId },
+  });
+
+  if (!wallet) return null;
+
+  const balanceInTargetCurrency = await currencyService.convert(
+    toDecimal(wallet.balance_cents),
+    wallet.currency as Currency,
+    targetCurrency
+  );
+
+  return {
+    walletId,
+    balanceInBaseCurrency: toDecimal(wallet.balance_cents),
+    baseCurrency: wallet.currency,
+    balanceInTargetCurrency,
+    targetCurrency,
+    exchangeRate: await currencyService.getExchangeRate(
+      wallet.currency as Currency,
+      targetCurrency
+    ),
+  };
+};

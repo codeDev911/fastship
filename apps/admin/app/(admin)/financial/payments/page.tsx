@@ -105,7 +105,7 @@ export default function PaymentsPage() {
               <div>
                 <p className="text-sm text-slate-600">Completed</p>
                 <p className="text-3xl font-bold text-green-600 mt-1">
-                  PKR {(totalCompleted / 1000).toFixed(2)}K
+                  $ {(totalCompleted / 1000).toFixed(2)}K
                 </p>
               </div>
               <TrendingUp className="w-8 h-8 text-green-500" />
@@ -119,7 +119,7 @@ export default function PaymentsPage() {
               <div>
                 <p className="text-sm text-slate-600">Pending</p>
                 <p className="text-3xl font-bold text-yellow-600 mt-1">
-                  PKR {(totalPending / 1000).toFixed(2)}K
+                  $ {(totalPending / 1000).toFixed(2)}K
                 </p>
               </div>
               <Zap className="w-8 h-8 text-yellow-500" />
@@ -133,7 +133,7 @@ export default function PaymentsPage() {
               <div>
                 <p className="text-sm text-slate-600">Failed</p>
                 <p className="text-3xl font-bold text-red-600 mt-1">
-                  PKR {(totalFailed / 1000).toFixed(2)}K
+                  $ {(totalFailed / 1000).toFixed(2)}K
                 </p>
               </div>
               <AlertCircle className="w-8 h-8 text-red-500" />
@@ -201,7 +201,7 @@ export default function PaymentsPage() {
                       <p className="font-medium text-slate-900">{payment?.referenceId}</p>
                     </td>
                     <td className="px-6 py-4 text-sm font-bold text-slate-900">
-                      PKR {payment.amount}
+                      $ {payment.amount}
                     </td>
                     <td className="px-6 py-4 text-sm text-slate-600">
                       {payment.paymentMethod}

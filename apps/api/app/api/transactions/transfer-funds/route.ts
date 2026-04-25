@@ -14,7 +14,6 @@ export async function POST(req:NextRequest) {
         const {from,to,fromId,toId,amount,description,uniqueId} = await req.json()
        
 
-
         
         return await prisma.$transaction(async(tx)=>{
             await financialService.transferFunds(tx,from?.toLowerCase(),to?.toLowerCase(),fromId,toId,Number(amount),description ,uniqueId)

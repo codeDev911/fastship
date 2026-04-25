@@ -148,7 +148,7 @@ export default function DisputesPage() {
               <div>
                 <p className="text-sm text-slate-600">Total Amount</p>
                 <p className="text-3xl font-bold text-blue-600 mt-1">
-                  PKR {(disputes.reduce((sum, d) => sum + d.amount, 0) / 1000).toFixed(0)}K
+                  $ {(disputes.reduce((sum, d) => sum + d.amount, 0) / 1000).toFixed(2)}K
                 </p>
               </div>
               <DollarSign className="w-8 h-8 text-blue-500" />
@@ -223,7 +223,7 @@ export default function DisputesPage() {
                       </div>
                       <div>
                         <p className="text-slate-600">Amount</p>
-                        <p className="font-medium text-red-600">PKR {dispute.amount}</p>
+                        <p className="font-medium text-red-600">$ {dispute.amount}</p>
                       </div>
                     </div>
 

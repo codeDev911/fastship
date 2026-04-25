@@ -215,19 +215,19 @@ export default function WalletDetailPage() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="bg-green-50 rounded-lg p-4">
               <p className="text-xs font-medium text-slate-500 uppercase">Balance</p>
-              <p className="text-2xl font-bold text-green-600 mt-1">Rs {wallet.balance.toFixed(0)}</p>
+              <p className="text-2xl font-bold text-green-600 mt-1">${wallet.balance.toFixed(2)}</p>
             </div>
             <div className="bg-yellow-50 rounded-lg p-4">
               <p className="text-xs font-medium text-slate-500 uppercase">Escrow (Locked)</p>
-              <p className="text-2xl font-bold text-yellow-600 mt-1">Rs {wallet.escrowBalance.toFixed(0)}</p>
+              <p className="text-2xl font-bold text-yellow-600 mt-1">${wallet.escrowBalance.toFixed(2)}</p>
             </div>
             <div className="bg-blue-50 rounded-lg p-4">
               <p className="text-xs font-medium text-slate-500 uppercase">Available</p>
-              <p className="text-2xl font-bold text-blue-600 mt-1">Rs {Number(wallet.balance-wallet.escrowBalance).toFixed(0)}</p>
+              <p className="text-2xl font-bold text-blue-600 mt-1">${Number(wallet.balance-wallet.escrowBalance).toFixed(2)}</p>
             </div>
             <div className="bg-purple-50 rounded-lg p-4">
               <p className="text-xs font-medium text-slate-500 uppercase">Total Earnings</p>
-              <p className="text-2xl font-bold text-purple-600 mt-1">Rs {wallet.totalEarnings.toFixed(0)}</p>
+              <p className="text-2xl font-bold text-purple-600 mt-1">${wallet.totalEarnings.toFixed(2)}</p>
             </div>
           </div>
         </CardContent>
@@ -290,11 +290,11 @@ export default function WalletDetailPage() {
           <CardContent className="space-y-4">
             <div>
               <p className="text-xs font-medium text-slate-500 uppercase">Total Earnings</p>
-              <p className="text-2xl font-bold text-blue-600 mt-1">Rs {wallet.totalEarnings.toFixed(0)}</p>
+              <p className="text-2xl font-bold text-blue-600 mt-1">${wallet.totalEarnings.toFixed(2)}</p>
             </div>
             <div className="border-t pt-4">
               <p className="text-xs font-medium text-slate-500 uppercase">Total Withdrawals</p>
-              <p className="text-2xl font-bold text-red-600 mt-1">Rs {wallet.totalWithdrawals.toFixed(0)}</p>
+              <p className="text-2xl font-bold text-red-600 mt-1">${wallet.totalWithdrawals.toFixed(2)}</p>
             </div>
             <div className="border-t pt-4">
               <p className="text-xs font-medium text-slate-500 uppercase">Account Created</p>
@@ -423,7 +423,7 @@ export default function WalletDetailPage() {
                         </span>
                       </td>
                       <td className="py-3 px-4 text-right text-sm font-semibold text-slate-900">
-                        Rs {txn.amount.toFixed(0)}
+                        ${txn.amount.toFixed(2)}
                       </td>
                       <td className="py-3 px-4 text-sm text-slate-600">{txn.description}</td>
                       <td className="py-3 px-4 text-sm">
@@ -485,10 +485,10 @@ export default function WalletDetailPage() {
                       </td>
                       <td className="py-3 px-4 text-sm text-slate-600">{entry.category}</td>
                       <td className="py-3 px-4 text-right text-sm font-semibold text-slate-900">
-                        Rs {entry.amount.toFixed(0)}
+                        ${entry.amount.toFixed(2)}
                       </td>
                       <td className="py-3 px-4 text-right text-sm font-semibold text-slate-900">
-                        Rs {entry.balanceAfter.toFixed(0)}
+                        ${entry.balanceAfter.toFixed(2)}
                       </td>
                       <td className="py-3 px-4 text-sm text-slate-600">
                         {new Date(entry.createdAt).toLocaleDateString()}
@@ -540,15 +540,15 @@ export default function WalletDetailPage() {
                         </span>
                       </td>
                       <td className="py-3 px-4 text-right text-sm font-semibold text-slate-900">
-                        Rs {log.expected.toFixed(0)}
+                        ${log.expected.toFixed(2)}
                       </td>
                       <td className="py-3 px-4 text-right text-sm font-semibold text-slate-900">
-                        Rs {log.actual.toFixed(0)}
+                        ${log.actual.toFixed(2)}
                       </td>
                       <td className={`py-3 px-4 text-right text-sm font-semibold ${
                         log.difference === 0 ? 'text-green-600' : 'text-red-600'
                       }`}>
-                        Rs {log.difference.toFixed(0)}
+                        ${log.difference.toFixed(2)}
                       </td>
                       <td className="py-3 px-4 text-sm text-slate-600">{log.message || '-'}</td>
                       <td className="py-3 px-4 text-sm text-slate-600">

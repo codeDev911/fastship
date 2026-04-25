@@ -14,3 +14,4 @@ export { LocationSelector } from './LocationSelector';
 export  { TopUpModal   } from './TopupWallet';
 export { TransferFundsModal } from './TransferFundsModal';
 export { ReportDisputeModal } from './ReportDisputeModal';
+export {ExchangeRateModal} from "./ExchangeRatesModal"
