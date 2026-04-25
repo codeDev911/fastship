@@ -187,12 +187,12 @@ export const currencyService = {
 
     // Convert to cents for precision
     const amountCents = toCents(amountDecimal);
-
+    
     // Get exchange rate
     const rate = await this.getExchangeRate(fromCurrency, toCurrency);
 
     // Calculate converted amount in cents, then back to decimal
-    const convertedCents = Math.round(amountCents * rate);
+    const convertedCents = amountCents * rate;
     return toDecimal(convertedCents);
   },
 
@@ -215,12 +215,13 @@ export const currencyService = {
         rate: 1,
       };
     }
+    const amountCents = toCents(amount);
 
     const rate = await this.getExchangeRate(currency, BASE_CURRENCY);
-    const baseAmount = await this.convert(amount, currency, BASE_CURRENCY);
-
+    const baseAmount = await this.convert(amountCents, currency, BASE_CURRENCY);
+    
     return {
-      baseAmount: roundToDecimals(baseAmount),
+      baseAmount: toDecimal(baseAmount),
       baseCents: toCents(baseAmount),
       rate,
     };

@@ -1,5 +1,5 @@
 // User Types
-export type UserRole = 'business' | 'driver';
+export type UserRole = "business" | "driver";
 
 export interface User {
   id: string;
@@ -27,20 +27,20 @@ export interface Business {
 }
 
 // Driver Types
-export type DriverStatus = 'ACTIVE' | 'INACTIVE' | 'ON_DELIVERY';
+export type DriverStatus = "ACTIVE" | "INACTIVE" | "ON_DELIVERY";
 
 export interface Driver {
   id: string;
   userId: string;
   businessId: string;
- user:{
-   name: string;
-  email: string;
-  phone: string;
- }
+  user: {
+    name: string;
+    email: string;
+    phone: string;
+  };
   licenseNumber: string;
-  vehicleType:string;
-  vehicleNumber:string;
+  vehicleType: string;
+  vehicleNumber: string;
   status: DriverStatus;
   totalDeliveries: number;
   totalEarnings: number;
@@ -49,7 +49,15 @@ export interface Driver {
 }
 
 // Shipment Types
-export type ShipmentStatus = 'PENDING' | 'PICKED_UP' | 'ASSIGNED' | 'IN_TRANSIT' | 'DELIVERED' | 'FAILED'|"RETURNED"|"CANCELED";
+export type ShipmentStatus =
+  | "PENDING"
+  | "PICKED_UP"
+  | "ASSIGNED"
+  | "IN_TRANSIT"
+  | "DELIVERED"
+  | "FAILED"
+  | "RETURNED"
+  | "CANCELED";
 
 export interface Product {
   id: string;
@@ -87,7 +95,7 @@ export interface Shipment {
   totalAmount: number;
   deliveryFee: number;
   notes?: string;
-  source: 'manual' | 'shopify';
+  source: "manual" | "shopify";
   shopifyOrderId?: string;
   estimatedDeliveryDate?: Date;
   actualDeliveryDate?: Date;
@@ -110,7 +118,7 @@ export interface Delivery {
 }
 
 // Notification Types
-export type NotificationType = 'shipment' | 'delivery' | 'payment' | 'system';
+export type NotificationType = "shipment" | "delivery" | "payment" | "system";
 
 export interface Notification {
   id: string;
@@ -155,7 +163,7 @@ export interface SellerOrder {
   orderId: string;
   deliveryAddress: string;
   weight: number;
-  status: 'PENDING' | 'BIDDING' | 'ASSIGNED' | 'IN_TRANSIT' | 'DELIVERED';
+  status: "PENDING" | "BIDDING" | "ASSIGNED" | "IN_TRANSIT" | "DELIVERED";
   createdAt: string;
   finalCost?: number;
   assignedCourier?: string;
@@ -198,25 +206,28 @@ export interface SellerWallet {
 
 export interface WalletTransaction {
   id: string;
-  type: 'topup' | 'shipping-locked' | 'shipping-deducted' | 'refund';
+  type: "topup" | "shipping-locked" | "shipping-deducted" | "refund";
   amount: number;
   description: string;
   date: string;
   orderReference?: string;
-  status: 'completed' | 'pending' | 'failed';
+  status: "completed" | "pending" | "failed";
 }
 
 // Rate Card Types
 export interface ZoneMultiplier {
   id: string;
   zoneName: string;
-  multiplierType: 'flat' | 'percentage';
+  multiplierType: "flat" | "percentage";
   multiplierValue: number;
 }
 
 export interface RateCard {
   id: string;
   businessId: string;
+  displayBaseRate?: number;
+  displayPerKmRate?: number;
+  displaySurChargeRate?: number;
   name: string;
   description?: string;
   baseRate: number;
@@ -239,11 +250,11 @@ export interface FleetDriver {
   id: string;
   name: string;
   phoneNumber: string;
-  status: 'idle' | 'busy' | 'offline';
+  status: "idle" | "busy" | "offline";
   distanceFromPickup: number;
   rating: number;
   totalDeliveries: number;
-  vehicleType: 'bike' | 'car' | 'van' | 'truck';
+  vehicleType: "bike" | "car" | "van" | "truck";
   vehicleNumber: string;
 }
 
@@ -256,7 +267,7 @@ export interface DispatchOrder {
   destinationCity: string;
   weight: number;
   estimatedMarketplaceRate: number;
-  status: 'pending' | 'assigned' | 'in-transit' | 'delivered';
+  status: "pending" | "assigned" | "in-transit" | "delivered";
   createdAt: string;
   assignedDriverId?: string;
 }
@@ -276,7 +287,7 @@ export interface DriverCODDebt {
   maxDebtLimit: number;
   collectedCash: number;
   lastSettlementDate?: string;
-  status: 'active' | 'suspended';
+  status: "active" | "suspended";
   qrCodeUrl: string;
 }
 

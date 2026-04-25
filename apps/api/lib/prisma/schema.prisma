@@ -369,12 +369,15 @@ model RateCard {
   name            String
   description     String?
   baseRate        Float
+  baseRate_cents Int @default(0) // Store base rate in cents for accuracy (used for calculation in backed only)
   perKmRate       Float
+  perKmRate_cents Int @default(0) // Store base rate in cents for accuracy (used for calculation in backed only)
   minimumDistance Float    @default(0)
   maximumDistance Float    @default(999999)
   minWeight       Float    @default(0)
   maxWeight       Float    @default(100)
   weightSurcharge Float    @default(0) // Extra charge per kg above minWeight
+  weightSurcharge_cents Int @default(0) // Store base rate in cents for accuracy (used for calculation in backed only)
   serviceStates   String[] @default([]) // States/regions served: ["Sindh", "Punjab"]
   inCityDelivery  Boolean  @default(false) // Support in-city delivery (same city, within distance)
   serviceCities   String[] @default([]) // Specific cities supporting in-city: ["Peshawar", "Karachi"]

@@ -4,25 +4,29 @@ import React, { useState, useEffect } from 'react';
 import { RateCard } from '../../lib/types';
 import { useToast } from '../../hooks/use-toast';
 import { AlertCircle, CheckCircle, Loader } from 'lucide-react';
+import { Currency } from '@prisma/client';
 
 interface RateCardFormProps {
   rateCard?: RateCard;
   businessId: string;
   onSubmit: (data: any) => Promise<void>;
   isLoading?: boolean;
+  currency:Currency
 }
 
 const STATES = [
-  'Sindh', 'Punjab', 'Khyber Pakhtunkhwa', 'Balochistan', 'Gilgit-Baltistan', 
+  'Sindh', 'Punjab', 'Khyber Pakhtunkhwa', 'Balochistan', 'Gilgit-Baltistan',
   'AJK', 'FATA', 'Islamabad'
 ];
 
 export function RateCardFormNew({
   rateCard,
   businessId,
+  currency,
   onSubmit,
   isLoading = false,
 }: RateCardFormProps) {
+  
   const [formData, setFormData] = useState({
     name: rateCard?.name || '',
     description: rateCard?.description || '',
@@ -31,6 +35,9 @@ export function RateCardFormNew({
     maximumDistance: rateCard?.maximumDistance || 0,
     perKmRate: rateCard?.perKmRate || 0,
     maxWeight: rateCard?.maxWeight || 0,
+    displayBaseRate: rateCard?.displayBaseRate || 0,
+    displayPerKmRate: rateCard?.displayPerKmRate || 0,
+    displaySurChargeRate: rateCard?.displaySurChargeRate || 0,
     minWeight: rateCard?.minWeight || 0,
     weightSurcharge: rateCard?.weightSurcharge || 0,
     serviceStates: rateCard?.serviceStates || [],
@@ -48,11 +55,11 @@ export function RateCardFormNew({
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target as any;
     setSuccessMessage('');
-    
+
     setFormData(prev => ({
       ...prev,
-      [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : 
-              type === 'number' ? Number(value) : value,
+      [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked :
+        type === 'number' ? Number(value) : value,
     }));
   };
 
@@ -95,7 +102,7 @@ export function RateCardFormNew({
       newErrors.name = 'Name is required';
     }
 
-    if (formData.baseRate <= 0) {
+    if (formData.displayBaseRate <= 0) {
       newErrors.baseRate = 'Base rate must be greater than 0';
     }
 
@@ -111,11 +118,11 @@ export function RateCardFormNew({
       newErrors.maxWeight = 'Max weight must be greater than base weight';
     }
 
-    if (formData.perKmRate < 0) {
+    if (formData.displayPerKmRate < 0) {
       newErrors.perKmRate = 'Per KM rate cannot be negative';
     }
 
-    if (formData.weightSurcharge < 0) {
+    if (formData.displaySurChargeRate < 0) {
       newErrors.weightSurcharge = 'Weight surcharge cannot be negative';
     }
 
@@ -133,7 +140,7 @@ export function RateCardFormNew({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) {
       return;
     }
@@ -170,7 +177,7 @@ export function RateCardFormNew({
       {/* Basic Information Section */}
       <div className="border-b pb-6">
         <h3 className="text-base font-semibold text-foreground mb-4">Basic Information</h3>
-        
+
         <div>
           <label className="block text-sm font-medium text-foreground mb-1">
             Rate Card Name *
@@ -181,11 +188,10 @@ export function RateCardFormNew({
             value={formData.name}
             onChange={handleChange}
             placeholder="e.g., Standard Delivery"
-            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 transition-all ${
-              errors.name 
-                ? 'border-red-300 focus:ring-red-200' 
+            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 transition-all ${errors.name
+                ? 'border-red-300 focus:ring-red-200'
                 : 'border-border focus:ring-accent'
-            }`}
+              }`}
             disabled={isLoading || saving}
           />
           {errors.name && (
@@ -219,21 +225,20 @@ export function RateCardFormNew({
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-foreground mb-1">
-              Base Rate (PKR) *
+              Base Rate ({currency}) *
             </label>
             <input
               type="number"
-              name="baseRate"
-              value={formData.baseRate}
+              name="displayBaseRate"
+              value={formData.displayBaseRate || formData.baseRate}
               onChange={handleChange}
               placeholder="0"
               min="0"
               step="0.01"
-              className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 transition-all ${
-                errors.baseRate 
-                  ? 'border-red-300 focus:ring-red-200' 
+              className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 transition-all ${errors.baseRate
+                  ? 'border-red-300 focus:ring-red-200'
                   : 'border-border focus:ring-accent'
-              }`}
+                }`}
               disabled={isLoading || saving}
             />
             {errors.baseRate && (
@@ -246,21 +251,20 @@ export function RateCardFormNew({
 
           <div>
             <label className="block text-sm font-medium text-foreground mb-1">
-              Per KM Rate (PKR) *
+              Per KM Rate ({currency}) *
             </label>
             <input
               type="number"
-              name="perKmRate"
-              value={formData.perKmRate}
+              name="displayPerKmRate"
+              value={formData.displayPerKmRate || formData.perKmRate}
               onChange={handleChange}
               placeholder="0"
               min="0"
               step="0.01"
-              className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 transition-all ${
-                errors.perKmRate 
-                  ? 'border-red-300 focus:ring-red-200' 
+              className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 transition-all ${errors.perKmRate
+                  ? 'border-red-300 focus:ring-red-200'
                   : 'border-border focus:ring-accent'
-              }`}
+                }`}
               disabled={isLoading || saving}
             />
             {errors.perKmRate && (
@@ -274,21 +278,20 @@ export function RateCardFormNew({
 
         <div className="mt-4">
           <label className="block text-sm font-medium text-foreground mb-1">
-            Weight Surcharge (PKR/kg)
+            Weight Surcharge ({currency}/kg)
           </label>
           <input
             type="number"
-            name="weightSurcharge"
-            value={formData.weightSurcharge}
+            name="displaySurChargeRate"
+            value={formData.displaySurChargeRate || formData.weightSurcharge}
             onChange={handleChange}
             placeholder="0"
             min="0"
             step="0.01"
-            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 transition-all ${
-              errors.weightSurcharge 
-                ? 'border-red-300 focus:ring-red-200' 
+            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 transition-all ${errors.weightSurcharge
+                ? 'border-red-300 focus:ring-red-200'
                 : 'border-border focus:ring-accent'
-            }`}
+              }`}
             disabled={isLoading || saving}
           />
           {errors.weightSurcharge && (
@@ -335,11 +338,10 @@ export function RateCardFormNew({
               placeholder="0"
               min="0"
               step="0.1"
-              className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 transition-all ${
-                errors.maxWeight 
-                  ? 'border-red-300 focus:ring-red-200' 
+              className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 transition-all ${errors.maxWeight
+                  ? 'border-red-300 focus:ring-red-200'
                   : 'border-border focus:ring-accent'
-              }`}
+                }`}
               disabled={isLoading || saving}
             />
             {errors.maxWeight && (
@@ -364,11 +366,10 @@ export function RateCardFormNew({
               placeholder="0"
               min="0"
               step="0.1"
-              className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 transition-all ${
-                errors.minimumDistance 
-                  ? 'border-red-300 focus:ring-red-200' 
+              className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 transition-all ${errors.minimumDistance
+                  ? 'border-red-300 focus:ring-red-200'
                   : 'border-border focus:ring-accent'
-              }`}
+                }`}
               disabled={isLoading || saving}
             />
             {errors.minimumDistance && (
@@ -391,11 +392,10 @@ export function RateCardFormNew({
               placeholder="0"
               min="0"
               step="0.1"
-              className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 transition-all ${
-                errors.maximumDistance 
-                  ? 'border-red-300 focus:ring-red-200' 
+              className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 transition-all ${errors.maximumDistance
+                  ? 'border-red-300 focus:ring-red-200'
                   : 'border-border focus:ring-accent'
-              }`}
+                }`}
               disabled={isLoading || saving}
             />
             {errors.maximumDistance && (
@@ -419,11 +419,10 @@ export function RateCardFormNew({
               key={state}
               type="button"
               onClick={() => toggleState(state)}
-              className={`px-3 py-2 rounded-lg border-2 font-medium transition-all ${
-                formData.serviceStates.includes(state)
+              className={`px-3 py-2 rounded-lg border-2 font-medium transition-all ${formData.serviceStates.includes(state)
                   ? 'border-accent bg-accent/10 text-accent'
                   : 'border-border bg-background text-foreground hover:bg-secondary/50'
-              }`}
+                }`}
               disabled={isLoading || saving}
             >
               {state}
@@ -538,11 +537,10 @@ export function RateCardFormNew({
           <label htmlFor="isActive" className="text-sm font-medium text-foreground cursor-pointer flex-1">
             Make this rate card active
           </label>
-          <div className={`px-3 py-1 rounded-full text-xs font-semibold ${
-            formData.isActive 
-              ? 'bg-green-100 text-green-700' 
+          <div className={`px-3 py-1 rounded-full text-xs font-semibold ${formData.isActive
+              ? 'bg-green-100 text-green-700'
               : 'bg-gray-100 text-gray-700'
-          }`}>
+            }`}>
             {formData.isActive ? 'Active' : 'Inactive'}
           </div>
         </div>

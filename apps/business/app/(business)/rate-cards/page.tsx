@@ -10,6 +10,7 @@ import { RateCard, secureFetch } from '@fastship/lib';
 
 export default function RateCardsPage() {
   const [rateCards, setRateCards] = useState<RateCard[]>([]);
+  const [peferredCurrency,setPeferredCurrency] = useState("USD")
   const [businessId, setBusinessId] = useState<string>('');
   const [selectedRateCard, setSelectedRateCard] = useState<RateCard | undefined>(undefined);
   const [isFormLoading, setIsFormLoading] = useState(false);
@@ -34,7 +35,8 @@ export default function RateCardsPage() {
         const response = await secureFetch(`/api/rate-cards?businessId=${bid}`);
         if (!response.ok) throw new Error('Failed to fetch rate cards');
         const data = await response.json();
-        setRateCards(data.data || []);
+        setRateCards(data.data.rateCards || []);
+        setPeferredCurrency(data.data.peferredCurrency || "USD")
       } catch (error: any) {
         console.error('Error fetching rate cards:', error);
         toast({
@@ -194,6 +196,7 @@ export default function RateCardsPage() {
 
                   <RateCardFormNew
                     rateCard={selectedRateCard}
+                    currency={peferredCurrency}
                     businessId={businessId}
                     onSubmit={handleSubmit}
                     isLoading={isFormLoading}

@@ -1,6 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { z } from 'zod';
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { z } from "zod";
+import { Currency } from "@prisma/client";
+import currencyService from "@/lib/services/currency.service";
+import { toCents } from "@fastship/lib/server";
 
 /**
  * Schema for updating a rate card
@@ -10,11 +13,20 @@ const updateRateCardSchema = z.object({
   description: z.string().optional(),
   baseRate: z.number().positive("Base rate must be positive").optional(),
   perKmRate: z.number().positive("Per km rate must be positive").optional(),
-  minimumDistance: z.number().nonnegative("Minimum distance cannot be negative").optional(),
-  maximumDistance: z.number().positive("Maximum distance must be positive").optional(),
+  minimumDistance: z
+    .number()
+    .nonnegative("Minimum distance cannot be negative")
+    .optional(),
+  maximumDistance: z
+    .number()
+    .positive("Maximum distance must be positive")
+    .optional(),
   minWeight: z.number().nonnegative("Min weight cannot be negative").optional(),
   maxWeight: z.number().positive("Max weight must be positive").optional(),
-  weightSurcharge: z.number().nonnegative("Weight surcharge cannot be negative").optional(),
+  weightSurcharge: z
+    .number()
+    .nonnegative("Weight surcharge cannot be negative")
+    .optional(),
   serviceStates: z.array(z.string()).optional(),
   inCityDelivery: z.boolean().optional(),
   serviceCities: z.array(z.string()).optional(),
@@ -27,7 +39,7 @@ const updateRateCardSchema = z.object({
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: { id: string } },
 ) {
   try {
     const rateCard = await prisma.rateCard.findUnique({
@@ -47,17 +59,17 @@ export async function GET(
 
     if (!rateCard) {
       return NextResponse.json(
-        { error: 'Rate card not found' },
-        { status: 404 }
+        { error: "Rate card not found" },
+        { status: 404 },
       );
     }
 
     return NextResponse.json(rateCard);
   } catch (error) {
-    console.error('[rate-cards GET] Error:', error);
+    console.error("[rate-cards GET] Error:", error);
     return NextResponse.json(
-      { error: 'Failed to fetch rate card' },
-      { status: 500 }
+      { error: "Failed to fetch rate card" },
+      { status: 500 },
     );
   }
 }
@@ -65,13 +77,13 @@ export async function GET(
 /**
  * PATCH /api/rate-cards/[id]
  * Update a rate card
- * 
+ *
  * All fields are optional - only provided fields will be updated
  * Validates constraints (e.g., minDistance < maxDistance)
  */
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: { id: string } },
 ) {
   try {
     // Fetch existing rate card first
@@ -81,70 +93,102 @@ export async function PATCH(
 
     if (!existingRateCard) {
       return NextResponse.json(
-        { error: 'Rate card not found' },
-        { status: 404 }
+        { error: "Rate card not found" },
+        { status: 404 },
       );
     }
 
+
+    
     const body = await request.json();
-    const validated = updateRateCardSchema.parse(body);
+    const {displayBaseRate,displayPerKmRate,displaySurChargeRate,businessId,...validated} = body;
 
     // Prepare update data - merge with existing values for validation
     const updateData: any = { ...validated };
 
     // Get values to validate (use existing if not updating)
-    const minDist = updateData.minimumDistance ?? existingRateCard.minimumDistance;
-    const maxDist = updateData.maximumDistance ?? existingRateCard.maximumDistance;
+    const minDist =
+      updateData.minimumDistance ?? existingRateCard.minimumDistance;
+    const maxDist =
+      updateData.maximumDistance ?? existingRateCard.maximumDistance;
     const minWgt = updateData.minWeight ?? existingRateCard.minWeight;
     const maxWgt = updateData.maxWeight ?? existingRateCard.maxWeight;
 
     // Validate distance range
     if (minDist >= maxDist) {
       return NextResponse.json(
-        { error: 'Minimum distance must be less than maximum distance' },
-        { status: 400 }
+        { error: "Minimum distance must be less than maximum distance" },
+        { status: 400 },
       );
     }
 
     // Validate weight range
     if (minWgt >= maxWgt) {
       return NextResponse.json(
-        { error: 'Min weight must be less than max weight' },
-        { status: 400 }
+        { error: "Min weight must be less than max weight" },
+        { status: 400 },
       );
     }
 
     // Add updatedAt timestamp
     updateData.updatedAt = new Date();
+    let rateCard = await prisma.$transaction(async (tx) => {
+      let buss = await prisma.business.findUnique({
+        where: { id: existingRateCard.businessId },
+        select: { user: { select: { preferredCurrency: true } } },
+      });
+      
+      let { baseRate, perKmRate, weightSurcharge, ...rest }: any = updateData;
+      const userCurrency = buss?.user.preferredCurrency || "USD";
 
-    const rateCard = await prisma.rateCard.update({
+      const rates: any = {};
+
+      // convert rate to base currency if user currency is not USD and if there is changes in rates
+      if(userCurrency !== Currency.USD){
+          baseRate = await currencyService.convert(displayBaseRate, userCurrency,"USD");
+          rates.baseRate_cents = toCents(baseRate);
+          rates.baseRate = baseRate;
+          perKmRate = await currencyService.convert(displayPerKmRate, userCurrency,"USD");
+          rates.perKmRate_cents = toCents(perKmRate)
+          rates.perKmRate = perKmRate;
+          weightSurcharge = await currencyService.convert(displaySurChargeRate, userCurrency,"USD");
+          rates.weightSurcharge_cents = toCents(weightSurcharge);
+          rates.weightSurcharge = weightSurcharge;
+      }
+      
+      
+      return await tx.rateCard.update({
       where: { id: (await params).id },
-      data: updateData,
-      include: {
-        business: {
-          select: {
-            id: true,
-            companyName: true,
-            rating: true,
+        data:{
+          ...rest,
+          ...rates
+        },
+        include: {
+          business: {
+            select: {
+              id: true,
+              companyName: true,
+              rating: true,
+            },
           },
         },
-      },
-    });
+      });
+    },{timeout:10000});
 
     return NextResponse.json(rateCard);
   } catch (error) {
     if (error instanceof z.ZodError) {
       console.log("error");
-      
+
       return NextResponse.json(
-        { error: 'Validation error', details: error.errors },
-        { status: 400 }
+        { error: "Validation error", details: error.errors },
+        { status: 400 },
       );
     }
-    console.error('[rate-cards PATCH] Error:', error);
+    console.error("[rate-cards PATCH] Error:", error);
     return NextResponse.json(
-      { error: 'Failed to update rate card' },
-      { status: 500 }
+      { error: "Failed to update rate card" },
+      { status: 500 },
     );
   }
 }
@@ -152,23 +196,23 @@ export async function PATCH(
 /**
  * DELETE /api/rate-cards/[id]
  * Delete a rate card (soft delete - set isActive to false)
- * 
+ *
  * Option 1: Hard delete (uncomment code below to enable)
  * Option 2: Soft delete (current implementation)
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: { id: string } },
 ) {
   try {
     const rateCard = await prisma.rateCard.findUnique({
-      where: { id:(await  params).id },
+      where: { id: (await params).id },
     });
 
     if (!rateCard) {
       return NextResponse.json(
-        { error: 'Rate card not found' },
-        { status: 404 }
+        { error: "Rate card not found" },
+        { status: 404 },
       );
     }
 
@@ -184,14 +228,14 @@ export async function DELETE(
     // });
 
     return NextResponse.json({
-      message: 'Rate card deleted successfully',
+      message: "Rate card deleted successfully",
       data: updated,
     });
   } catch (error) {
-    console.error('[rate-cards DELETE] Error:', error);
+    console.error("[rate-cards DELETE] Error:", error);
     return NextResponse.json(
-      { error: 'Failed to delete rate card' },
-      { status: 500 }
+      { error: "Failed to delete rate card" },
+      { status: 500 },
     );
   }
 }

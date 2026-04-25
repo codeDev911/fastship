@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
+import { Currency } from "@prisma/client";
+import { toCents } from "@fastship/lib/server";
+import currencyService from "@/lib/services/currency.service";
 
 /**
  * Schema for creating a new rate card with updated fields
@@ -11,11 +14,20 @@ const createRateCardSchema = z.object({
   description: z.string().optional(),
   baseRate: z.number().positive("Base rate must be positive"),
   perKmRate: z.number().positive("Per km rate must be positive"),
-  minimumDistance: z.number().nonnegative("Minimum distance cannot be negative").default(0),
-  maximumDistance: z.number().positive("Maximum distance must be positive").default(999999),
+  minimumDistance: z
+    .number()
+    .nonnegative("Minimum distance cannot be negative")
+    .default(0),
+  maximumDistance: z
+    .number()
+    .positive("Maximum distance must be positive")
+    .default(999999),
   minWeight: z.number().nonnegative("Min weight cannot be negative").default(0),
   maxWeight: z.number().positive("Max weight must be positive").default(100),
-  weightSurcharge: z.number().nonnegative("Weight surcharge cannot be negative").default(0),
+  weightSurcharge: z
+    .number()
+    .nonnegative("Weight surcharge cannot be negative")
+    .default(0),
   serviceStates: z.array(z.string()).default([]),
   inCityDelivery: z.boolean().default(false),
   serviceCities: z.array(z.string()).default([]),
@@ -24,7 +36,7 @@ const createRateCardSchema = z.object({
 /**
  * GET /api/rate-cards
  * Fetch rate cards for a business or all active rate cards
- * 
+ *
  * Query params:
  * - businessId: Filter by business (optional)
  * - isActive: Only active cards (default: true)
@@ -42,28 +54,42 @@ export async function GET(request: NextRequest) {
     const where: any = { isActive };
     if (businessId) where.businessId = businessId;
 
-    const [rateCards, total] = await Promise.all([
-      prisma.rateCard.findMany({
-        where,
-        include: {
-          business: {
-            select: {
-              id: true,
-              companyName: true,
-              rating: true,
-            },
-          },
-        },
-        orderBy: { createdAt: "desc" },
-        take: limit,
-        skip,
-      }),
-      prisma.rateCard.count({ where }),
-    ]);
+    const [total] = await Promise.all([prisma.rateCard.count({ where })]);
+
+    let buss = await prisma.business.findUnique({
+      where: { id: businessId || undefined },
+      select: {
+        user: { select: { preferredCurrency: true } },
+      },
+    });
+
+    const currencyConversionRate = await currencyService.getExchangeRate(
+      "USD",
+      buss?.user.preferredCurrency,
+    );
     
+    const rateCards = await prisma.$queryRaw`
+        SELECT
+          rc.*,
+          b."companyName",
+          b.rating,
+          rc."baseRate" * ${currencyConversionRate}::numeric AS "displayBaseRate",
+          rc."perKmRate" * ${currencyConversionRate}::numeric AS "displayPerKmRate",
+          rc."weightSurcharge" * ${currencyConversionRate}::numeric AS "displaySurChargeRate"
+        FROM "RateCard" rc
+        INNER JOIN "Business" b ON b.id = rc."businessId"
+        WHERE rc."businessId" = ${businessId}
+          AND rc."isActive" = ${isActive}
+        ORDER BY rc."createdAt" DESC
+        LIMIT ${Number(limit)}
+        OFFSET ${Number(skip)};
+      `;
 
     return NextResponse.json({
-      data: rateCards,
+      data: {rateCards,
+          peferredCurrency:buss?.user.preferredCurrency,
+
+      },
       pagination: {
         total,
         skip,
@@ -75,7 +101,7 @@ export async function GET(request: NextRequest) {
     console.error("[rate-cards GET] Error:", error);
     return NextResponse.json(
       { error: "Failed to fetch rate cards" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -83,7 +109,7 @@ export async function GET(request: NextRequest) {
 /**
  * POST /api/rate-cards
  * Create a new rate card for a business
- * 
+ *
  * Required: businessId, name, baseRate, perKmRate
  * Optional: description, minimumDistance, maximumDistance, minWeight, maxWeight, weightSurcharge, serviceStates
  */
@@ -95,20 +121,25 @@ export async function POST(request: NextRequest) {
     // Check if business exists
     const business = await prisma.business.findUnique({
       where: { id: validated.businessId },
-      select: { id: true, companyName: true, isActive: true },
+      select: {
+        id: true,
+        companyName: true,
+        isActive: true,
+        user: { select: { preferredCurrency: true } },
+      },
     });
 
     if (!business) {
       return NextResponse.json(
         { error: "Business not found" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
     if (!business.isActive) {
       return NextResponse.json(
         { error: "Business is not active" },
-        { status: 403 }
+        { status: 403 },
       );
     }
 
@@ -116,7 +147,7 @@ export async function POST(request: NextRequest) {
     if (validated.minimumDistance >= validated.maximumDistance) {
       return NextResponse.json(
         { error: "Minimum distance must be less than maximum distance" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -124,35 +155,68 @@ export async function POST(request: NextRequest) {
     if (validated.minWeight >= validated.maxWeight) {
       return NextResponse.json(
         { error: "Min weight must be less than max weight" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
-    const rateCard = await prisma.rateCard.create({
-      data: validated,
-      include: {
-        business: {
-          select: {
-            id: true,
-            companyName: true,
-            rating: true,
+    // do currency logic
+
+    let rateCard = await prisma.$transaction(
+      async (tx) => {
+        let { baseRate, perKmRate, weightSurcharge, ...rest }: any = validated;
+        const userCurrency = business.user.preferredCurrency;
+
+        if (userCurrency !== Currency.USD) {
+          baseRate = await currencyService.toBaseCurrency(
+            baseRate,
+            userCurrency,
+          );
+          perKmRate = await currencyService.toBaseCurrency(
+            perKmRate,
+            userCurrency,
+          );
+          weightSurcharge = await currencyService.toBaseCurrency(
+            weightSurcharge,
+            userCurrency,
+          );
+        }
+
+        return await tx.rateCard.create({
+          data: {
+            ...rest,
+            baseRate_cents: toCents(baseRate),
+            perKmRate_cents: toCents(perKmRate),
+            weightSurcharge_cents: toCents(weightSurcharge),
+            baseRate,
+            perKmRate,
+            weightSurcharge,
           },
-        },
+          include: {
+            business: {
+              select: {
+                id: true,
+                companyName: true,
+                rating: true,
+              },
+            },
+          },
+        });
       },
-    });
+      { timeout: 10000 },
+    );
 
     return NextResponse.json(rateCard, { status: 201 });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { error: "Validation error", details: error.errors },
-        { status: 400 }
+        { status: 400 },
       );
     }
     console.error("[rate-cards POST] Error:", error);
     return NextResponse.json(
       { error: "Failed to create rate card" },
-      { status: 500 }
+      { status: 500 },
     );
   }
-}  
+}

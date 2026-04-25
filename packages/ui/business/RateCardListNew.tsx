@@ -135,11 +135,11 @@ export function RateCardListNew({
               <div className="grid grid-cols-2 gap-3 py-2 border-t border-border">
                 <div>
                   <p className="text-xs text-muted-foreground">Base Rate</p>
-                  <p className="text-sm font-semibold text-foreground">PKR {card.baseRate}</p>
+                  <p className="text-sm font-semibold text-foreground">PKR {card.displayBaseRate}</p>
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Per KM</p>
-                  <p className="text-sm font-semibold text-foreground">PKR {card.perKmRate}</p>
+                  <p className="text-sm font-semibold text-foreground">PKR {card.displayPerKmRate}</p>
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Base Weight</p>
@@ -160,7 +160,7 @@ export function RateCardListNew({
                 {card.weightSurcharge > 0 && (
                   <div>
                     <p className="text-xs text-muted-foreground">Weight Surcharge</p>
-                    <p className="text-sm font-semibold text-foreground">PKR {card.weightSurcharge}/kg</p>
+                    <p className="text-sm font-semibold text-foreground">PKR {card.displaySurChargeRate}/kg</p>
                   </div>
                 )}
               </div>
