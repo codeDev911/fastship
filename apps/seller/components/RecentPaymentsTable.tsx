@@ -18,6 +18,7 @@ interface Payment {
 
 interface RecentPaymentsTableProps {
   payments: Payment[];
+  peferredCurrency?: string;
   onViewDetails?: (payment: Payment) => void;
   onDownloadReceipt?: (payment: Payment) => void;
 }
@@ -38,6 +39,7 @@ export function RecentPaymentsTable({
   payments,
   onViewDetails,
   onDownloadReceipt,
+  peferredCurrency = 'USD',
 }: RecentPaymentsTableProps) {
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -119,26 +121,26 @@ export function RecentPaymentsTable({
                   >
                     <td className="py-3 px-4 text-sm font-medium text-slate-900">
                       <span className="font-mono text-xs bg-slate-100 px-2 py-1 rounded">
-                        {payment.id.slice(0, 8)}...
+                        {payment?.id?.slice(0, 8)}...
                       </span>
                     </td>
                     <td className="py-3 px-4 text-sm text-slate-700">
                       <span className="font-mono text-xs">
-                        {payment.shipmentId.slice(0, 8)}...
+                        {payment?.shipmentId?.slice(0, 8)}...
                       </span>
                     </td>
                     <td className="py-3 px-4 text-sm font-semibold text-slate-900">
-                      {formatCurrency(payment.amount)}
+                      {peferredCurrency} {payment.amount}
                     </td>
                     <td className="py-3 px-4 text-sm">
                       <div className="flex items-center gap-2">
-                        <span className="text-lg">{methodInfo.icon}</span>
-                        <span className="text-slate-700">{methodInfo.label}</span>
+                        <span className="text-lg">{methodInfo?.icon}</span>
+                        <span className="text-slate-700">{methodInfo?.label}</span>
                       </div>
                     </td>
                     <td className="py-3 px-4">
                       <span
-                        className={`inline-block px-3 py-1 rounded-full text-xs font-medium border ${config.bg} ${config.text} ${config.border}`}
+                        className={`inline-block px-3 py-1 rounded-full text-xs font-medium border ${config?.bg} ${config?.text} ${config?.border}`}
                       >
                         {payment.paymentStatus}
                       </span>
@@ -154,7 +156,7 @@ export function RecentPaymentsTable({
                         {onViewDetails && (
                           <button
                             onClick={() => {
-                                location.assign(`/seller/orders/${payment.shipmentId}`)
+                                location.assign(`/orders/${payment.shipmentId}`)
                             }}
                             className="p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-200 rounded transition-colors"
                             title="View details"

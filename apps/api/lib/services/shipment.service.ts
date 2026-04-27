@@ -103,7 +103,7 @@ export const shipmentService = {
           shipment.codAmount || shipment.actualRate || shipment.expectedRate,
         ),
         shipment.paymentMethod as PaymentMethod,
-
+        shipment?.currency || "USD"
       );
 
       return updated;
@@ -124,7 +124,7 @@ export const shipmentService = {
         const shipment = await tx.shipment.findUnique({
           where: { id: shipmentId },
           include: {
-            seller: { select: { wallet: { select: { id: true } } } },
+            seller: { select: { wallet: { select: { id: true ,currency:true} } } },
             assignment: { include: { driver: { include: { wallet: true } } } },
             payment: true,
           },
@@ -167,11 +167,12 @@ export const shipmentService = {
             shipment.assignment?.driver?.id || "",
             Number(debtAmount),
             shipment.id,
+            shipment.assignment?.driver?.wallet?.currency || "USD",
           );
 
           const businessWallet = await tx.wallet.findUnique({
             where: { businessId: shipment.businessId || "" },
-            select: { id: true },
+            select: { id: true ,currency:true},
           });
 
           await financialService.cutEscrow(
@@ -180,6 +181,7 @@ export const shipmentService = {
             Number(amount * 0.1), // platform fee 10%
             "Platform fee 10%",
             updated.id,
+            businessWallet?.currency
           );
 
           await financialService.releaseEscrow(
@@ -188,6 +190,7 @@ export const shipmentService = {
             amount,
             "Escrow released",
             updated.id,
+            shipment.seller.wallet?.currency
           );
         }
 
@@ -214,7 +217,7 @@ export const shipmentService = {
           payment: { select: { id: true, paymentMethod: true } },
           actualRate: true,
           businessId: true,
-          seller: { select: { wallet: { select: { id: true } } } },
+          seller: { select: { wallet: { select: { id: true ,currency:true} } } },
         },
       });
 
@@ -233,12 +236,13 @@ export const shipmentService = {
         updated.seller.wallet?.id!,
         safeNumber(updated.actualRate),
         "Failed delivery release",
-        shipmentId
+        shipmentId,
+        updated.seller?.wallet?.currency
       );
 
       const businessWallet = await tx.wallet.findUnique({
         where: { businessId: updated.businessId || "" },
-        select: { id: true },
+        select: { id: true ,currency:true},
       });
 
       await financialService.cutEscrow(
@@ -246,7 +250,8 @@ export const shipmentService = {
         businessWallet?.id!,
         safeNumber(updated.actualRate) * 0.1,
         "Platform cut",
-        shipmentId
+        shipmentId,
+        businessWallet?.currency!
       );
 
       await tx.shipmentActivity.create({
@@ -279,10 +284,10 @@ export const shipmentService = {
             assignment: {
               include: {
                 
-                driver: { select: { wallet: { select: { id: true } } } },
+                driver: { select: { wallet: { select: { id: true,currency:true } } } },
               },
             },
-            seller: { select: { wallet: { select: { id: true } } } },
+            seller: { select: { wallet: { select: { id: true,currency:true } } } },
           },
         });
 
@@ -306,7 +311,7 @@ export const shipmentService = {
 
         const businessWallet = await tx.wallet.findUnique({
           where: { businessId: shipment.businessId || "" },
-          select: { id: true },
+          select: { id: true ,currency:true},
         });
 
         const amount = safeNumber(shipment.actualRate);
@@ -320,14 +325,16 @@ export const shipmentService = {
             shipment.seller.wallet?.id!,
             amount,
             "Seller cancel",
-            shipment.id
+            shipment.id,
+            shipment.seller.wallet?.currency!,
           );
           await financialService.releaseEscrow(
             tx,
             businessWallet?.id!,
             amount * 0.1,
             "Platform refund",
-            shipment.id
+            shipment.id,
+            businessWallet?.currency,
           );
         } else if (canceledBy === "seller") {
           await financialService.processShipmentTransactions(tx, shipment);
@@ -337,7 +344,9 @@ export const shipmentService = {
             shipment.seller.wallet?.id!,
             amount,
             "Business cancel",
-            shipment.id
+            shipment.id,
+            shipment.seller.wallet?.currency!,
+
           );
 
           await financialService.cutEscrow(
@@ -345,7 +354,8 @@ export const shipmentService = {
             businessWallet?.id!,
             amount * 0.1,
             "Platform fee",
-            shipment.id
+            shipment.id,
+            shipment.seller.wallet?.currency
           );
         }
 

@@ -13,3 +13,4 @@ export * from "./toggle"
 export * from './select'
 export {Textarea} from "./textarea"
 export * from "./skeleton"
+export {Tooltip,TooltipContent,TooltipTrigger,TooltipProvider} from './tooltip'

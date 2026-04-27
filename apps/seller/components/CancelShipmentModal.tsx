@@ -12,7 +12,7 @@ import {
     InfoIcon
 } from 'lucide-react';
 import { Button } from '../../../packages/ui/shared/Button';
-import { secureFetch } from '@fastship/lib';
+import { CurrencyDisplay, secureFetch } from '@fastship/lib';
 
 const CancelShipmentModal = ({ isOpen, onClose, data }: any) => {
     const [step, setStep] = useState(1); // 1: Warning/Terms, 2: Success, 3: Error
@@ -86,7 +86,7 @@ const CancelShipmentModal = ({ isOpen, onClose, data }: any) => {
                                     <p className="text-sm font-bold text-slate-500 ">Cancellation Policy</p>
                                     <ul className="text-sm text-slate-600 space-y-1 list-disc ml-3 leading-relaxed">
                                         <li>Shipping fee refund only if cancelled within Pending or Assigned Phase.</li>
-                                        <li>{data?.status === "PENDING" || data?.status === "ASSIGNED" ? `Current status: ${data?.status}. No shipping fees will be deducted.` : `A standard delivery fee of ${data?.actualRate?.toFixed(2)} will still apply.`}</li>
+                                        <li>{data?.status === "PENDING" || data?.status === "ASSIGNED" ? `Current status: ${data?.status}. No shipping fees will be deducted.` : `A standard delivery fee  will still apply.`} <strong><CurrencyDisplay showCode={false} amount={data?.actualRate} currency={data?.seller?.wallet?.currency}/></strong></li>
                                         <li>Once canceled, this order cannot be edited or restored.</li>
                                     </ul>
                                 </div>

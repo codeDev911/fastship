@@ -100,9 +100,9 @@ export const addLedger = async (tx: any, data: any) => {
 
   const result = await tx.$queryRaw`
     INSERT INTO "LedgerEntry" 
-      ("id", "walletId", "amount", "amount_cents", "type", "category", "referenceId", "balanceAfter", "balanceAfter_cents", "createdAt")
+      ("id","amountDisplay","balanceAfterDisplay","currency","exchangeRate", "walletId", "amount", "amount_cents", "type", "category", "referenceId", "balanceAfter", "balanceAfter_cents", "createdAt")
     VALUES 
-      (gen_random_uuid(), ${data.walletId}, ${amountDecimal}, ${data.amount}, ${data.type}, ${data.category}, ${data.referenceId}, ${newBalanceDecimal}, ${newBalanceCents}, NOW())
+      (gen_random_uuid(),${data.localAmount},${newBalanceDecimal*data.exchangeRate},${data.currency},${data.exchangeRate} ${data.walletId}, ${amountDecimal}, ${data.amount}, ${data.type}, ${data.category}, ${data.referenceId}, ${newBalanceDecimal}, ${newBalanceCents}, NOW())
     RETURNING *
   `;
 

@@ -14,6 +14,7 @@ import { Button } from '../../../packages/ui/shared/Button';
 import PaymentReceivedModal from './PaymentRecievedModal';
 import CancelShipmentModal from './CancelShipmentModal';
 import { ServiceTierBadge, InfoCard } from '@fastship/ui';
+import { CurrencyDisplay } from '@fastship/lib';
 
 const FullScreenOrderModal = ({ isOpen, onClose, data, onReportIssue }: any) => {
 
@@ -23,9 +24,10 @@ const FullScreenOrderModal = ({ isOpen, onClose, data, onReportIssue }: any) => 
   const [cancelationModal,setCancelationModal] = useState({isOpen:false,data:{}})
   // Prevent scrolling when modal is open
   useEffect(() => {
+    console.log(data);
+    
     if (isOpen) document.body.style.overflow = 'hidden';
     else document.body.style.overflow = 'unset';
-    console.log(data);
 
     return () => { document.body.style.overflow = 'unset'; };
   }, [isOpen]);
@@ -124,9 +126,9 @@ const FullScreenOrderModal = ({ isOpen, onClose, data, onReportIssue }: any) => 
                   <tbody className="divide-y divide-slate-50">
                     <tr>
                       <td className="px-8 py-4 text-sm text-slate-500">Actual Rate</td>
-                      <td className="px-8 py-4 text-sm font-medium text-slate-700">{data?.actualRate || "—"}</td>
+                      <td className="px-8 py-4 text-sm font-medium text-slate-700"><CurrencyDisplay currency={data?.seller?.wallet?.currency} amount={data?.actualRate}/></td>
                       <td className="px-8 py-4 text-sm text-slate-500">Expected Rate</td>
-                      <td className="px-8 py-4 text-sm font-medium text-slate-700">{data?.expectedRate || "—"}</td>
+                      <td className="px-8 py-4 text-sm font-medium text-slate-700"><CurrencyDisplay currency={data?.seller?.wallet?.currency} amount={data?.expectedRate ||0}/></td>
                       <td className="px-8 py-4 text-sm text-slate-500">Business ID</td>
                       <td className="px-8 py-4 text-sm font-medium text-slate-700">{data?.businessId || "—"}</td>
                     </tr>
@@ -224,7 +226,7 @@ const FullScreenOrderModal = ({ isOpen, onClose, data, onReportIssue }: any) => 
                 <InfoCard 
                   icon={<DollarSign className="h-5 w-5" />}
                   label="Amount"
-                  value={`PKR ${(data?.payment?.amount || 0)?.toFixed(2)}`}
+                  value={data?.payment?.amount ? <CurrencyDisplay currency={data?.seller?.wallet?.currency} amount={data?.payment?.amount} /> : 'N/A'}
                 />
                 <InfoCard 
                   icon={<CreditCard className="h-5 w-5" />}
@@ -247,7 +249,7 @@ const FullScreenOrderModal = ({ isOpen, onClose, data, onReportIssue }: any) => 
                     <div className="flex-1">
                       <p className="font-semibold text-yellow-900">Payment Pending</p>
                       <p className="text-sm text-yellow-800 mt-1">Confirm payment received to avoid disputes</p>
-                      <Button onClick={() => setPaymentRecievedModal({ isOpen: true, data: data?.payment })} className='mt-3'>
+                      <Button onClick={() => setPaymentRecievedModal({ isOpen: true, data: data })} className='mt-3'>
                         ✓ Confirm Payment Received
                       </Button>
                     </div>
@@ -257,7 +259,7 @@ const FullScreenOrderModal = ({ isOpen, onClose, data, onReportIssue }: any) => 
                 <div className='p-4 rounded-xl bg-green-50 border-2 border-green-200'>
                   <p className="font-semibold text-green-900">✓ Payment Received</p>
                   <p className="text-sm text-green-700 mt-2">
-                    PKR {data?.payment?.amount?.toFixed(2)} was collected on {new Date(data?.payment?.paidAt).toLocaleDateString()}
+                    <CurrencyDisplay currency={data?.seller?.wallet?.currency} amount={data?.payment?.amount} /> was collected on {new Date(data?.payment?.paidAt).toLocaleDateString()}
                   </p>
                 </div>
               ) : null}
@@ -302,7 +304,7 @@ const FullScreenOrderModal = ({ isOpen, onClose, data, onReportIssue }: any) => 
                 </div>
               </div>
               <div>
-                <p className="text-sm">If you cancel this shipment, the courier will be notified to stop delivery. Please be advised that the Escrow-locked delivery fee of <strong>Rs. {data?.actualRate?.toFixed(2)}</strong> may apply.</p>
+                <p className="text-sm">If you cancel this shipment, the courier will be notified to stop delivery. Please be advised that the Escrow-locked delivery fee of <strong><CurrencyDisplay currency={data?.seller?.wallet?.currency} showCode={false} amount={data?.actualRate}/></strong> may apply.</p>
                 <br />
                 <Button onClick={()=>setCancelationModal({isOpen:true,data:data})}>Cancel Shipment</Button>
               </div>

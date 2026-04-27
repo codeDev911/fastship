@@ -1,31 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { jwtVerify } from 'jose';
 
-const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || 'your-secret-key');
 
 export async function GET(request: NextRequest) {
   try {
     // Verify authentication
-    const authToken = request.headers.get('authorization')?.replace('Bearer ', '');
-    const cookieToken = request.cookies.get('auth_token')?.value || authToken;
-
-    if (!cookieToken) {
-      return NextResponse.json(
-        { message: 'Authentication required' },
-        { status: 401 }
-      );
-    }
-
-    let sellerId: string;
-    try {
-      const verified = await jwtVerify(cookieToken, JWT_SECRET);
-      sellerId = verified.payload.jobId as string;
-    } catch (error) {
-      return NextResponse.json(
-        { message: 'Invalid authentication token' },
-        { status: 401 }
-      );
+     const sellerId = request.nextUrl.searchParams.get('sellerId');
+    if (!sellerId) {
+      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
 
     // Get seller

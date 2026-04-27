@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
 
     const display = {
       balance: await currencyService.convert(wallet.balance||0,"USD",wallet.currency) || wallet.balance,
-      escorwBalance: await currencyService.convert(wallet.escrowBalance||0,"USD",wallet.currency) || wallet.escrowBalance,
+      escrowBalance: await currencyService.convert(wallet.escrowBalance||0,"USD",wallet.currency) || wallet.escrowBalance,
       currency: wallet.currency || "USD",
       available: await currencyService.convert(wallet.balance-wallet.escrowBalance||0,"USD",wallet.currency) || wallet.balance-wallet.escrowBalance,
     }

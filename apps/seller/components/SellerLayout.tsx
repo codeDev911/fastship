@@ -18,10 +18,6 @@ interface SellerLayoutProps {
 
 export function SellerLayout({
   children,
-  currentPage = 'overview',
-  walletBalance = 0,
-  currency = 'PKR',
-  onTopUp,
 }: SellerLayoutProps) {
   const router = useRouter();
   const { logout } = useAuth();
@@ -131,27 +127,7 @@ export function SellerLayout({
 
             {/* Right: Wallet Balance and Top Up */}
             <div className="flex items-center gap-4 flex-shrink-0">
-              {/* Wallet Balance Card */}
-              <div className="rounded-full bg-accent/10 px-4 py-2 flex items-center gap-3">
-                <Wallet className="h-5 w-5 text-accent" />
-                <div className="text-right">
-                  <p className="text-xs text-muted-foreground">Wallet Balance</p>
-                  <p className="text-base font-bold text-foreground">
-                    {walletBalance.toLocaleString()} {currency}
-                  </p>
-                </div>
-              </div>
-
-              {/* Top Up Button */}
-              <Button
-                onClick={onTopUp}
-                variant="primary"
-                size="sm"
-                icon={<Plus className="h-4 w-4" />}
-              >
-                Top Up
-              </Button>
-
+            
               {/* Logout Button */}
               <button
                 onClick={handleLogout}

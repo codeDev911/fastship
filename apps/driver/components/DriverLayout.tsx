@@ -28,8 +28,6 @@ interface DriverLayoutProps {
 
 export function DriverLayout({
   children,
-  currentPage,
-  unreadNotifications = 0,
 }: DriverLayoutProps) {
   const router = useRouter();
   const { logout } = useAuth();
@@ -76,7 +74,7 @@ export function DriverLayout({
       label: 'Notifications',
       href: '/notifications',
       icon: <Bell className="h-5 w-5" />,
-      badge: unreadNotifications,
+      badge: 0,
     },
      {
         label:"Billing",
@@ -129,7 +127,7 @@ export function DriverLayout({
           userName="Driver"
           userRole="Delivery Driver"
           userAvatar=""
-          unreadNotifications={unreadNotifications}
+          unreadNotifications={0}
           onMenuToggle={() => setSidebarOpen(!sidebarOpen)}
           onLogout={handleLogout}
           isLoggingOut={isLoggingOut}

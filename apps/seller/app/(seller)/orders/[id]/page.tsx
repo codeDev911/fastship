@@ -33,6 +33,8 @@ export default function OrderDetailsPage() {
           // Find the specific order
           const foundOrder = data.data?.find((o: any) => o.id === orderId);
           if (foundOrder) {
+            console.log(data.data);
+            
             setOrder(foundOrder);
           } else {
             setError('Order not found');

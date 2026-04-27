@@ -1,13 +1,13 @@
 'use client';
-
-import React from 'react';
 import { Currency } from '@prisma/client';
 import { CURRENCY_SYMBOLS } from '../utils/currency.utils';
-import { Skeleton } from '@fastship/ui';
+import { Skeleton,Tooltip, TooltipContent, TooltipTrigger } from '@fastship/ui';
+import { InfoIcon } from 'lucide-react';
 
 interface CurrencyDisplayProps {
   amount: number;
   currency?: Currency;
+  amountBase?: number;
   showCode?: boolean;
   showSymbol?: boolean;
   decimalPlaces?: number;
@@ -23,6 +23,7 @@ interface CurrencyDisplayProps {
  * <CurrencyDisplay
  *   amount={1000.50}
  *   currency={Currency.EUR}
+ *   amountBase={10} // amount in USD
  *   showSymbol={true}
  *   showCode={false}
  * />
@@ -32,6 +33,7 @@ interface CurrencyDisplayProps {
 export function CurrencyDisplay({
   amount,
   currency = Currency.USD,
+  amountBase = 0,
   showCode = true,
   showSymbol = true,
   decimalPlaces = 2,
@@ -47,15 +49,27 @@ export function CurrencyDisplay({
 
   return (
     <>
-    {amount || amount ===0  ? (
-        <span className={className}>
-      {showSymbol && <span>{symbol}</span>}
-      <span>{formattedAmount}</span>
-      {showCode && <span className="text-sm"> {currency}</span>}
-    </span>
-    ):(
+      {amount || amount === 0 ? (
+        <div>
+          <div>
+            <span className={className}>
+              {showSymbol && <span>{symbol}</span>}
+              <span>{formattedAmount}</span>
+              {showCode && <span className="text-sm"> {currency}</span>}
+            </span>
+          </div>
+
+        {currency !==Currency.USD  && amountBase!==0 &&   <div className="text-sm text-right justify-end  space-x-1 w-full text-gray-600 flex items-center font-normal">
+            <span className=' text-right'>≈ ${amountBase}</span>
+            <Tooltip>
+              <TooltipTrigger><InfoIcon className='w-3'/></TooltipTrigger>
+              <TooltipContent  className="text-sm">Stored in USD. {currency} is a live estimate that fluctuates with market rates. <br /> Your actual balance remains stable. <br /> <strong>Stored {amountBase}USD ≈ {amount.toFixed(2)}{currency} </strong> according to market rate exchange </TooltipContent>
+            </Tooltip>
+            </div>}
+        </div>
+      ) : (
         <Skeleton className={`h-6 w-20 bg-gray-700`} />
-    )}
+      )}
     </>
   );
 }

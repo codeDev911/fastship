@@ -53,7 +53,7 @@ export function RecentOrdersTable({
                 <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Destination</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Weight</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Status</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Final Cost</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Estimated Cost</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Actions</th>
               </tr>
             </thead>
@@ -71,7 +71,7 @@ export function RecentOrdersTable({
                       </span>
                     </td>
                     <td className="px-4 py-4 text-sm font-medium text-foreground">
-                      {order.actualRate ? `${order.actualRate} PKR` : '—'}
+                      {order.actualRate ? `${order.actualRate} ${order?.seller?.wallet?.currency}` : '—'}
                     </td>
                     <td className="px-4 py-4 text-sm">
                       <div className="flex gap-2">

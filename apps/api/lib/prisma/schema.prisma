@@ -153,18 +153,18 @@ enum ReconciliationAlertType {
 // ============ MODELS ============
 
 model User {
-  id           String   @id @default(cuid())
-  email        String   @unique
-  phone        String   @unique
-  name         String
-  password     String
-  role         UserRole
-  profileImage String?
-  isVerified   Boolean  @default(false)
-  isActive     Boolean  @default(true)
+  id                String   @id @default(cuid())
+  email             String   @unique
+  phone             String   @unique
+  name              String
+  password          String
+  role              UserRole
+  profileImage      String?
+  isVerified        Boolean  @default(false)
+  isActive          Boolean  @default(true)
   preferredCurrency Currency @default(USD)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
   // Relations
   seller    Seller?
@@ -327,6 +327,12 @@ model Shipment {
   pickedUpAt        DateTime?
   deliveredAt       DateTime?
 
+  codAmountDisplay    Float?    @default(0) // COD amount in local currency
+  expectedRateDisplay Float?    @default(0) // Expected rate in local currency
+  actualRateDisplay   Float?    @default(0) // Actual rate in local currency
+  currency            Currency? @default(USD) // local currecy at the time user created the shipment, used for display purposes
+  exchangeRate        Float?    @default(1) // Exchange rate used for display amounts
+
   seller        Seller             @relation(fields: [sellerId], references: [id], onDelete: Cascade)
   assignment    DriverAssignment?
   payment       Payment?
@@ -364,26 +370,26 @@ model DriverAssignment {
 }
 
 model RateCard {
-  id              String   @id @default(cuid())
-  businessId      String
-  name            String
-  description     String?
-  baseRate        Float
-  baseRate_cents Int @default(0) // Store base rate in cents for accuracy (used for calculation in backed only)
-  perKmRate       Float
-  perKmRate_cents Int @default(0) // Store base rate in cents for accuracy (used for calculation in backed only)
-  minimumDistance Float    @default(0)
-  maximumDistance Float    @default(999999)
-  minWeight       Float    @default(0)
-  maxWeight       Float    @default(100)
-  weightSurcharge Float    @default(0) // Extra charge per kg above minWeight
-  weightSurcharge_cents Int @default(0) // Store base rate in cents for accuracy (used for calculation in backed only)
-  serviceStates   String[] @default([]) // States/regions served: ["Sindh", "Punjab"]
-  inCityDelivery  Boolean  @default(false) // Support in-city delivery (same city, within distance)
-  serviceCities   String[] @default([]) // Specific cities supporting in-city: ["Peshawar", "Karachi"]
-  isActive        Boolean  @default(true)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id                    String   @id @default(cuid())
+  businessId            String
+  name                  String
+  description           String?
+  baseRate              Float
+  baseRate_cents        Int      @default(0) // Store base rate in cents for accuracy (used for calculation in backed only)
+  perKmRate             Float
+  perKmRate_cents       Int      @default(0) // Store base rate in cents for accuracy (used for calculation in backed only)
+  minimumDistance       Float    @default(0)
+  maximumDistance       Float    @default(999999)
+  minWeight             Float    @default(0)
+  maxWeight             Float    @default(100)
+  weightSurcharge       Float    @default(0) // Extra charge per kg above minWeight
+  weightSurcharge_cents Int      @default(0) // Store base rate in cents for accuracy (used for calculation in backed only)
+  serviceStates         String[] @default([]) // States/regions served: ["Sindh", "Punjab"]
+  inCityDelivery        Boolean  @default(false) // Support in-city delivery (same city, within distance)
+  serviceCities         String[] @default([]) // Specific cities supporting in-city: ["Peshawar", "Karachi"]
+  isActive              Boolean  @default(true)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
 
   business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
 
@@ -423,20 +429,19 @@ model Wallet {
 }
 
 model Transaction {
-  id             String          @id @default(cuid())
-  walletId       String
-  type           TransactionType
-  amount         Float           @default(0) // Keep for backward compatibility, but will be generated from amount_cents
-  amount_cents   Int?            @default(0) // Store amount in cents for accuracy (used for calculation in backed only)
-  currency       Currency        @default(USD)
-  exchangeRate   Float           @default(1) // Exchange rate used for this transaction
-  displayAmount  Float?          // Amount in user's display currency
-  displayCurrency Currency?      // User's display currency
-  description    String
-  referenceId    String?
-  status         PaymentStatus   @default(PENDING)
-  createdAt      DateTime        @default(now())
-  completedAt    DateTime?
+  id              String          @id @default(cuid())
+  walletId        String
+  type            TransactionType
+  amount          Float           @default(0) // Keep for backward compatibility, but will be generated from amount_cents
+  amount_cents    Int?            @default(0) // Store amount in cents for accuracy (used for calculation in backed only)
+  currency        Currency        @default(USD)
+  exchangeRate    Float           @default(1) // Exchange rate used for this transaction
+  displayAmount   Float? // Amount in user's display currency
+  description     String
+  referenceId     String?
+  status          PaymentStatus   @default(PENDING)
+  createdAt       DateTime        @default(now())
+  completedAt     DateTime?
 
   wallet Wallet @relation(fields: [walletId], references: [id], onDelete: Cascade)
 
@@ -446,25 +451,29 @@ model Transaction {
 }
 
 model Payment {
-  id                  String        @id @default(cuid())
-  shipmentId          String        @unique
-  amount              Float         @default(0) // Keep for backward compatibility, but will be generated from amount_cents
-  amount_cents        Int?          @default(0) // Store amount in cents for accuracy (used for calculation in backed only)
-  currency            Currency      @default(USD)
-  exchangeRate        Float         @default(1)
-  tax                 Float         @default(0) // Keep for backward compatibility, but will be generated from amount_cents
-  tax_cents           Int?          @default(0) // Store amount in cents for accuracy (used for calculation in backed only)
-  commission          Float         @default(0) // Keep for backward compatibility, but will be generated from amount_cents
-  commission_cents    Int?          @default(0) // Store amount in cents for accuracy (used for calculation in backed only)
-  driverPayable       Float         @default(0) // Keep for backward compatibility, but will be generated from amount_cents
-  driverPayable_cents Int?          @default(0) // Store amount in cents for accuracy (used for calculation in backed only)
-  paymentMethod       PaymentMethod
-  paymentStatus       PaymentStatus @default(PENDING)
-  transactionId       String?
-  notes               String?
-  createdAt           DateTime      @default(now())
-  updatedAt           DateTime      @updatedAt
-  paidAt              DateTime?
+  id                   String        @id @default(cuid())
+  shipmentId           String        @unique
+  amount               Float         @default(0) // Keep for backward compatibility, but will be generated from amount_cents
+  amount_cents         Int?          @default(0) // Store amount in cents for accuracy (used for calculation in backed only)
+  tax                  Float         @default(0) // Keep for backward compatibility, but will be generated from amount_cents
+  tax_cents            Int?          @default(0) // Store amount in cents for accuracy (used for calculation in backed only)
+  commission           Float         @default(0) // Keep for backward compatibility, but will be generated from amount_cents
+  commission_cents     Int?          @default(0) // Store amount in cents for accuracy (used for calculation in backed only)
+  driverPayable        Float         @default(0) // Keep for backward compatibility, but will be generated from amount_cents
+  driverPayable_cents  Int?          @default(0) // Store amount in cents for accuracy (used for calculation in backed only)
+  currency             Currency      @default(USD)
+  exchangeRate         Float         @default(1) // at that time the exchange rate of USD and user's  currency
+  amountDisplay        Float?        @default(0) // Amount in user's local currency
+  taxDisplay           Float?        @default(0) // Tax in user's local currency
+  commissionDisplay    Float?        @default(0) // Commission in user's local currency
+  driverPayableDisplay Float?        @default(0) // Driver payable in user's local currency
+  paymentMethod        PaymentMethod
+  paymentStatus        PaymentStatus @default(PENDING)
+  transactionId        String?
+  notes                String?
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+  paidAt               DateTime?
 
   shipment Shipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
 
@@ -473,17 +482,20 @@ model Payment {
 }
 
 model LedgerEntry {
-  id                 String   @id @default(uuid())
-  walletId           String
-  amount             Float    @default(0) // +credit / -debit
-  amount_cents       Int?     @default(0) // Store amount in cents for accuracy (used for calculation in backed only)
-  currency           Currency @default(USD)
-  type               String // CREDIT / DEBIT
-  category           String // escrow, fee, transfer
-  referenceId        String?
-  balanceAfter       Float
-  balanceAfter_cents Int?     @default(0) // Store balance in cents for accuracy (used for calculation in backed only)
-  createdAt          DateTime @default(now())
+  id                  String   @id @default(uuid())
+  walletId            String
+  amount              Float    @default(0) // +credit / -debit
+  amount_cents        Int?     @default(0) // Store amount in cents for accuracy (used for calculation in backed only)
+  type                String // CREDIT / DEBIT
+  category            String // escrow, fee, transfer
+  referenceId         String?
+  balanceAfter        Float
+  balanceAfter_cents  Int?     @default(0) // Store balance in cents for accuracy (used for calculation in backed only)
+  amountDisplay       Float?   @default(0) // Amount in user's local currency
+  balanceAfterDisplay Float?   @default(0) // Balance in user's local currency
+  currency            Currency @default(USD)
+  exchangeRate        Float    @default(1) // Exchange rate used for this entry
+  createdAt           DateTime @default(now())
 
   wallet Wallet @relation(fields: [walletId], references: [id])
 
@@ -554,16 +566,19 @@ model ShipmentActivity {
 }
 
 model Earning {
-  id           String    @id @default(cuid())
-  driverId     String
-  shipmentId   String?
-  amount       Float     @default(0)
-  amount_cents Int?      @default(0) // Store amount in cents for accuracy (used for calculation in backed only)
-  earnedAt     DateTime  @default(now())
-  settlementId String?
-  isSettled    Boolean   @default(false)
-  settledAt    DateTime?
-  createdAt    DateTime  @default(now())
+  id            String    @id @default(cuid())
+  driverId      String
+  shipmentId    String?
+  amount        Float     @default(0)
+  amount_cents  Int?      @default(0) // Store amount in cents for accuracy (used for calculation in backed only)
+  earnedAt      DateTime  @default(now())
+  amountDisplay Float?    @default(0) // Amount in user's local currency
+  currency      Currency? @default(USD) // local currecy at the time earning was recorded, used for display purposes
+  exchangeRate  Float?    @default(1) // Exchange rate used for display amount
+  settlementId  String?
+  isSettled     Boolean   @default(false)
+  settledAt     DateTime?
+  createdAt     DateTime  @default(now())
 
   driver Driver @relation(fields: [driverId], references: [id], onDelete: Cascade)
 
@@ -573,17 +588,20 @@ model Earning {
 }
 
 model DriverDebt {
-  id           String    @id @default(cuid())
-  driverId     String
-  shipmentId   String?
-  amount       Float     @default(0)
-  amount_cents Int?      @default(0) // Store amount in cents for accuracy (used for calculation in backed only)
-  debtReason   String
-  incurredAt   DateTime  @default(now())
-  settledAt    DateTime?
-  isSettled    Boolean   @default(false)
-  settlementId String?
-  createdAt    DateTime  @default(now())
+  id            String    @id @default(cuid())
+  driverId      String
+  shipmentId    String?
+  amount        Float     @default(0)
+  amount_cents  Int?      @default(0) // Store amount in cents for accuracy (used for calculation in backed only)
+  amountDisplay Float?    @default(0) // Amount in user's local currency
+  currency      Currency? @default(USD) // local currecy at the time debt
+  exchangeRate  Float?    @default(1) // Exchange rate used for display amount
+  debtReason    String
+  incurredAt    DateTime  @default(now())
+  settledAt     DateTime?
+  isSettled     Boolean   @default(false)
+  settlementId  String?
+  createdAt     DateTime  @default(now())
 
   driver Driver @relation(fields: [driverId], references: [id], onDelete: Cascade)
 
@@ -593,24 +611,28 @@ model DriverDebt {
 }
 
 model Settlement {
-  id                String           @id @default(cuid())
-  businessId        String
-  driverId          String?
-  periodStart       DateTime
-  periodEnd         DateTime
-  totalAmount       Float            @default(0)
-  totalAmount_cents Int?             @default(0) // Store total amount in cents for accuracy (used for calculation in backed only) 
-  commission        Float            @default(0)
-  commission_cents  Int?             @default(0) // Store total amount in cents for accuracy (used for calculation in backed only)
-  netAmount         Float            @default(0)
-  netAmount_cents   Int?             @default(0) // Store total amount in cents for accuracy (used for calculation in backed only)
-  status            SettlementStatus @default(PENDING)
-  notes             String?
-  settledAt         DateTime?
-  createdAt         DateTime         @default(now())
-  updatedAt         DateTime         @updatedAt
-
-  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  id                 String           @id @default(cuid())
+  businessId         String
+  driverId           String?
+  periodStart        DateTime
+  periodEnd          DateTime
+  totalAmount        Float            @default(0)
+  totalAmount_cents  Int?             @default(0) // Store total amount in cents for accuracy (used for calculation in backed only) 
+  commission         Float            @default(0)
+  commission_cents   Int?             @default(0) // Store total amount in cents for accuracy (used for calculation in backed only)
+  netAmount          Float            @default(0)
+  netAmount_cents    Int?             @default(0) // Store total amount in cents for accuracy (used for calculation in backed only)
+  status             SettlementStatus @default(PENDING)
+  notes              String?
+  settledAt          DateTime?
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+  totalAmountDisplay Float?           @default(0) // Amount in user's local currency
+  commissionDisplay  Float?           @default(0) // Amount in user's local currency
+  netAmountDisplay   Float?           @default(0) // Amount in user's local currency
+  currency           Currency?        @default(USD) // local currecy at the time settlement was created, used for display purposes
+  exchangeRate       Float?           @default(1) // Exchange rate used for display amounts
+  business           Business         @relation(fields: [businessId], references: [id], onDelete: Cascade)
 
   @@index([businessId])
   @@index([status])
@@ -633,7 +655,9 @@ model Bid {
   expiresAt           DateTime
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
-
+  amountDisplay       Float?    @default(0) // Bid amount in user's local currency
+  currency            Currency? @default(USD) // local currecy at the time bid was created, used for display purposes
+  exchangeRate        Float?    @default(1) // Exchange rate used for display amount
   shipment Shipment? @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
   seller   Seller    @relation(fields: [sellerId], references: [id], onDelete: Cascade)
   business Business? @relation(fields: [businessId], references: [id], onDelete: Cascade)
@@ -722,25 +746,25 @@ model ShopifyOrder {
 }
 
 model ReconciliationAlert {
-  id             String                         @id @default(cuid())
+  id             String                      @id @default(cuid())
   walletId       String
   logId          String
-  severity       ReconciliationAlertSeverity    @default(MEDIUM)
-  type           ReconciliationAlertType        @default(BALANCE_MISMATCH)
+  severity       ReconciliationAlertSeverity @default(MEDIUM)
+  type           ReconciliationAlertType     @default(BALANCE_MISMATCH)
   message        String
   expectedCents  Int
   actualCents    Int
   diffCents      Int
-  currency       Currency                       @default(USD)
+  currency       Currency                    @default(USD)
   status         String // NEW | ACKNOWLEDGED | RESOLVED
   resolution     String?
   description    String?
-  createdAt      DateTime                       @default(now())
+  createdAt      DateTime                    @default(now())
   acknowledgedAt DateTime?
   acknowledgedBy String?
   resolvedAt     DateTime?
   resolvedBy     String?
-  wallet         Wallet                         @relation(fields: [walletId], references: [id])
+  wallet         Wallet                      @relation(fields: [walletId], references: [id])
 
   @@index([walletId])
   @@index([severity])
@@ -764,7 +788,7 @@ model ExchangeRate {
 }
 
 model Notification {
-  id         Int @unique @default(autoincrement())
+  id         Int      @unique @default(autoincrement())
   type       String // RECONCILIATION_ALERT
   severity   String // CRITICAL | HIGH | MEDIUM | LOW
   title      String

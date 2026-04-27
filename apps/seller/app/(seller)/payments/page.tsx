@@ -39,7 +39,7 @@ export default function SellerPaymentsPage() {
   const [user, setUser] = useState<any>(null);
   const [sellerId, setSellerId] = useState<string>('');
   const [payments, setPayments] = useState<Payment[]>([]);
-  const [stats, setStats] = useState({ pendingAmount: 0, totalPayments: 0, amountRatio: 0 });
+  const [stats, setStats] = useState({ pendingAmount: 0, totalPayments: 0, amountRatio: 0,peferredCurrency:"USD" });
   const [isLoading, setIsLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [walletBalance, setWalletBalance] = useState(0);
@@ -128,7 +128,7 @@ export default function SellerPaymentsPage() {
                 <p className="text-2xl font-bold text-green-600">{completedCount}</p>
               </div>
               <p className="text-sm text-muted-foreground">Completed</p>
-              <p className="text-xs text-green-700 font-medium">PKR {stats.totalPayments?.toLocaleString() || '0'}</p>
+              <p className="text-xs text-green-700 font-medium">{stats?.peferredCurrency}  {stats.totalPayments?.toLocaleString() || '0'}</p>
             </CardContent>
           </Card>
 
@@ -142,7 +142,7 @@ export default function SellerPaymentsPage() {
                 <p className="text-2xl font-bold text-yellow-600">{pendingCount}</p>
               </div>
               <p className="text-sm text-muted-foreground">Pending</p>
-              <p className="text-xs text-yellow-700 font-medium">PKR {stats.pendingAmount?.toLocaleString() || '0'}</p>
+              <p className="text-xs text-yellow-700 font-medium">{stats?.peferredCurrency} {stats.pendingAmount?.toLocaleString() || '0'}</p>
             </CardContent>
           </Card>
         </div>
@@ -203,7 +203,7 @@ export default function SellerPaymentsPage() {
                             </div>
                           </td>
                           <td className="px-4 py-4 text-sm font-medium text-foreground">
-                            PKR {payment.amount?.toLocaleString() || '0'}
+                            {stats?.peferredCurrency}  {payment.amount?.toLocaleString() || '0'}
                           </td>
                           <td className="px-4 py-4 text-sm text-foreground">{payment.paymentMethod}</td>
                           <td className="px-4 py-4 text-sm">

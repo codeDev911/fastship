@@ -28,30 +28,19 @@ export class AuthService {
    */
  static saveTokens(tokens: AuthTokens): void {
   try {
-    console.log('[AuthService.saveTokens] Called with:', { 
-      accessToken: tokens.accessToken ? `${tokens.accessToken.substring(0, 20)}...` : 'EMPTY/NULL',
-      refreshToken: tokens.refreshToken ? 'yes' : 'no',
-      expiresIn: tokens.expiresIn
-    });
+    
 
     if (typeof window === "undefined") {
       console.error('[AuthService.saveTokens] window is undefined - aborting save');
       return;
     }
 
-    console.log('[AuthService.saveTokens] window exists, attempting to save...');
 
     // Save access token
-    console.log('[AuthService.saveTokens] Setting TOKEN_KEY (auth_token)...');
     localStorage.setItem(TOKEN_KEY, tokens.accessToken);
     
-    // Verify it was saved
-    const saved = localStorage.getItem(TOKEN_KEY);
-    console.log('[AuthService.saveTokens] Verification - TOKEN_KEY exists:', !!saved);
-    console.log('[AuthService.saveTokens] Saved token length:', saved?.length);
 
     if (tokens.refreshToken) {
-      console.log('[AuthService.saveTokens] Setting REFRESH_TOKEN_KEY...');
       localStorage.setItem(REFRESH_TOKEN_KEY, tokens.refreshToken);
     }
 
@@ -59,9 +48,7 @@ export class AuthService {
     const expiresIn = tokens.expiresIn || 86400;
     const expiresAt = new Date(Date.now() + expiresIn * 1000).toISOString();
     localStorage.setItem("auth_token_expires", expiresAt);
-    console.log('[AuthService.saveTokens] Token expiration set to:', expiresAt);
     
-    console.log('[AuthService.saveTokens] SUCCESS - All tokens saved');
   } catch (error) {
     console.error("[AuthService.saveTokens] FAILED with error:", error);
     console.error("[AuthService.saveTokens] Error type:", error instanceof Error ? error.message : 'Unknown');

@@ -47,9 +47,10 @@ export default function IntegrationsPage() {
   const fetchIntegrations = async () => {
     setIsLoading(true);
     setError(null);
-
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    const sellerId = user?.jobId;
     try {
-      const response = await secureFetch('/api/sellers/integrations', {
+      const response = await secureFetch(`/api/sellers/integrations?sellerId=${sellerId}`, {
         headers: {
           'Content-Type': 'application/json',
         },
@@ -216,19 +217,19 @@ export default function IntegrationsPage() {
             {/* Simple Integration List */}
             {integrations.length > 0 ? (
               <div className="space-y-3">
-                {integrations.map((integration) => (
+                {integrations?.map((integration) => (
                   <div
-                    key={integration.id}
+                    key={integration?.id}
                     className="flex items-center justify-between p-4 border rounded-lg bg-white hover:bg-gray-50 transition-colors"
                   >
                     <div className="flex items-center gap-3">
-                      <span className="text-2xl">{integration.icon}</span>
+                      <span className="text-2xl">{integration?.icon}</span>
                       <div>
                         <p className="font-medium text-foreground">
-                          {integration.name}
+                          {integration?.name}
                         </p>
                         <p className="text-sm text-muted-foreground">
-                          {integration.type}
+                          {integration?.type}
                         </p>
                       </div>
                     </div>
@@ -281,7 +282,7 @@ export default function IntegrationsPage() {
                           size="sm"
                           variant="primary"
                           onClick={() => {
-                            if (integration.icon === '🛍️') {
+                            if (integration?.icon === '🛍️') {
                               setShowConnectModal(true);
                             }
                           }}

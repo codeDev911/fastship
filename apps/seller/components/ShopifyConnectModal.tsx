@@ -130,7 +130,7 @@ export function ShopifyConnectModal({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-2xl overflow-y-auto h-[90vh]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <span className="text-2xl">🛍️</span>
@@ -149,7 +149,7 @@ export function ShopifyConnectModal({
 
           {/* Custom App Tab */}
           <TabsContent value="custom-app" className="space-y-4 py-4">
-            <Alert className="bg-blue-50 border-blue-200">
+            <Alert type="info" title="Custom app" className="bg-blue-50 border-blue-200">
               <Info className="h-4 w-4 text-blue-600" />
               <AlertDescription className="text-sm text-blue-900 ml-2">
                 Best for MVP testing. Use your Shopify Custom App credentials directly.
@@ -157,7 +157,7 @@ export function ShopifyConnectModal({
             </Alert>
 
             {error && (
-              <Alert variant="destructive">
+              <Alert type="info" title='Error'>
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
@@ -260,7 +260,7 @@ export function ShopifyConnectModal({
             </Alert>
 
             {error && (
-              <Alert variant="destructive">
+              <Alert type="destructive">
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription>{error}</AlertDescription>
               </Alert>

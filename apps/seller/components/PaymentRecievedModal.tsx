@@ -21,7 +21,7 @@ interface PaymentReceivedModalProps {
 
 const PaymentReceivedModal = ({ isOpen, onClose, data }: PaymentReceivedModalProps) => {
   // Mock data if none provided
-  const receipt = data 
+  const receipt = data?.payment
   const [loading,setLoading] = useState(false)
 
   const handleConfirm = async()=>{
@@ -31,7 +31,7 @@ const PaymentReceivedModal = ({ isOpen, onClose, data }: PaymentReceivedModalPro
             method:"PATCH",
             body:JSON.stringify({
                 status:"COMPLETED",
-                paymentId:data?.id,
+                paymentId:receipt?.id,
                 paidAt:new Date()
             })
         })
@@ -86,7 +86,7 @@ const PaymentReceivedModal = ({ isOpen, onClose, data }: PaymentReceivedModalPro
         <div className="mt-10 mb-10 text-center">
           <p className="text-[10px] uppercase font-bold text-slate-400 tracking-[0.2em] mb-2">Total Amount</p>
           <h3 className="text-4xl font-black text-slate-900 flex items-center justify-center gap-2">
-            <span className="text-xl text-red-600">PKR</span>
+            <span className="text-xl text-red-600">{data?.seller?.wallet?.currency}</span>
             {receipt?.amount.toLocaleString()}
           </h3>
         </div>

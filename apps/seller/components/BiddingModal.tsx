@@ -153,7 +153,7 @@ export function BiddingModal({
                     )}
 
                     {/* Service Level */}
-                    <div className={`inline-block px-2 py-1 rounded-lg text-xs font-medium mb-2 ${style.bg} ${style.border} border ${style.text}`}>
+                    <div className={`inline-block px-2 py-1 rounded-lg text-xs font-medium mb-2 ${style?.bg} ${style?.border} border ${style.text}`}>
                       {style.icon} {bid.rateCardName || 'Service'}
                     </div>
 

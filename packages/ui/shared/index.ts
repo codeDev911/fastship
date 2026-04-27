@@ -15,3 +15,4 @@ export  { TopUpModal   } from './TopupWallet';
 export { TransferFundsModal } from './TransferFundsModal';
 export { ReportDisputeModal } from './ReportDisputeModal';
 export {ExchangeRateModal} from "./ExchangeRatesModal"
+export {BillingPageShared} from "./BillingPageShared"

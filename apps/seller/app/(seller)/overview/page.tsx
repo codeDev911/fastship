@@ -9,8 +9,9 @@ import { BiddingModal } from '../../../components/BiddingModal';
 import { Card,  CardContent } from '@fastship/ui';
 import { Button } from '@fastship/ui';
 import {  AlertCircle, CheckCircle2, Banknote, PercentCircle } from 'lucide-react';
-import { secureFetch } from '@fastship/lib';
+import { CurrencyDisplay, secureFetch } from '@fastship/lib';
 import { useRouter } from 'next/navigation';
+import { Currency } from '@prisma/client';
 
 export default function SellerDashboardPage() {
   const router = useRouter();
@@ -24,9 +25,13 @@ export default function SellerDashboardPage() {
   const [isBiddingModalOpen, setIsBiddingModalOpen] = useState(false);
   const [paymentStats, setPaymentStats] = useState({
     pendingAmount: 0,
+    pendingAmountBase: 0,
+    peferredCurrency:Currency.USD,
     amountRatio: 0,
     totalPayments: 0,
+    totalPaymentsBase: 0,
     completedAmount:0,
+    completedAmountBase:0,
   })
   // Get user from localStorage
   useEffect(() => {
@@ -49,6 +54,8 @@ export default function SellerDashboardPage() {
         if (ordersRes.ok) {
           const ordersData = await ordersRes.json();
           setOrders(ordersData.data || []);
+          console.log(ordersData);
+          
         }
 
         if (paymentsRes.ok) {
@@ -58,8 +65,14 @@ export default function SellerDashboardPage() {
             amountRatio: paymentsData.stats.amountRatio,
             totalPayments: paymentsData.stats.totalPayments,
             completedAmount: paymentsData.stats.completedAmount,
+            peferredCurrency: paymentsData.stats.peferredCurrency || 'USD',
+            pendingAmountBase: paymentsData.stats.pendingAmountBase,
+            totalPaymentsBase: paymentsData.stats.totalPaymentsBase,
+            completedAmountBase: paymentsData.stats.completedAmountBase,
           })
           setPayments(paymentsData.payments || []);
+          console.log(paymentsData);
+          
         }
 
 
@@ -128,7 +141,7 @@ export default function SellerDashboardPage() {
     }
   };
 
-  const recentOrders = orders.slice(0, 5);
+  const recentOrders = orders 
 
   return (
     <SellerLayout
@@ -151,12 +164,12 @@ export default function SellerDashboardPage() {
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3 lg:grid-cols-4">
           {/* Total Orders Card */}
           <Card>
-            <CardContent className="space-y-3 ">
+            <CardContent className="space-y-3 p-1 ">
               <div className="flex items-center justify-between">
                 <div className="rounded-lg bg-blue-50 p-2.5">
                   <Banknote className="h-5 w-5 text-blue-600" />
                 </div>
-                <p className="text-2xl font-bold text-foreground">Rs {paymentStats.totalPayments}</p>
+                <p className="text-2xl font-bold text-foreground"><CurrencyDisplay amountBase={paymentStats.totalPaymentsBase} currency={paymentStats.peferredCurrency} amount={paymentStats?.totalPayments}/></p>
               </div>
               <p className="text-sm text-muted-foreground">Total Payments</p>
             </CardContent>
@@ -164,12 +177,12 @@ export default function SellerDashboardPage() {
 
           {/* Pending Card */}
           <Card>
-            <CardContent className="space-y-3 ">
+            <CardContent className="space-y-3 p-1">
               <div className="flex items-center justify-between">
                 <div className="rounded-lg bg-yellow-50 p-2.5">
                   <AlertCircle className="h-5 w-5 text-yellow-600" />
                 </div>
-                <p className="text-2xl font-bold text-yellow-600">Rs {paymentStats.pendingAmount}</p>
+                <p className="text-2xl font-bold text-yellow-600"><CurrencyDisplay amountBase={paymentStats.pendingAmountBase} currency={paymentStats.peferredCurrency} amount={paymentStats?.pendingAmount}/></p>
               </div>
               <p className="text-sm text-muted-foreground">Pending payments</p>
             </CardContent>
@@ -177,7 +190,7 @@ export default function SellerDashboardPage() {
 
           {/* In Transit Card */}
           <Card>
-            <CardContent className="space-y-3 ">
+            <CardContent className="space-y-3 p-1">
               <div className="flex items-center justify-between">
                 <div className="rounded-lg bg-purple-50 p-2.5">
                   <PercentCircle className="h-5 w-5 text-purple-600" />
@@ -195,7 +208,7 @@ export default function SellerDashboardPage() {
                 <div className="rounded-lg bg-green-50 p-2.5">
                   <CheckCircle2 className="h-5 w-5 text-green-600" />
                 </div>
-                <p className="text-2xl font-bold text-green-600">Rs {paymentStats.completedAmount}</p>
+                <p className="text-2xl font-bold text-green-600"><CurrencyDisplay amountBase={paymentStats.completedAmountBase} currency={paymentStats.peferredCurrency} amount={paymentStats.completedAmount}/></p>
               </div>
               <p className="text-sm text-muted-foreground">Completed payments</p>
             </CardContent>
@@ -241,7 +254,7 @@ export default function SellerDashboardPage() {
             orders={recentOrders}
             onFindCourier={handleFindCourier}
             onEdit={handleEdit}
-            onViewDetails={(order) => router.push(`/seller/orders/${order.id}`)}
+            onViewDetails={(order) => router.push(`/orders/${order.id}`)}
           />
         </div>
 
@@ -255,6 +268,7 @@ export default function SellerDashboardPage() {
           </div>
           <RecentPaymentsTable
             payments={payments}
+            peferredCurrency={paymentStats.peferredCurrency}
             onViewDetails={(payment) => {
               // Handle view payment details
               console.log('View payment details:', payment);
