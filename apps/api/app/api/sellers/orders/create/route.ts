@@ -4,6 +4,8 @@ import {
   calculateDistanceByCities,
   initializePersistentCache,
 } from "@/lib/utils/distance";
+import { Currency } from "@prisma/client";
+import currencyService from "@/lib/services/currency.service";
 
 /**
  * Helper function to get city coordinates from cities.json
@@ -11,7 +13,7 @@ import {
 async function getCityCoordinates(city: string, state: string) {
   try {
     const response = await fetch(
-      `${process.env.NEXTAUTH_URL || "http://localhost:3000"}/api/locations/cities?state=${encodeURIComponent(state)}`,
+      `/api/locations/cities?state=${encodeURIComponent(state)}`,
     );
     const data = await response.json();
     const foundCity = data.cities?.find(
@@ -36,7 +38,7 @@ export async function POST(request: NextRequest) {
 
     const rs = await request.json();
 
-    const {
+    let {
       sellerId,
       weight,
       dimensions,
@@ -45,6 +47,7 @@ export async function POST(request: NextRequest) {
       pickupCity,
       pickupState,
       deliveryCity,
+      codAmount ,
       deliveryState,
       inCityDistance,
       isInCityDelivery,
@@ -116,16 +119,29 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    const seller= await prisma.seller.findUnique({where:{id:sellerId},include:{wallet:{select:{currency:true}}}});
+
+    if(!seller){
+      return NextResponse.json({message:"Seller not found"}, {status:404});
+    }
+
+    let codAmount_cents = codAmount ? Math.round(codAmount * 100) : null;
+    let actualAmount = codAmount;
+    if(seller.wallet?.currency !== Currency.USD){
+      const {baseAmount,baseCents,rate} = await currencyService.toBaseCurrency(codAmount, seller?.wallet?.currency!);
+      codAmount = baseAmount;
+      codAmount_cents = baseCents;
+    }
+
     // Create shipment with calculated distance and coordinates
     const shipment = await prisma.shipment.create({
       data: {
         ...body,
-
         weight: parseFloat(weight),
         isInCityDelivery,
         sellerId,
         dimensions,
-        paymentMethod,
+        paymentMethod,  
         description,
         pickupState,
         deliveryState,
@@ -133,6 +149,10 @@ export async function POST(request: NextRequest) {
         pickupLatitude,
         pickupLongitude,
         pickupCity,
+        codAmount,
+        codAmount_cents,
+        codAmountDisplay:actualAmount, // in user's peferred currency
+        currency: seller?.wallet?.currency || Currency.USD, // in user's peferred currency
         deliveryCity,
         deliveryLatitude,
         deliveryLongitude,

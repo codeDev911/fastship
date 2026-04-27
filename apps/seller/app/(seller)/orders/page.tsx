@@ -104,6 +104,8 @@ export default function SellerOrdersPage() {
     if (selectedOrderForBidding) {
       try {
         setIsLoading(true);
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        const sellerId = user?.jobId;
         // Accept bid with validated amount (not just baseRate)
         const response = await secureFetch(
           `/api/shipments/${selectedOrderForBidding.id}?lockEscrow=true`,
@@ -112,6 +114,7 @@ export default function SellerOrdersPage() {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               status: "PENDING",
+              sellerId,
               businessId: bid.id,
               amount: bid.totalRate, // Use calculated totalRate, not baseRate
             }),

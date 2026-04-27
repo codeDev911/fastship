@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { financialService } from "@/lib/services/financial.service";
 import { bidService } from "@/lib/services/bid.service";
+import { Currency } from "@prisma/client";
+import currencyService from "@/lib/services/currency.service";
 
 export async function GET(
   request: NextRequest,
@@ -72,33 +74,8 @@ export async function PATCH(
     const validated = body;
     const shipmentId = (await params).id;
     const lockEscrow = request.nextUrl.searchParams.get("lockEscrow") == "true";
-    const { amount, driverId, businessId, ...rest } = validated;
+    const { amount, driverId, businessId,sellerId, ...rest } = validated;
 
-    // ==========================================
-    // STEP 1: Validate bid acceptance (if business assignment)
-    // ==========================================
-    // if (lockEscrow && businessId && amount) {
-    //   const bidValidation = await bidService.validateBidAcceptance(
-    //     shipmentId,
-    //     amount,
-    //     businessId
-    //   );
-
-    //   if (!bidValidation.isValid) {
-    //     return NextResponse.json(
-    //       { error: bidValidation.errors.join("; ") },
-    //       { status: 400 }
-    //     );
-    //   }
-
-    //   if (bidValidation.warnings.length > 0) {
-    //     console.warn("Bid acceptance warnings:", bidValidation.warnings);
-    //   }
-    // }
-
-    // ==========================================
-    // STEP 2: Prepare shipment data
-    // ==========================================
     let data: any;
 
     if (driverId) {
@@ -123,21 +100,59 @@ export async function PATCH(
         ? {
             ...rest,
             actualRate: amount,
+            actualRate_cents : amount ? Math.round(amount * 100) : null,
+
           }
         : {
             ...rest,
           };
     }
 
-    // ==========================================
-    // STEP 3: Process transaction
-    // ==========================================
+
+    
+
     const updatedShipment = await prisma.$transaction(
       async (tx) => {
+
+        let seller = await tx.seller.findUnique({
+          where: {
+            id: sellerId,
+          },
+          select:{
+            wallet:{
+              select:{
+                id:true,
+                currency:true
+              }
+            }
+          }
+        })
+
+
+        if(!seller){
+          throw new Error("Seller not found");
+        }
+
+        if(seller.wallet?.currency !== Currency.USD) {
+          const { baseAmount, baseCents, rate } =
+            await currencyService.toBaseCurrency(
+              amount,
+              seller?.wallet?.currency!,
+            )
+          data.actualRate = baseAmount;
+          data.actualRate_cents = baseCents;
+          data.exchangeRate = rate;
+          data.actualRateDisplay = amount; // show original amount in user's currency
+        }
+
+
+
+
         const shipment = await tx.shipment.update({
           where: { id: shipmentId },
           data: {
             ...data,
+            exchangeRate: data.exchangeRate || 1,
             businessId,
             updatedAt: new Date(),
           },
@@ -148,6 +163,7 @@ export async function PATCH(
                 wallet: {
                   select: {
                     id: true,
+                    currency:true
                   },
                 },
               },
@@ -179,6 +195,7 @@ export async function PATCH(
           },
           select: {
             id: true,
+            currency:true,
           },
         });
  
@@ -202,7 +219,8 @@ export async function PATCH(
             shipment.seller.wallet.id,
             amount || 0,
             "Shipping fee locked",
-            shipment.id
+            shipment.id,
+            shipment.seller.wallet.currency
           );
 
           // Lock business escrow for 10% platform fee
@@ -211,7 +229,8 @@ export async function PATCH(
             businessWallet.id,
             Number(amount) * 0.1 || 10,
             "Platform fee locked 10%",
-            shipment.id
+            shipment.id,
+            businessWallet.currency
           );
 
           // ==========================================

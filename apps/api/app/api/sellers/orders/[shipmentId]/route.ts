@@ -4,6 +4,8 @@ import {
   calculateDistanceByCities,
   initializePersistentCache,
 } from "@/lib/utils/distance";
+import { Currency } from "@prisma/client";
+import currencyService from "@/lib/services/currency.service";
 
 /**
  * Helper function to get city coordinates from cities.json
@@ -31,18 +33,18 @@ async function getCityCoordinates(city: string, state: string) {
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { shipmentId: string } }
+  { params }: { params: { shipmentId: string } },
 ) {
   try {
     // Initialize persistent cache (cleanup expired entries)
     initializePersistentCache();
 
-    const shipmentId  = (await params).shipmentId;
+    const shipmentId = (await params).shipmentId;
 
     if (!shipmentId) {
       return NextResponse.json(
         { message: "Shipment ID is required" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -54,29 +56,27 @@ export async function PATCH(
     if (!existingShipment) {
       return NextResponse.json(
         { message: "Shipment not found" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
     // Check if shipment is in PENDING or ASSIGNED status
-    if (
-      existingShipment.status !== "PENDING" &&
-      existingShipment.status !== "ASSIGNED"
-    ) {
+    if (existingShipment.status !== "PENDING") {
       return NextResponse.json(
         {
           message: `Cannot edit shipment in ${existingShipment.status} status. Only PENDING and ASSIGNED orders can be edited.`,
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     const rs = await request.json();
 
-    const {
+    let {
       sellerId,
       weight,
       dimensions,
+      codAmount,
       paymentMethod,
       description,
       pickupCity,
@@ -105,7 +105,7 @@ export async function PATCH(
           message:
             "Missing required fields: weight, pickupCity, pickupState, deliveryCity, deliveryState",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -130,7 +130,7 @@ export async function PATCH(
             message:
               "In-city delivery requires pickupLatitude, pickupLongitude, deliveryLatitude, deliveryLongitude, and inCityDistance",
           },
-          { status: 400 }
+          { status: 400 },
         );
       }
     }
@@ -169,17 +169,47 @@ export async function PATCH(
       }
     }
 
+    const seller = await prisma.seller.findUnique({
+      where: { id: sellerId },
+      include: {
+        wallet: {
+          select: {
+            currency: true,
+          },
+        },
+      },
+    });
+
+    let codAmount_cents = codAmount ? Math.round(codAmount * 100) : null;
+    let actualAmount = codAmount;
+    let exchangeRate=1// exchangerate 
+    if (seller?.wallet?.currency !== Currency.USD) {
+      const { baseAmount, baseCents, rate } =
+        await currencyService.toBaseCurrency(
+          codAmount,
+          seller?.wallet?.currency!,
+        );
+      codAmount = baseAmount;
+      codAmount_cents = baseCents;
+      exchangeRate = rate;
+    }
+
     // Update shipment with new data
     const updatedShipment = await prisma.shipment.update({
       where: { id: shipmentId },
       data: {
-        ...body,
+        // ...body,
         weight: parseFloat(weight),
         dimensions,
         paymentMethod,
         description,
         pickupState,
         deliveryState,
+        codAmount,
+        codAmount_cents,
+        exchangeRate:exchangeRate, // IF COD AMOUNT IS IN NON-USD, WE STORE THE EXCHANGE RATE USED FOR CONVERSION
+        codAmountDisplay: actualAmount, // in user's peferred currency
+        currency: seller?.wallet?.currency || Currency.USD, // in user's peferred currency
         distance, // Update distance
         pickupLatitude,
         pickupLongitude,
@@ -223,15 +253,15 @@ export async function PATCH(
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { shipmentId: string } }
+  { params }: { params: { shipmentId: string } },
 ) {
   try {
-    const shipmentId  = (await params).shipmentId;
+    const shipmentId = (await params).shipmentId;
 
     if (!shipmentId) {
       return NextResponse.json(
         { message: "Shipment ID is required" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -242,20 +272,17 @@ export async function GET(
     if (!shipment) {
       return NextResponse.json(
         { message: "Shipment not found" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
     // Check if shipment is in PENDING or ASSIGNED status
-    if (
-      shipment.status !== "PENDING" &&
-      shipment.status !== "ASSIGNED"
-    ) {
+    if (shipment.status !== "PENDING" && shipment.status !== "ASSIGNED") {
       return NextResponse.json(
         {
           message: `Cannot edit shipment in ${shipment.status} status. Only PENDING and ASSIGNED orders can be edited.`,
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
