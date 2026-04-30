@@ -78,6 +78,7 @@ const publicRoutes = [
   "/api/distance/calculate",
   "/api/locations/cities",
   "/api/locations/distance",
+  "api/auth/oauth/shopify/callback", // callback for shopify oauth, needs to be public to allow shopify to call it without token
   "/api/locations/districts",
   "/api/locations/in-city-distance",
   "/api/locations/states",
