@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { jwtVerify } from 'jose';
 import prisma from '@/lib/prisma';
 import { generateApiKey } from '@fastship/lib';
-import { validateCSRFMiddleware, csrfErrorResponse } from '../../../../lib/csrf-middleware';
 
 /**
  * GET /api/auth/api-keys
