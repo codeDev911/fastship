@@ -116,11 +116,11 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const validated = body
+    const validated = createRateCardSchema.parse(body);
 
     // Check if business exists
     const business = await prisma.business.findUnique({
-      where: { id: body.businessId },
+      where: { id: validated.businessId },
       select: {
         id: true,
         companyName: true,
