@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
     response.cookies.set('shopify_oauth_state', state, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      sameSite: 'none',
       maxAge: 600, // 10 minutes
     });
 
@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
     response.cookies.set('shopify_oauth_shop', normalizedShop, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      sameSite: 'none',
       maxAge: 600,
     });
 
