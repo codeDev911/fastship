@@ -41,12 +41,17 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    console.log(oauthState);
+    
+
     // seller ID  decode from JWT token
     let token = oauthState;
     let sellerId: string;
     // Verify JWT token
     try {
       const verified = await jwtVerify(token, JWT_SECRET);
+      console.log({verified});
+      
       sellerId = verified.payload.sellerId as string;
     } catch (error) {
       return NextResponse.json(
@@ -133,7 +138,7 @@ export async function GET(request: NextRequest) {
     const shopData = await verifyResponse.json();
 
     // Update or create Integration record
-    const integration = await prisma.integration.upsert({
+    await prisma.integration.upsert({
       where: {
         sellerId_integrationType: {
           sellerId: sellerId,
