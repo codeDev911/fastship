@@ -88,7 +88,8 @@ export function ShopifyConnectModal({
 
     setLoading(true);
     setError(null);
-
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    const sellerId = user?.jobId; // get sellerId from localStorage (set at login)
     try {
       // Call API to initiate OAuth flow
       const response = await secureFetch('/api/integrations/shopify/connect', {
@@ -98,7 +99,7 @@ export function ShopifyConnectModal({
         },
         body: JSON.stringify({
           shopUrl: shopUrl.trim(),
-          sellerId:JSON.parse(localStorage.getItem('user') || '{}').jobId, // pass sellerId for state JWT
+          sellerId:sellerId, // pass sellerId for state JWT
         }),
       });
 
