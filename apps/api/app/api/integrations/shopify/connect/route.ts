@@ -19,8 +19,7 @@ const JWT_SECRET = new TextEncoder().encode(
  */
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { shopUrl, sellerId } = body;
+    const { shopUrl, sellerId } = await request.json();
 
     if (!shopUrl || typeof shopUrl !== "string") {
       console.log("no url needed");

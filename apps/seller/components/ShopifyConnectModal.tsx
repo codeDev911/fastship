@@ -88,7 +88,7 @@ export function ShopifyConnectModal({
 
     setLoading(true);
     setError(null);
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
+     const user =  JSON.parse(localStorage.getItem('user') || '{}');
     const sellerId = user?.jobId; // get sellerId from localStorage (set at login)
     try {
       // Call API to initiate OAuth flow
