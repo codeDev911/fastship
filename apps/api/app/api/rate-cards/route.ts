@@ -12,8 +12,8 @@ const createRateCardSchema = z.object({
   businessId: z.string().min(1, "Business ID required"),
   name: z.string().min(2, "Name must be at least 2 characters"),
   description: z.string().optional(),
-  baseRate: z.number().positive("Base rate must be positive"),
-  perKmRate: z.number().positive("Per km rate must be positive"),
+  baseRate: z.number(),
+  perKmRate: z.number(),
   minimumDistance: z
     .number()
     .nonnegative("Minimum distance cannot be negative")
@@ -116,11 +116,11 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const validated = createRateCardSchema.parse(body);
+    const validated = body
 
     // Check if business exists
     const business = await prisma.business.findUnique({
-      where: { id: validated.businessId },
+      where: { id: body.businessId },
       select: {
         id: true,
         companyName: true,
@@ -128,6 +128,8 @@ export async function POST(request: NextRequest) {
         user: { select: { preferredCurrency: true } },
       },
     });
+    
+
 
     if (!business) {
       return NextResponse.json(
@@ -135,6 +137,8 @@ export async function POST(request: NextRequest) {
         { status: 404 },
       );
     }
+
+    
 
     if (!business.isActive) {
       return NextResponse.json(
@@ -145,6 +149,7 @@ export async function POST(request: NextRequest) {
 
     // Validate distance range
     if (validated.minimumDistance >= validated.maximumDistance) {
+      console.error("Validation error: Minimum distance must be less than maximum distance");
       return NextResponse.json(
         { error: "Minimum distance must be less than maximum distance" },
         { status: 400 },
@@ -153,6 +158,7 @@ export async function POST(request: NextRequest) {
 
     // Validate weight range
     if (validated.minWeight >= validated.maxWeight) {
+      console.error("Validation error: Minimum distance must be less than maximum distance");
       return NextResponse.json(
         { error: "Min weight must be less than max weight" },
         { status: 400 },
@@ -208,6 +214,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(rateCard, { status: 201 });
   } catch (error) {
     if (error instanceof z.ZodError) {
+      console.error("Validation error:", error.errors);
       return NextResponse.json(
         { error: "Validation error", details: error.errors },
         { status: 400 },
