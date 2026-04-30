@@ -44,7 +44,8 @@ export async function POST(request: NextRequest) {
         { status: 400 },
       );
     }
-
+    console.log({sellerId});
+    
     // Generate OAuth state for CSRF protection
     const state = await new SignJWT({ sellerId }) // we've signed user id to send as a state and then get at callback to identify which user initiated the flow
       .setProtectedHeader({ alg: "HS256" })

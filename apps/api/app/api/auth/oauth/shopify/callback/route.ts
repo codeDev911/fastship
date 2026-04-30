@@ -31,21 +31,9 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get OAuth state from session/cookies to verify CSRF
-    const oauthState = request.cookies.get('shopify_oauth_state')?.value;
-
-    if (!oauthState || oauthState !== state) {
-      return NextResponse.json(
-        { message: 'Invalid OAuth state - possible CSRF attack' },
-        { status: 403 }
-      );
-    }
-
-    console.log(oauthState);
-    
 
     // seller ID  decode from JWT token
-    let token = oauthState;
+    let token = state;
     let sellerId: string;
     // Verify JWT token
     try {
