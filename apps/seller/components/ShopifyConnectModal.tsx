@@ -98,6 +98,7 @@ export function ShopifyConnectModal({
         },
         body: JSON.stringify({
           shopUrl: shopUrl.trim(),
+          sellerId:JSON.parse(localStorage.getItem('seller') || '{}').jobId, // pass sellerId for state JWT
         }),
       });
 

@@ -41,30 +41,17 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get seller ID from session
-    // Get authentication token from cookies
-       let token = request.cookies.get('auth_token')?.value|| "";
-    
-    // If no cookie, try Authorization header (cross-origin requests)
-    if (!token) {
-      const authHeader = request.headers.get('Authorization');
-      if (authHeader?.startsWith('Bearer ')) {
-        token = authHeader.substring(7); // Remove 'Bearer ' prefix
-      }
-    }
-    
+    // seller ID  decode from JWT token
+    let token = oauthState;
     let sellerId: string;
-
-   
-
     // Verify JWT token
     try {
       const verified = await jwtVerify(token, JWT_SECRET);
-      sellerId = verified.payload.jobId as string;
+      sellerId = verified.payload.sellerId as string;
     } catch (error) {
       return NextResponse.json(
         { message: 'Invalid authentication token' },
-        { status: 401 }
+        { status: 403 }
       );
     }
 
