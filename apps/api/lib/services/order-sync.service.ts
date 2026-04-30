@@ -90,7 +90,7 @@ export class OrderSyncService {
           warehouseZipCode: true,
           warehouseLatitude: true,
           warehouseLongitude: true,
-          wherehousePhone:true,
+          warehousePhone:true
         },
       });
 
@@ -287,7 +287,7 @@ export class OrderSyncService {
     const pickupZipCode = seller?.warehouseZipCode || '42000';
     const pickupLatitude = seller?.warehouseLatitude || undefined;
     const pickupLongitude = seller?.warehouseLongitude || undefined;
-    const pickupPhone = seller?.warehousePhone || "00000";
+    const pickupPhone = seller?.pickupPhone || "00000";
 
     // Note: In a real scenario, you'd get pickup address from seller profile
     // For now, using warehouse if available, otherwise placeholder
