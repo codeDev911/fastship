@@ -13,7 +13,7 @@ import currencyService from "@/lib/services/currency.service";
 async function getCityCoordinates(city: string, state: string) {
   try {
     const response = await fetch(
-      `${process.env.NEXTAUTH_URL || "http://localhost:3000"}/api/locations/cities?state=${encodeURIComponent(state)}`,
+      `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/locations/cities?state=${encodeURIComponent(state)}`,
     );
     const data = await response.json();
     const foundCity = data.cities?.find(

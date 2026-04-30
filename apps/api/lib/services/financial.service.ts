@@ -163,10 +163,9 @@ export const financialService = {
     walletId: string,
     type: TransactionType,
     amount: number,
-    currency: Currency,
     description: string,
     referenceId?: string,
-    displayCurrency?: Currency,
+    currency?: Currency,
   ) {
     validatePositiveAmount(amount, "transaction amount");
 
@@ -176,7 +175,7 @@ export const financialService = {
     // Convert to base currency for storage
     const { baseCents, rate } = await currencyService.toBaseCurrency(
       amount,
-      currency,
+      currency!,
     );
 
     const idempotencyKey = `tx-multi-${walletId}-${type}-${baseCents}-${referenceId || "no-ref"}-${Date.now()}`;
@@ -194,7 +193,6 @@ export const financialService = {
             amount: fromCents(baseCents),
             currency: currency,
             displayAmount: amount || undefined,
-            displayCurrency: displayCurrency || undefined,
             exchangeRate: rate, // Save rate for audit trail
             description,
             referenceId,
@@ -249,7 +247,9 @@ export const financialService = {
     // Convert incoming decimal amount to cents
     const amountCents = toCents(amount);
     validateCents(amountCents, "escrow lock amount");
-
+    console.log({amount});
+    console.log({currency});
+    
     // Convert to base currency if needed
     let baseCents = amountCents;
     let exchangeRate = 1;
@@ -270,7 +270,6 @@ export const financialService = {
           where: { id: walletId },
           select: { balance: true, balance_cents: true, currency: true },
         });
-        console.log(wallet.balance_cents);
 
         if (!wallet || wallet.balance_cents < baseCents) {
           throw new Error("Insufficient balance");
@@ -385,7 +384,6 @@ export const financialService = {
               currency: currency,
               exchangeRate: exchangeRate,
               displayAmount: amount,
-              displayCurrency: currency,
               referenceId,
               description: `Escrow released: ${reason}`,
               status: "COMPLETED",

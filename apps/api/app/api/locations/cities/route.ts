@@ -83,7 +83,7 @@ export async function GET(request: NextRequest) {
         type: 'city',
       }))
       .sort((a, b) => a.name.localeCompare(b.name)); // Sort alphabetically
-
+      
     return NextResponse.json({
       state,
       cities,

@@ -77,7 +77,7 @@ export function InCityLocationPicker({
 
     const reverseGeocode = async (lat: number, lng: number): Promise<string> => {
         try {
-            const response = await secureFetch(
+            const response = await fetch(
                 `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`,
                 {
                     headers: { Accept: 'application/json' },
@@ -155,8 +155,6 @@ export function InCityLocationPicker({
 
     const handleMapClick = async (lat: number, lng: number) => {
         const address = await reverseGeocode(lat, lng);
-        console.log({address});
-        console.log({lat,lng});
         
         if (activeSelection === 'pickup') {
             const parsed = parseAddress(address);

@@ -212,8 +212,9 @@ export async function PATCH(
             throw new Error("Business wallet not found");
           }
 
+            console.log(shipment?.seller?.wallet?.currency!);
+            
           
-
           // Lock seller escrow for shipping fee
           await financialService.lockEscrow(
             tx,
@@ -341,7 +342,7 @@ async function updateShopifyOrderStatus(shipmentId: string, newStatus: string) {
     for (const shopifyOrder of shipment.shopifyOrders) {
       try {
         await fetch(
-          `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}/api/integrations/shopify/update-status`,
+          `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000"}/api/integrations/shopify/update-status`,
           {
             method: "POST",
             headers: {

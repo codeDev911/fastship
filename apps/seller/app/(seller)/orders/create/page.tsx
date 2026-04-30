@@ -379,7 +379,7 @@ const CreateOrderForm = () => {
         
         // Reset form and redirect
         if (isEdit) {
-          router.push('/seller/orders');
+          router.push('/orders');
         } else {
           setFormData({
             pickupName: "", pickupPhone: "", pickupAddress: "", pickupCity: "", pickupState: states[0] || "", pickupZipCode: "",

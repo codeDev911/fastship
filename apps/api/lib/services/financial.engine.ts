@@ -815,7 +815,7 @@ export const createMultiCurrencyTransaction = async (data: {
   amountDecimal: number;
   amountCents: number;
   currency: Currency;
-  displayCurrency?: Currency;
+  currency?: Currency;
   category: string;
   description: string;
   referenceId?: string;
@@ -838,14 +838,13 @@ export const createMultiCurrencyTransaction = async (data: {
         amount_cents: baseCents,
         amount: toDecimal(baseCents),
         currency: Currency.USD,
-        displayAmount: data.displayCurrency
+        displayAmount: data.currency
           ? await currencyService.convert(
               toDecimal(baseCents),
               Currency.USD,
-              data.displayCurrency
+              data.currency
             )
           : undefined,
-        displayCurrency: data.displayCurrency || undefined,
         exchangeRate: rate, // Save the rate for audit trail
         category: data.category,
         description: data.description,
@@ -891,7 +890,7 @@ export const getTransactionInUserCurrency = async (
     baseAmount: transaction.amount,
     baseCurrency: transaction.currency,
     displayAmount: convertedAmount,
-    displayCurrency: userCurrency,
+    currency: userCurrency,
     exchangeRate: transaction.exchangeRate,
     description: transaction.description,
     type: transaction.type,

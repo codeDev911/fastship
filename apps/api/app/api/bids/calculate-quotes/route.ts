@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
       console.log("used saved distance");
     }
  
-      let sellerCurr = await prisma.seller.findUnique({where:{id:shipment.sellerId},select:{wallet:{select:{currency:true}}}})
+    let sellerCurr = await prisma.seller.findUnique({where:{id:shipment.sellerId},select:{wallet:{select:{currency:true}}}})
 
     // Find matching businesses
     const businesses = await bidService.findMatchingBusinesses(
