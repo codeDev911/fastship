@@ -4,6 +4,7 @@ import { financialService } from "@/lib/services/financial.service";
 import { bidService } from "@/lib/services/bid.service";
 import { Currency } from "@prisma/client";
 import currencyService from "@/lib/services/currency.service";
+import { toCents } from "@fastship/lib/server";
 
 export async function GET(
   request: NextRequest,
@@ -21,16 +22,16 @@ export async function GET(
       where: where,
       include: {
         seller: {
-          include:{
-            user:{
-              select:{
-                id:true,
-                name:true,
-                email:true,
-                phone:true,
-              }
-            }
-          }
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                phone: true,
+              },
+            },
+          },
         },
         assignment: {
           include: {
@@ -74,7 +75,7 @@ export async function PATCH(
     const validated = body;
     const shipmentId = (await params).id;
     const lockEscrow = request.nextUrl.searchParams.get("lockEscrow") == "true";
-    const { amount, driverId, businessId,sellerId, ...rest } = validated;
+    const { amount, driverId, businessId, sellerId, ...rest } = validated;
 
     let data: any;
 
@@ -100,54 +101,54 @@ export async function PATCH(
         ? {
             ...rest,
             actualRate: amount,
-            actualRate_cents : amount ? Math.round(amount * 100) : null,
-
+            actualRate_cents: amount ? Math.round(amount * 100) : null,
           }
         : {
             ...rest,
           };
     }
 
-
-    
-
     const updatedShipment = await prisma.$transaction(
       async (tx) => {
+        if (sellerId) {
+          let seller = await tx.seller.findUnique({
+            where: {
+              id: sellerId,
+            },
+            select: {
+              wallet: {
+                select: {
+                  id: true,
+                  currency: true,
+                },
+              },
+            },
+          });
 
-        let seller = await tx.seller.findUnique({
-          where: {
-            id: sellerId,
-          },
-          select:{
-            wallet:{
-              select:{
-                id:true,
-                currency:true
-              }
-            }
+          if (!seller) {
+            throw new Error("Seller not found");
           }
-        })
 
-
-        if(!seller){
-          throw new Error("Seller not found");
-        }
-
-        if(seller.wallet?.currency !== Currency.USD) {
-          const { baseAmount, baseCents, rate } =
-            await currencyService.toBaseCurrency(
-              amount,
-              seller?.wallet?.currency!,
-            )
-          data.actualRate = baseAmount;
-          data.actualRate_cents = baseCents;
-          data.exchangeRate = rate;
+          
+          if (seller.wallet?.currency !== Currency.USD) {
+            const { baseAmount, baseCents, rate } =
+              await currencyService.toBaseCurrency(
+                amount,
+                seller?.wallet?.currency!,
+              );
+            data.actualRate = baseAmount;
+            data.actualRate_cents = baseCents;
+            data.exchangeRate = rate;
+            data.actualRateDisplay = amount; // show original amount in user's currency
+          }
+        else{ // otherwise save in USD and convert later for display
+          data.actualRate = amount;
+          data.actualRate_cents = toCents(amount);
+          data.exchangeRate = 1;
           data.actualRateDisplay = amount; // show original amount in user's currency
+          
         }
-
-
-
-
+      }
         const shipment = await tx.shipment.update({
           where: { id: shipmentId },
           data: {
@@ -163,7 +164,7 @@ export async function PATCH(
                 wallet: {
                   select: {
                     id: true,
-                    currency:true
+                    currency: true,
                   },
                 },
               },
@@ -191,15 +192,13 @@ export async function PATCH(
 
         let businessWallet = await tx.wallet.findUnique({
           where: {
-            businessId:businessId || "",
+            businessId: businessId || "",
           },
           select: {
             id: true,
-            currency:true,
+            currency: true,
           },
         });
- 
-        
 
         // ==========================================
         // STEP 4: Lock escrow if assigning to business
@@ -213,6 +212,8 @@ export async function PATCH(
             throw new Error("Business wallet not found");
           }
 
+          
+
           // Lock seller escrow for shipping fee
           await financialService.lockEscrow(
             tx,
@@ -220,17 +221,28 @@ export async function PATCH(
             amount || 0,
             "Shipping fee locked",
             shipment.id,
-            shipment.seller.wallet.currency
+            shipment?.seller?.wallet?.currency!,
           );
+
+          // convert the amount to business wallet currency if different
+          let amountInBusinessCurrency = amount || 0;
+          if (businessWallet.currency !== shipment?.currency!) {
+            const converted = await currencyService.convert(
+              amount || 0,
+              shipment?.currency!,
+              businessWallet.currency,
+            );
+            amountInBusinessCurrency = converted;
+          }
 
           // Lock business escrow for 10% platform fee
           await financialService.lockEscrow(
             tx,
             businessWallet.id,
-            Number(amount) * 0.1 || 10,
+            Number(amountInBusinessCurrency) * 0.1,
             "Platform fee locked 10%",
             shipment.id,
-            businessWallet.currency
+            businessWallet.currency,
           );
 
           // ==========================================
@@ -269,19 +281,21 @@ export async function PATCH(
             status: validated.status || shipment.status,
             description: businessId
               ? `Shipment assigned to business`
-              :driverId?"Driver assigned": `Shipment status updated to ${validated.status}`,
+              : driverId
+                ? "Driver assigned"
+                : `Shipment status updated to ${validated.status}`,
           },
         });
 
-       return shipment;
+        return shipment;
       },
-      { timeout: 200000 }
+      { timeout: 200000 },
     );
 
     // Update Shopify order status if shipment status changed
     if (validated.status) {
-      updateShopifyOrderStatus(shipmentId, validated.status).catch(err => 
-        console.warn('Failed to update Shopify status:', err)
+      updateShopifyOrderStatus(shipmentId, validated.status).catch((err) =>
+        console.warn("Failed to update Shopify status:", err),
       );
     }
 
@@ -290,10 +304,9 @@ export async function PATCH(
     console.error("Update shipment error:", error);
     return NextResponse.json(
       {
-        error:
-          error instanceof Error ? error.message : "Internal server error",
+        error: error instanceof Error ? error.message : "Internal server error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -315,8 +328,12 @@ async function updateShopifyOrderStatus(shipmentId: string, newStatus: string) {
         },
       },
     });
-    
-    if (!shipment || !shipment.shopifyOrders || shipment.shopifyOrders.length === 0) {
+
+    if (
+      !shipment ||
+      !shipment.shopifyOrders ||
+      shipment.shopifyOrders.length === 0
+    ) {
       return; // No Shopify order to update
     }
 
@@ -324,25 +341,28 @@ async function updateShopifyOrderStatus(shipmentId: string, newStatus: string) {
     for (const shopifyOrder of shipment.shopifyOrders) {
       try {
         await fetch(
-          `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/integrations/shopify/update-status`,
+          `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}/api/integrations/shopify/update-status`,
           {
-            method: 'POST',
+            method: "POST",
             headers: {
-              'Content-Type': 'application/json',
+              "Content-Type": "application/json",
             },
             body: JSON.stringify({
               shipmentId,
               integrationId: shopifyOrder.integrationId,
               status: newStatus,
             }),
-          }
-        ).catch(err => console.warn('Failed to update Shopify status:', err));
+          },
+        ).catch((err) => console.warn("Failed to update Shopify status:", err));
       } catch (error) {
-        console.warn(`Failed to update Shopify order status for integration ${shopifyOrder.integrationId}:`, error);
+        console.warn(
+          `Failed to update Shopify order status for integration ${shopifyOrder.integrationId}:`,
+          error,
+        );
       }
     }
   } catch (error) {
-    console.warn('Error in updateShopifyOrderStatus:', error);
+    console.warn("Error in updateShopifyOrderStatus:", error);
     // Don't throw - this is a secondary operation
   }
 }

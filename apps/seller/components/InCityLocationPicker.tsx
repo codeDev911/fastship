@@ -155,6 +155,9 @@ export function InCityLocationPicker({
 
     const handleMapClick = async (lat: number, lng: number) => {
         const address = await reverseGeocode(lat, lng);
+        console.log({address});
+        console.log({lat,lng});
+        
         if (activeSelection === 'pickup') {
             const parsed = parseAddress(address);
             setPickupLocation((prev) => ({

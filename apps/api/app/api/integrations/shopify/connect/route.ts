@@ -19,11 +19,14 @@ export async function POST(request: NextRequest) {
     const { shopUrl } = body;
 
     if (!shopUrl || typeof shopUrl !== 'string') {
+      console.log("no url needed");
       return NextResponse.json(
         { message: 'Shop URL is required' },
         { status: 400 }
       );
     }
+
+    
 
     // Normalize shop URL
     const normalizedShop = shopUrl.includes('.myshopify.com')

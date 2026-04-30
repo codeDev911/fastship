@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { CourierBid, SellerOrder } from '@fastship/lib';
+import { CourierBid, CurrencyDisplay, SellerOrder } from '@fastship/lib';
 import { Button } from '@fastship/ui';
 import { Card } from '@fastship/ui';
 import { Star, X, Clock, DollarSign, CheckCircle2, MapPin, Truck, Info, TrendingDown, Zap, Award } from 'lucide-react';
@@ -43,7 +43,7 @@ export function BiddingModal({
   onAcceptBid,
   isLoading = false,
 }: BiddingModalProps) {
-  const [selectedBid, setSelectedBid] = useState<string|number | null>(null);
+  const [selectedBid, setSelectedBid] = useState<string | number | null>(null);
   const [acceptingBid, setAcceptingBid] = useState(false);
   const [viewMode, setViewMode] = useState<'list' | 'compare'>('list');
 
@@ -59,7 +59,7 @@ export function BiddingModal({
     }
   };
 
- 
+
   const serviceStyle = (bid: any) => getServiceLevelStyle(bid.rateCardName);
   const recommendationTag = (bid: any, idx: number) => getRecommendationTag(bid, idx, bids.length);
 
@@ -88,21 +88,19 @@ export function BiddingModal({
           <div className="flex gap-2 p-2 border-b border-border bg-gray-50">
             <button
               onClick={() => setViewMode('list')}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
-                viewMode === 'list'
-                  ? 'bg-accent text-accent-foreground'
-                  : 'bg-secondary text-foreground'
-              }`}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition ${viewMode === 'list'
+                ? 'bg-accent text-accent-foreground'
+                : 'bg-secondary text-foreground'
+                }`}
             >
               Detailed View
             </button>
             <button
               onClick={() => setViewMode('compare')}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
-                viewMode === 'compare'
-                  ? 'bg-accent text-accent-foreground'
-                  : 'bg-secondary text-foreground'
-              }`}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition ${viewMode === 'compare'
+                ? 'bg-accent text-accent-foreground'
+                : 'bg-secondary text-foreground'
+                }`}
             >
               Compare ({bids.slice(0, 3).length})
             </button>
@@ -139,11 +137,10 @@ export function BiddingModal({
                       setSelectedBid(idx);
                       setViewMode('list');
                     }}
-                    className={`rounded-xl border-2 p-4 transition-all cursor-pointer relative ${
-                      idx === 0
-                        ? 'border-accent ring-2 ring-accent/20'
-                        : 'border-border hover:border-accent/50'
-                    }`}
+                    className={`rounded-xl border-2 p-4 transition-all cursor-pointer relative ${idx === 0
+                      ? 'border-accent ring-2 ring-accent/20'
+                      : 'border-border hover:border-accent/50'
+                      }`}
                   >
                     {/* Recommendation Tag */}
                     {tag && (
@@ -164,11 +161,10 @@ export function BiddingModal({
                       {[...Array(5)].map((_, i) => (
                         <Star
                           key={i}
-                          className={`h-3 w-3 ${
-                            i < Math.floor(bid.rating)
-                              ? 'fill-yellow-400 text-yellow-400'
-                              : 'text-gray-300'
-                          }`}
+                          className={`h-3 w-3 ${i < Math.floor(bid.rating)
+                            ? 'fill-yellow-400 text-yellow-400'
+                            : 'text-gray-300'
+                            }`}
                         />
                       ))}
                       <span className="text-xs font-medium">{bid.rating.toFixed(1)}</span>
@@ -190,7 +186,7 @@ export function BiddingModal({
                     <div className="border-t border-border/50 pt-2 mt-2">
                       <p className="text-xs text-muted-foreground mb-1">Total</p>
                       <p className="text-xl font-bold text-accent">
-                        {bid.totalRate.toFixed(0)} <span className="text-xs font-normal text-foreground">PKR</span>
+                        <CurrencyDisplay amount={bid.totalRate} currency={bid.currencyDisplay} />
                       </p>
                     </div>
 
@@ -218,11 +214,10 @@ export function BiddingModal({
                 <div
                   key={bid.id}
                   onClick={() => setSelectedBid(idx)}
-                  className={`rounded-2xl border-2 p-5 transition-all cursor-pointer relative ${
-                    selectedBid === idx
-                      ? 'border-accent ring-2 ring-accent/20'
-                      : 'border-border hover:border-accent/50'
-                  }`}
+                  className={`rounded-2xl border-2 p-5 transition-all cursor-pointer relative ${selectedBid === idx
+                    ? 'border-accent ring-2 ring-accent/20'
+                    : 'border-border hover:border-accent/50'
+                    }`}
                 >
                   {/* Recommendation Badge */}
                   {tag && (
@@ -265,11 +260,10 @@ export function BiddingModal({
                           {[...Array(5)].map((_, i) => (
                             <Star
                               key={i}
-                              className={`h-4 w-4 ${
-                                i < Math.floor(bid.rating)
-                                  ? 'fill-yellow-400 text-yellow-400'
-                                  : 'text-gray-300'
-                              }`}
+                              className={`h-4 w-4 ${i < Math.floor(bid.rating)
+                                ? 'fill-yellow-400 text-yellow-400'
+                                : 'text-gray-300'
+                                }`}
                             />
                           ))}
                         </div>
@@ -285,7 +279,7 @@ export function BiddingModal({
                           <div>
                             <p className="text-xs text-muted-foreground">Distance</p>
                             <p className="text-sm font-medium text-foreground">
-                              {bid.distance.toFixed(0)} km
+                              {bid.distance.toFixed(2)} km
                             </p>
                           </div>
                         </div>
@@ -315,25 +309,26 @@ export function BiddingModal({
                           <p className="text-xs font-semibold text-foreground mb-3">Price Breakdown</p>
                           <div className="flex justify-between text-sm">
                             <span className="text-muted-foreground">Base Rate</span>
-                            <span className="font-medium">{bid.baseRate.toFixed(0)} PKR</span>
+                            <span className="font-medium"><CurrencyDisplay amount={bid.baseRate} currency={bid.currencyDisplay} />
+                            </span>
                           </div>
                           {bid.distanceCharge > 0 && (
                             <div className="flex justify-between text-sm">
-                              <span className="text-muted-foreground">Distance Charge ({bid.distance.toFixed(0)} km)</span>
-                              <span className="font-medium">+{bid.distanceCharge.toFixed(0)} PKR</span>
+                              <span className="text-muted-foreground">Distance Charge ({bid.distance.toFixed(2)} km)</span>
+                              <span className="font-medium flex">+<CurrencyDisplay amount={bid.distanceCharge} currency={bid.currencyDisplay} /></span>
                             </div>
                           )}
                           {bid.weightCharge > 0 && (
                             <div className="flex justify-between text-sm">
                               <span className="text-muted-foreground">Weight Surcharge</span>
-                              <span className="font-medium">+{bid.weightCharge.toFixed(0)} PKR</span>
+                              <span className="font-medium flex">+<CurrencyDisplay amount={bid.weightCharge} currency={bid.currencyDisplay} /></span>
                             </div>
                           )}
                           <div className="flex justify-between text-sm font-bold border-t border-border/50 pt-2 mt-2">
                             <span>Total</span>
-                            <span className="text-accent">{bid.totalRate.toFixed(0)} PKR</span>
+                            <span className="text-accent"><CurrencyDisplay amount={bid.totalRate} currency={bid.currencyDisplay} /> </span>
                           </div>
-                          
+
                         </div>
                       )}
                     </div>
@@ -344,9 +339,9 @@ export function BiddingModal({
                         <p className="text-xs text-muted-foreground mb-1">Total Quote</p>
                         <div className="flex items-baseline gap-1 justify-end">
                           <p className="text-3xl font-bold text-accent">
-                            {bid.totalRate.toFixed(0)}
+                            <CurrencyDisplay  amount={bid.totalRate} currency={bid.currencyDisplay} />
+
                           </p>
-                          <p className="text-sm text-foreground">PKR</p>
                         </div>
                       </div>
 

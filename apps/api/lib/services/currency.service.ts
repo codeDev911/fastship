@@ -215,10 +215,9 @@ export const currencyService = {
         rate: 1,
       };
     }
-    const amountCents = toCents(amount);
 
     const rate = await this.getExchangeRate(currency, BASE_CURRENCY);
-    const baseAmount = await this.convert(amountCents, currency, BASE_CURRENCY);
+    const baseAmount = await this.convert(amount, currency, BASE_CURRENCY);
     
     return {
       baseAmount: toDecimal(baseAmount),

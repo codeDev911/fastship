@@ -50,9 +50,11 @@ export default function SellerOrdersPage() {
 
   // Fetch connected integrations for sync
   useEffect(() => {
+    const user =  JSON.parse(localStorage.getItem('user') || '{}');
+    const sellerId = user?.jobId;
     const fetchIntegrations = async () => {
       try {
-        const response = await secureFetch('/api/sellers/integrations', {
+        const response = await secureFetch(`/api/sellers/integrations?sellerId=${sellerId}`, {
           headers: {
             'Content-Type': 'application/json',
           },
@@ -84,6 +86,8 @@ export default function SellerOrdersPage() {
       if (response.ok) {
         const data = await response.json();
         setBids(data.data);
+        console.log(data.data);
+        
       } else {
         const error = await response.json();
         console.error("Error fetching quotes:", error);

@@ -25,10 +25,11 @@ export function BillingPageShared({apiUrl}: {apiUrl: string}) {
       try {
         setIsLoading(true);
         const walletRes= await secureFetch(`${apiUrl}=${jobId}`)
-
+        
         if (walletRes.ok) {
           const data = await walletRes.json();
           setWallet(data?.data)
+          console.log(data?.data);
           setWalletBalance(data.data?.balance || 0);
         }
 
@@ -86,7 +87,7 @@ export function BillingPageShared({apiUrl}: {apiUrl: string}) {
                 <p className="text-sm font-medium text-muted-foreground">Available Balance</p>
               </div>
               <p className="text-4xl font-bold text-green-600">
-                <CurrencyDisplay amount={wallet.display?.balance||walletBalance} currency={wallet.currency} />
+                <CurrencyDisplay amountBase={wallet.balance - wallet.escrowBalance} amount={wallet.display?.available||walletBalance} currency={wallet.currency} />
               </p>
               <p className="mt-2 text-xs text-muted-foreground">Funds ready to use</p>
             </CardContent>
@@ -103,8 +104,7 @@ export function BillingPageShared({apiUrl}: {apiUrl: string}) {
                 <p className="text-sm font-medium text-muted-foreground">Locked in Escrow</p>
               </div>
               <p className="text-4xl font-bold text-orange-600">
-                <CurrencyDisplay amount={wallet?.display?.escorwBalance||wallet?.escrowBalance || 0} currency={wallet.currency} />
-
+                <CurrencyDisplay amountBase={wallet.escrowBalance} amount={wallet?.display?.escrowBalance || 0} currency={wallet.currency} />
               </p>
               <p className="mt-2 text-xs text-muted-foreground">Reserved for active shipments</p>
             </CardContent>
@@ -121,7 +121,7 @@ export function BillingPageShared({apiUrl}: {apiUrl: string}) {
                 <p className="text-sm font-medium text-muted-foreground">Total Balance</p>
               </div>
               <p className="text-4xl font-bold text-accent">
-                <CurrencyDisplay amount={wallet.display?.available||walletBalance} currency={wallet.currency} />
+                <CurrencyDisplay amountBase={wallet.balance} amount={wallet.display?.balance||walletBalance} currency={wallet.currency} />
               </p>
               <p className="mt-2 text-xs text-muted-foreground">{wallet?.currency}</p>
             </CardContent>
@@ -182,14 +182,14 @@ export function BillingPageShared({apiUrl}: {apiUrl: string}) {
                           </span>
                         </td>
                         <td className="px-4 py-4 text-sm">
-                          <span className="text-muted-foreground">{txn.description} {txn.currency}</span>
+                          <span className="text-muted-foreground">{txn.description} {txn?.currency}</span>
                         </td>
                         <td className="px-4 py-4 text-sm">
                           <span className="text-muted-foreground">{txn.referenceId || "N/A"}</span>
                         </td>
-                        <td className={`px-4 py-4 text-right text-sm font-semibold ${isAddition ? 'text-green-600' : isEscrow ? "text-yellow-600" : isEscrowReleased ? "text-blue-600" : 'text-red-600'
+                        <td className={`px-4 flex justify-end py-4 text-right text-sm font-semibold ${isAddition ? 'text-green-600' : isEscrow ? "text-yellow-600" : isEscrowReleased ? "text-blue-600" : 'text-red-600'
                           }`}>
-                          {isAddition ? '+' : isEscrow || isEscrowReleased ? "" : '-'} {txn.displayCurrency}{txn.amount} 
+                          {isAddition ? '+' : isEscrow || isEscrowReleased ? "" : '-'} <CurrencyDisplay amountBase={txn.amount} currency={txn?.currency} amount={txn?.displayAmount}/> 
                         </td>
                       </tr>
                     );

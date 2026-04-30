@@ -27,8 +27,10 @@ L.Icon.Default.mergeOptions({
 });
 
 function ClickHandler({ onMapClick }: { onMapClick: (lat: number, lng: number) => void }) {
+  
   useMapEvents({
     click(event) {
+      console.log(event);
       onMapClick(event.latlng.lat, event.latlng.lng);
     },
   });

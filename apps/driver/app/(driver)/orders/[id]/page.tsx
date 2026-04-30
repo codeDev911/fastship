@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { Card, CardHeader, CardContent } from '@fastship/ui';
 import { Button } from '@fastship/ui';
-import { secureFetch, ShipmentStatus } from '@fastship/lib';
+import { CurrencyDisplay, secureFetch, ShipmentStatus } from '@fastship/lib';
 
 import { StatusBadge } from '@fastship/ui';
 import { ReportDisputeModal } from '@fastship/ui';
@@ -153,7 +153,7 @@ export default function OrderDetailPage() {
                   <div className="text-right">
                     <p className="text-sm text-muted-foreground mb-2">Order Value</p>
                     <p className="text-2xl font-bold text-accent">
-                      PKR {(shipment.codAmount + shipment.actualRate).toFixed(2)}
+                      <CurrencyDisplay amount={(shipment.codAmountDisplay + shipment.actualRateDisplay).toFixed(2)} currency={shipment?.currency}/>
                     </p>
                   </div>
                 </div>
@@ -285,19 +285,19 @@ export default function OrderDetailPage() {
                   <div className="flex justify-between">
                     <span className="text-sm text-muted-foreground">Subtotal</span>
                     <span className="font-medium text-foreground">
-                      PKR {shipment.codAmount.toFixed(2)}
+                     <CurrencyDisplay currency={shipment?.currency} amount={shipment.codAmountDisplay.toFixed(2)}/>
                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-sm text-muted-foreground">Delivery Fee</span>
                     <span className="font-medium text-accent">
-                      PKR {shipment.actualRate.toFixed(2)}
+                     <CurrencyDisplay currency={shipment?.currency} amount={shipment.actualRateDisplay.toFixed(2)}/>
                     </span>
                   </div>
                   <div className="flex justify-between border-t border-border pt-3">
                     <span className="font-semibold text-foreground">Total</span>
                     <span className="font-bold text-accent">
-                      PKR {(shipment.codAmount + shipment.actualRate).toFixed(2)}
+                     <CurrencyDisplay currency={shipment?.currency} amount={(shipment.codAmountDisplay + shipment.actualRateDisplay).toFixed(2)}/>
                     </span>
                   </div>
                 </div>
@@ -309,7 +309,7 @@ export default function OrderDetailPage() {
               <CardContent className="pt-6">
                 <p className="text-sm text-muted-foreground mb-2">Your Earning</p>
                 <p className="text-3xl font-bold text-accent mb-4">
-                  PKR {(shipment.actualRate * 0.8).toFixed(2)}
+                  <CurrencyDisplay currency={shipment?.currency} amount={(shipment.actualRateDisplay * 0.8)}/>
                 </p>
                 <div className="space-y-2 text-xs text-muted-foreground">
                   <p>Base delivery fee for this order</p>

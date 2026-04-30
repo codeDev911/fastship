@@ -127,7 +127,7 @@ export function ShipmentListView({ shipments, isLoading = false }: ShipmentListV
                   <div className="flex items-center gap-2">
                     <MapPin className="h-4 w-4 text-muted-foreground" />
                     <span className="text-sm text-foreground">
-                      {shipment.deliveryCity}, {shipment.deliveryZipCode}
+                      {shipment.pickupCity}, {shipment.deliveryCity}
                     </span>
                   </div>
                 </td>
@@ -139,7 +139,7 @@ export function ShipmentListView({ shipments, isLoading = false }: ShipmentListV
                 </td>
                 <td className="px-6 py-4">
                   <p className="font-semibold text-accent">
-                    Rs.{shipment.actualRate.toFixed(2)}
+                    {shipment.actualRateDisplay.toFixed(2) || shipment?.actualRate} {shipment?.currency}
                   </p>
                 </td>
                 <td className="px-6 py-4">

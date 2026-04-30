@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { bidService } from "@/lib/services/bid.service";
 import { calculateDistanceByCities, estimatePickupTime } from "@/lib/utils/distance";
+import currencyService from "@/lib/services/currency.service";
 
 export async function GET(request: NextRequest) {
   try {
@@ -52,6 +53,7 @@ export async function GET(request: NextRequest) {
       console.log("used saved distance");
     }
  
+      let sellerCurr = await prisma.seller.findUnique({where:{id:shipment.sellerId},select:{wallet:{select:{currency:true}}}})
 
     // Find matching businesses
     const businesses = await bidService.findMatchingBusinesses(
@@ -73,6 +75,8 @@ export async function GET(request: NextRequest) {
     // Get all rate cards from all businesses and calculate quotes for each
     const allQuotes: any[] = [];
 
+    const getExchangeRateForSellerCurrency = await currencyService.getExchangeRate('USD',sellerCurr?.wallet?.currency);
+
     for (const business of businesses) {
       // Get all rate cards for this business
       const rateCards = business.rateCards || [];
@@ -93,6 +97,15 @@ export async function GET(request: NextRequest) {
         if (quote.isValid) {
           const serviceArea = business.serviceAreas[0];
           
+          // do conversion in user's currency
+          if(sellerCurr?.wallet?.currency && sellerCurr.wallet.currency !== 'USD'){
+            quote.baseRate = quote.baseRate * getExchangeRateForSellerCurrency;
+            quote.distanceCharge = quote.distanceCharge * getExchangeRateForSellerCurrency;
+            quote.weightCharge = quote.weightCharge * getExchangeRateForSellerCurrency;
+            quote.totalRate = quote.totalRate * getExchangeRateForSellerCurrency;
+          }
+           
+
           allQuotes.push({
             id: business.id,
             rateCardId: rateCard.id,
@@ -106,6 +119,7 @@ export async function GET(request: NextRequest) {
             totalRate: quote.totalRate,
             distance: quote.distanceKm,
             commission: business.commissionRate,
+            currencyDisplay: sellerCurr?.wallet?.currency || 'USD',
             // Why recommended
             driverCount: serviceArea?.activeDrivers || 0,
             estimatedPickupHours: estimatePickupTime(distance),

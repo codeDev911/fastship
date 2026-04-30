@@ -304,7 +304,7 @@ const FullScreenOrderModal = ({ isOpen, onClose, data, onReportIssue }: any) => 
                 </div>
               </div>
               <div>
-                <p className="text-sm">If you cancel this shipment, the courier will be notified to stop delivery. Please be advised that the Escrow-locked delivery fee of <strong><CurrencyDisplay currency={data?.seller?.wallet?.currency} showCode={false} amount={data?.actualRate}/></strong> may apply.</p>
+                <p className="text-sm flex ">If you cancel this shipment, the courier will be notified to stop delivery. Please be advised that the Escrow-locked delivery fee of <strong className='mx-1'><CurrencyDisplay currency={data?.currency} showCode={false} amount={data?.actualRateDisplay}/></strong> may apply.</p>
                 <br />
                 <Button onClick={()=>setCancelationModal({isOpen:true,data:data})}>Cancel Shipment</Button>
               </div>

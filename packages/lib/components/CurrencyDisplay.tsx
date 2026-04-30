@@ -34,7 +34,7 @@ export function CurrencyDisplay({
   amount,
   currency = Currency.USD,
   amountBase = 0,
-  showCode = true,
+  showCode = false,
   showSymbol = true,
   decimalPlaces = 2,
   className = '',

@@ -71,7 +71,7 @@ export function RecentOrdersTable({
                       </span>
                     </td>
                     <td className="px-4 py-4 text-sm font-medium text-foreground">
-                      {order.actualRate ? `${order.actualRate} ${order?.seller?.wallet?.currency}` : '—'}
+                      {order.actualRateDisplay ? `${order.actualRateDisplay?.toFixed(2)} ${order?.currency}` : '—'}
                     </td>
                     <td className="px-4 py-4 text-sm">
                       <div className="flex gap-2">

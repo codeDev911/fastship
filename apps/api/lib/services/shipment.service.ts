@@ -1,6 +1,7 @@
 import { prisma } from "@fastship/lib";
 import { ShipmentStatus, PaymentMethod } from "@prisma/client";
 import { financialService } from "./financial.service";
+import currencyService from "./currency.service";
 
 const safeNumber = (v: any) => Number(v || 0);
 
@@ -69,45 +70,48 @@ export const shipmentService = {
   // PICKUP FLOW
   // =========================
   async processPickup(shipmentId: string) {
-    return prisma.$transaction(async (tx) => {
-      const shipment = await tx.shipment.findUnique({
-        where: { id: shipmentId },
-        include: { assignment: { include: { driver: true } } },
-      });
+    return prisma.$transaction(
+      async (tx) => {
+        const shipment = await tx.shipment.findUnique({
+          where: { id: shipmentId },
+          include: { assignment: { include: { driver: true } } },
+        });
 
-      if (!shipment) throw new Error("Shipment not found");
-      if (shipment.status !== "ASSIGNED") {
-        throw new Error("Shipment must be assigned before pickup");
-      }
+        if (!shipment) throw new Error("Shipment not found");
+        if (shipment.status !== "ASSIGNED") {
+          throw new Error("Shipment must be assigned before pickup");
+        }
 
-      const updated = await tx.shipment.update({
-        where: { id: shipmentId },
-        data: {
-          status: "PICKED_UP",
-          pickedUpAt: new Date(),
-        },
-      });
+        const updated = await tx.shipment.update({
+          where: { id: shipmentId },
+          data: {
+            status: "PICKED_UP",
+            pickedUpAt: new Date(),
+          },
+        });
 
-      await tx.shipmentActivity.create({
-        data: {
+        await tx.shipmentActivity.create({
+          data: {
+            shipmentId,
+            status: "PICKED_UP",
+            description: "Package picked up by driver",
+          },
+        });
+
+        await financialService.processPayment(
+          tx,
           shipmentId,
-          status: "PICKED_UP",
-          description: "Package picked up by driver",
-        },
-      });
+          safeNumber(
+            shipment.codAmount || shipment.actualRate || shipment.expectedRate,
+          ),
+          shipment.paymentMethod as PaymentMethod,
+          shipment?.currency || "USD",
+        );
 
-      await financialService.processPayment(
-        tx,
-        shipmentId,
-        safeNumber(
-          shipment.codAmount || shipment.actualRate || shipment.expectedRate,
-        ),
-        shipment.paymentMethod as PaymentMethod,
-        shipment?.currency || "USD"
-      );
-
-      return updated;
-    },{timeout:100000});
+        return updated;
+      },
+      { timeout: 1000000 },
+    );
   },
 
   // =========================
@@ -124,7 +128,9 @@ export const shipmentService = {
         const shipment = await tx.shipment.findUnique({
           where: { id: shipmentId },
           include: {
-            seller: { select: { wallet: { select: { id: true ,currency:true} } } },
+            seller: {
+              select: { wallet: { select: { id: true, currency: true } } },
+            },
             assignment: { include: { driver: { include: { wallet: true } } } },
             payment: true,
           },
@@ -159,7 +165,7 @@ export const shipmentService = {
         // ================= COD FLOW =================
         if (shipment.paymentMethod === "COD") {
           const businessCommission = amount * 0.2;
-          const debtAmount : number =
+          const debtAmount: number =
             safeNumber(shipment.codAmount) + businessCommission;
 
           await financialService.addCODDebt(
@@ -172,16 +178,25 @@ export const shipmentService = {
 
           const businessWallet = await tx.wallet.findUnique({
             where: { businessId: shipment.businessId || "" },
-            select: { id: true ,currency:true},
+            select: { id: true, currency: true },
           });
+
+          let convertedAmountBuss = updated?.actualRate!; // USD base amount
+          if (updated?.currency !== businessWallet?.currency) {
+            convertedAmountBuss = await currencyService.convert(
+              updated?.actualRate!,
+              "USD",
+              businessWallet?.currency!,
+            );
+          }
 
           await financialService.cutEscrow(
             tx,
             businessWallet?.id!,
-            Number(amount * 0.1), // platform fee 10%
+            convertedAmountBuss * 0.1, // platform fee 10%
             "Platform fee 10%",
             updated.id,
-            businessWallet?.currency
+            businessWallet?.currency,
           );
 
           await financialService.releaseEscrow(
@@ -190,7 +205,7 @@ export const shipmentService = {
             amount,
             "Escrow released",
             updated.id,
-            shipment.seller.wallet?.currency
+            shipment?.currency!,
           );
         }
 
@@ -209,62 +224,74 @@ export const shipmentService = {
   // FAIL DELIVERY
   // =========================
   async failDelivery(shipmentId: string, reason: string) {
-    return prisma.$transaction(async (tx) => {
-      const updated = await tx.shipment.update({
-        where: { id: shipmentId },
-        data: { status: "FAILED" },
-        select: {
-          payment: { select: { id: true, paymentMethod: true } },
-          actualRate: true,
-          businessId: true,
-          seller: { select: { wallet: { select: { id: true ,currency:true} } } },
-        },
-      });
-
-      if (updated.payment?.paymentMethod === "COD") {
-        await tx.payment.update({
-          where: { id: updated.payment.id },
-          data: {
-            notes: "Delivery failed: " + reason,
-            paymentStatus: "FAILED",
+    return prisma.$transaction(
+      async (tx) => {
+        const updated = await tx.shipment.update({
+          where: { id: shipmentId },
+          data: { status: "FAILED" },
+          select: {
+            currency: true,
+            payment: { select: { id: true, paymentMethod: true } },
+            actualRate: true,
+            businessId: true,
+            seller: { select: { wallet: { select: { id: true } } } },
           },
         });
-      }
 
-      await financialService.releaseEscrow(
-        tx,
-        updated.seller.wallet?.id!,
-        safeNumber(updated.actualRate),
-        "Failed delivery release",
-        shipmentId,
-        updated.seller?.wallet?.currency
-      );
+        if (updated.payment?.paymentMethod === "COD") {
+          await tx.payment.update({
+            where: { id: updated.payment.id },
+            data: {
+              notes: "Delivery failed: " + reason,
+              paymentStatus: "FAILED",
+            },
+          });
+        }
 
-      const businessWallet = await tx.wallet.findUnique({
-        where: { businessId: updated.businessId || "" },
-        select: { id: true ,currency:true},
-      });
-
-      await financialService.cutEscrow(
-        tx,
-        businessWallet?.id!,
-        safeNumber(updated.actualRate) * 0.1,
-        "Platform cut",
-        shipmentId,
-        businessWallet?.currency!
-      );
-
-      await tx.shipmentActivity.create({
-        data: {
+        await financialService.releaseEscrow(
+          tx,
+          updated.seller.wallet?.id!,
+          safeNumber(updated.actualRate),
+          "Failed delivery release",
           shipmentId,
-          status: "FAILED",
-          description: `Delivery failed: ${reason}`,
-        },
-      });
+          updated?.currency!,
+        );
 
+        const businessWallet = await tx.wallet.findUnique({
+          where: { businessId: updated.businessId || "" },
+          select: { id: true, currency: true },
+        });
 
-      return updated;
-    },{timeout:100000});
+        let convertedAmountBuss = updated?.actualRate!; // USD base amount
+        if (updated?.currency !== businessWallet?.currency) {
+          convertedAmountBuss = await currencyService.convert(
+            updated?.actualRate!,
+            "USD",
+            businessWallet?.currency!,
+          );
+        }
+
+        await financialService.cutEscrow(
+          tx,
+          businessWallet?.id!,
+          convertedAmountBuss * 0.1,
+          "Platform cut",
+          shipmentId,
+          businessWallet?.currency!,
+        );
+
+        await tx.shipmentActivity.create({
+          data: {
+            shipmentId,
+            status: "FAILED",
+            description: `Delivery failed: ${reason}`,
+          },
+        });
+
+        return updated;
+      },
+      { timeout: 100000 },
+    );
   },
 
   // =========================
@@ -283,11 +310,14 @@ export const shipmentService = {
             payment: { select: { id: true } },
             assignment: {
               include: {
-                
-                driver: { select: { wallet: { select: { id: true,currency:true } } } },
+                driver: {
+                  select: { wallet: { select: { id: true, currency: true } } },
+                },
               },
             },
-            seller: { select: { wallet: { select: { id: true,currency:true } } } },
+            seller: {
+              select: { wallet: { select: { id: true, currency: true } } },
+            },
           },
         });
 
@@ -311,11 +341,11 @@ export const shipmentService = {
 
         const businessWallet = await tx.wallet.findUnique({
           where: { businessId: shipment.businessId || "" },
-          select: { id: true ,currency:true},
+          select: { id: true, currency: true },
         });
 
-        const amount = safeNumber(shipment.actualRate);
-
+        const amount = safeNumber(shipment.actualRateDisplay); // use local amount for accurate refund and fee calculation
+        
         if (
           canceledBy === "seller" &&
           ["PENDING", "ASSIGNED"].includes(shipment.status)
@@ -323,15 +353,24 @@ export const shipmentService = {
           await financialService.releaseEscrow(
             tx,
             shipment.seller.wallet?.id!,
-            amount,
+            amount,  
             "Seller cancel",
             shipment.id,
-            shipment.seller.wallet?.currency!,
+            shipment?.currency!,  
           );
+          let convertedAmountBuss = amount; // USD base amount
+          if (shipment?.currency !== businessWallet?.currency) {
+            // converting from usd beacuse amount is stored in usd (base amount)
+            convertedAmountBuss = await currencyService.convert(
+              convertedAmountBuss,
+              shipment?.currency!,
+              businessWallet?.currency!,
+            );
+          }
           await financialService.releaseEscrow(
             tx,
             businessWallet?.id!,
-            amount * 0.1,
+            convertedAmountBuss * 0.1,
             "Platform refund",
             shipment.id,
             businessWallet?.currency,
@@ -345,17 +384,28 @@ export const shipmentService = {
             amount,
             "Business cancel",
             shipment.id,
-            shipment.seller.wallet?.currency!,
-
+            shipment?.currency!,
           );
+
+          // convert to business currency if needed
+
+          let convertedAmountBuss = amount; // USD base amount
+          if (shipment?.currency !== businessWallet?.currency) {
+            // converting from usd beacuse amount is stored in usd (base amount)
+            convertedAmountBuss = await currencyService.convert(
+              convertedAmountBuss,
+              shipment?.currency!,
+              businessWallet?.currency!,
+            );
+          }
 
           await financialService.cutEscrow(
             tx,
             businessWallet?.id!,
-            amount * 0.1,
+            convertedAmountBuss * 0.1,
             "Platform fee",
             shipment.id,
-            shipment.seller.wallet?.currency
+            businessWallet?.currency,
           );
         }
 
@@ -379,55 +429,63 @@ export const shipmentService = {
   // RETURN SHIPMENT
   // =========================
   async returnShipment(shipmentId: string, reason: string) {
-    return prisma.$transaction(async (tx) => {
-      const shipment = await tx.shipment.findUnique({
-        where: { id: shipmentId },
-        include: {
-          payment: true,
-          seller: { include: { wallet: true } },
-          assignment: { include: { driver: {include:{
-            wallet:{
-              select:{id:true}
-            }
-          }} } },
-        },
-      });
-
-      if (!shipment) throw new Error("Shipment not found");
-      if (["DELIVERED", "FAILED", "CANCELLED"].includes(shipment.status)) {
-        throw new Error("Invalid state");
-      }
-
-      const updated = await tx.shipment.update({
-        where: { id: shipmentId },
-        data: { status: "RETURNED" },
-        include: { payment: { select: { id: true } } },
-      });
-
-      await tx.shipmentActivity.create({
-        data: {
-          shipmentId,
-          status: "RETURNED",
-          description: `Returned: ${reason}`,
-        },
-      });
-
-      if(updated.paymentMethod === "COD"){
-        await tx.payment.update({
-          where:{
-            shipmentId:updated.id
+    return prisma.$transaction(
+      async (tx) => {
+        const shipment = await tx.shipment.findUnique({
+          where: { id: shipmentId },
+          include: {
+            payment: true,
+            seller: { include: { wallet: true } },
+            assignment: {
+              include: {
+                driver: {
+                  include: {
+                    wallet: {
+                      select: { id: true },
+                    },
+                  },
+                },
+              },
+            },
           },
-          data:{
-            paymentStatus:"FAILED",
-            notes:"Payment failed due to return delivery"
-          }
-        })
-      }
+        });
 
-      
-      await financialService.processShipmentTransactions(tx, shipment);
+        if (!shipment) throw new Error("Shipment not found");
+        if (["DELIVERED", "FAILED", "CANCELLED"].includes(shipment.status)) {
+          throw new Error("Invalid state");
+        }
 
-      return updated;
-    },{timeout:100000});
+        const updated = await tx.shipment.update({
+          where: { id: shipmentId },
+          data: { status: "RETURNED" },
+          include: { payment: { select: { id: true } } },
+        });
+
+        await tx.shipmentActivity.create({
+          data: {
+            shipmentId,
+            status: "RETURNED",
+            description: `Returned: ${reason}`,
+          },
+        });
+
+        if (updated.paymentMethod === "COD") {
+          await tx.payment.update({
+            where: {
+              shipmentId: updated.id,
+            },
+            data: {
+              paymentStatus: "FAILED",
+              notes: "Payment failed due to return delivery",
+            },
+          });
+        }
+
+        await financialService.processShipmentTransactions(tx, shipment);
+
+        return updated;
+      },
+      { timeout: 100000 },
+    );
   },
 };

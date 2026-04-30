@@ -27,7 +27,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { BusinessLayout } from '@fastship/ui';
-import { secureFetch } from '@fastship/lib';
+import { CurrencyDisplay, secureFetch } from '@fastship/lib';
 import {ReleaseCODPaymentModal} from '@fastship/ui';
 
 function formatDuration(date1: any, date2: any) {
@@ -107,6 +107,8 @@ export default function ShipmentDetailPage() {
         if (shipmentRes.ok) {
           const shipmentData = await shipmentRes.json();
           setShipment(shipmentData);
+          console.log(shipmentData);
+          
           setSelectedDriver(shipmentData?.driverId || '');
           const time = formatDuration(new Date(shipmentData?.activities[0]?.createdAt), new Date(shipmentData?.activities?.slice(-1)?.createdAt))
           setTimeTaken(time)
@@ -257,7 +259,7 @@ export default function ShipmentDetailPage() {
                   <div className="text-right">
                     <p className="text-sm text-muted-foreground mb-2">Order Value</p>
                     <p className="text-2xl font-bold text-accent">
-                      PKR {((shipment?.codAmount || 0) + (shipment?.actualRate || 0))?.toFixed(2)}
+                      <CurrencyDisplay amount={((shipment?.codAmountDisplay || 0) + (shipment?.actualRateDisplay || 0))?.toFixed(2)} currency={shipment?.currency}/>
                     </p>
                   </div>
                 </div>
@@ -405,19 +407,19 @@ export default function ShipmentDetailPage() {
                     <h3 className="text-sm font-medium">
                       Amount
                     </h3>
-                    <p className="text-lg font-bold ">Rs. {shipment?.payment?.amount}</p>
+                    <p className="text-lg font-bold "><CurrencyDisplay amount={shipment?.payment?.amountDisplay||0} currency={shipment?.currency}/></p>
                   </div>
                   <div className="flex flex-col ">
                     <h3 className="text-sm font-medium">
                       Status
                     </h3>
-                    <p className="text-sm ">{shipment?.payment?.paymentStatus}</p>
+                    <p className="text-sm ">{shipment?.payment?.paymentStatus || "-"}</p>
                   </div>
                   <div className="flex flex-col ">
                     <h3 className="text-sm font-medium">
                       Method
                     </h3>
-                    <p className="text-sm ">Rs. {shipment?.payment?.paymentMethod}</p>
+                    <p className="text-sm ">{shipment?.payment?.paymentMethod || "-"}</p>
                   </div>
                   <div className="flex flex-col ">
                     <h3 className="text-sm font-medium">
@@ -441,19 +443,19 @@ export default function ShipmentDetailPage() {
                     <h3 className="text-sm font-medium">
                       Tax
                     </h3>
-                    <p className="text-sm ">Rs {shipment?.payment?.tax || "0"}</p>
+                    <p className="text-sm "><CurrencyDisplay amount={shipment?.payment?.taxDisplay || 0} currency={shipment?.currency}/></p>
                   </div>
                   <div className="flex flex-col ">
                     <h3 className="text-sm font-medium">
                       Commission
                     </h3>
-                    <p className="text-sm ">Rs {shipment?.payment?.commission || "0"}</p>
+                    <p className="text-sm "><CurrencyDisplay amount={shipment?.payment?.commissionDisplay || 0} currency={shipment?.currency}/></p>
                   </div>
                   <div className="flex flex-col ">
                     <h3 className="text-sm font-medium">
                       Driver Payable
                     </h3>
-                    <p className="text-sm ">Rs {shipment?.payment?.driverPayable || "-"}</p>
+                    <p className="text-sm "><CurrencyDisplay amount={shipment?.payment?.driverPayableDisplay || 0} currency={shipment?.currency}/></p>
                   </div>
                   <div className="flex flex-col ">
                     <h3 className="text-sm font-medium">
@@ -483,29 +485,34 @@ export default function ShipmentDetailPage() {
             <Card>
               <CardHeader title="💰 Revenue Breakdown" />
               <CardContent className="space-y-4">
+                    <div className="flex justify-between items-center">
+                    <span className="text-base text-muted-foreground">Payment method</span>
+                    <span className="text-lg font-bold"> {shipment?.paymentMethod}</span>
+                  </div>
+
                 <div className="space-y-3">
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-muted-foreground">Delivery Fee (Total)</span>
-                    <span className="text-lg font-bold">PKR {shipment?.actualRate?.toFixed(2)}</span>
+                    <span className="text-lg font-bold"> <CurrencyDisplay amountBase={shipment.actualRate} amount={shipment?.actualRateDisplay} currency={shipment?.currency}/></span>
                   </div>
-
+              
                   <div className="pl-4 space-y-2 border-l-2 border-accent">
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Your Commission (10%)</span>
                       <span className="font-medium text-accent">
-                        PKR {((shipment?.actualRate || 0) * 0.1)?.toFixed(2)}
+                         <CurrencyDisplay amount={(shipment?.actualRateDisplay || 0) * 0.1}  currency={shipment?.currency}/>
                       </span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Driver Payout (80%)</span>
                       <span className="font-medium">
-                        PKR {((shipment?.actualRate || 0) * 0.8)?.toFixed(2)}
+                         <CurrencyDisplay amount={(shipment?.actualRateDisplay || 0) * 0.8}  currency={shipment?.currency}/>
                       </span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Platform Fee (10%)</span>
                       <span className="font-medium">
-                        PKR {((shipment?.actualRate || 0) * 0.1)?.toFixed(2)}
+                         <CurrencyDisplay amount={(shipment?.actualRateDisplay || 0) * 0.1}  currency={shipment?.currency}/>
                       </span>
                     </div>
                   </div>
@@ -565,7 +572,7 @@ export default function ShipmentDetailPage() {
               </CardContent>
             </Card>
             {/* Driver Assignment */}
-            {!shipment?.assignment?.driverId && (
+            {!shipment?.assignment?.driverId && shipment.status !== "CANCELLED" &&shipment.status !== "FAILED" && (
               <Card>
                 <CardHeader title="Assign Driver" />
                 <CardContent className="space-y-4">
@@ -573,7 +580,7 @@ export default function ShipmentDetailPage() {
                     Select an available driver from our network to assign this shipment.
                   </p>
                   <Button
-                    onClick={() => setIsAssignmentModalOpen(true)}
+                     onClick={() => setIsAssignmentModalOpen(true)}
                     isLoading={isUpdating}
                     fullWidth
                   >

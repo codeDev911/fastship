@@ -207,5 +207,16 @@
     "method": "openroute",
     "savedAt": 1776460975335,
     "updatedAt": 1776460975335
+  },
+  "Peshawar_Khyber Pakhtunkhwa__Islamabad_Islamabad": {
+    "pickupCity": "Peshawar",
+    "pickupState": "Khyber Pakhtunkhwa",
+    "deliveryCity": "Islamabad",
+    "deliveryState": "Islamabad",
+    "distance": 183.03,
+    "duration": 6739.39,
+    "method": "openroute",
+    "savedAt": 1777312650029,
+    "updatedAt": 1777312650029
   }
 }

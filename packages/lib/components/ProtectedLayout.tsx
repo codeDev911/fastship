@@ -49,13 +49,7 @@ export function ProtectedLayout({
         const isExpired = AuthService.isTokenExpired();
         if (!token || isExpired) {
           // No valid token, redirect to login
-          console.log('[ProtectedLayout] No valid token, redirecting to login');
           setIsAuthenticated(false);
-
-          console.log({token,isExpired});
-          
-          
-          alert("Session expired or not found. Please login again.");
           // Small delay to ensure we're not in the middle of render
           setTimeout(() => {
             window.location.href = loginUrl;

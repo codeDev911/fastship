@@ -12,9 +12,9 @@
         if (cityPart) {
             city = cityPart.replace(/(city|town).*$/i, "").trim();
         }
-
+        
         const address = parts.slice(0, 2).join(", ");
-
+        
         return {
             address,
             city,

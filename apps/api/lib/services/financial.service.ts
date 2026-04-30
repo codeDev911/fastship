@@ -253,14 +253,14 @@ export const financialService = {
     // Convert to base currency if needed
     let baseCents = amountCents;
     let exchangeRate = 1;
-
+    
     if (currency !== Currency.USD) {
       const { baseCents: converted, rate } =
-        await currencyService.toBaseCurrency(amount, currency);
+      await currencyService.toBaseCurrency(amount, currency);
       baseCents = converted;
       exchangeRate = rate;
     }
-
+    
     return await runIdempotent(
       tx,
       `lock-${walletId}-${baseCents}-${referenceId}`,
@@ -270,6 +270,7 @@ export const financialService = {
           where: { id: walletId },
           select: { balance: true, balance_cents: true, currency: true },
         });
+        console.log(wallet.balance_cents);
 
         if (!wallet || wallet.balance_cents < baseCents) {
           throw new Error("Insufficient balance");
@@ -515,9 +516,9 @@ export const financialService = {
             driverId,
             amount: toDecimal(baseCents),
             amount_cents: baseCents,
-            amountDisplay:amount,
+            amountDisplay: amount,
             currency,
-            exchangeRate:exchangeRate,
+            exchangeRate: exchangeRate,
             createdAt: new Date(), //  Track original currency
           },
         });
@@ -587,15 +588,14 @@ export const financialService = {
   // =========================
   // SHIPMENT PROCESSING (CORE FLOW)
   // =========================
-  async processShipmentTransactions(
-    tx: Tx,
-    shipment: any,
-  ) {
+  async processShipmentTransactions(tx: Tx, shipment: any) {
     // Fetch shipment details with all required relations
     const fullShipment = await tx.shipment.findUnique({
       where: { id: shipment.id },
       include: {
-        seller: { include: { wallet: {select:{id:true,currency:true}} } },
+        seller: {
+          include: { wallet: { select: { id: true, currency: true } } },
+        },
         assignment: { include: { driver: { include: { wallet: true } } } },
       },
     });
@@ -605,7 +605,8 @@ export const financialService = {
     }
 
     //  NEW SECTION - Get currency from shipment or use provided currency
-    const transactionCurrency = fullShipment?.seller?.wallet?.currency || Currency.USD;
+    const transactionCurrency =
+      fullShipment?.currency || Currency.USD;
 
     // Convert decimal amount to cents and validate
     const amountCents = toCents(
@@ -662,30 +663,38 @@ export const financialService = {
           await this.cutEscrow(
             tx,
             fullShipment.seller.wallet.id,
-            fullShipment.actualRate,
+            fullShipment.actualRateDisplay, // local currency amount 
             "Shipment fee deducted",
             fullShipment.id,
-            transactionCurrency, //  PASS CURRENCY
+            transactionCurrency, //  PASS local shipment currency for accurate conversion and ledger recording
           );
 
           const businessWallet = await tx.wallet.findUnique({
             where: { businessId: fullShipment.businessId },
-            select:{id:true, currency:true}
+            select: { id: true, currency: true },
           });
 
           if (!businessWallet) throw new Error("Business wallet not found");
 
           // ------------ business transaction starts ----------------------
           // save the amount as amountDisplay to the business's peferred currency
-          const convertedAmount = await currencyService.convert(shipment.actualRate, "USD", businessWallet.currency);
-          const getExchangeRateForBusinessCurrencty = await currencyService.getExchangeRate("USD", businessWallet.currency);
+          const convertedAmount = await currencyService.convert(
+            shipment.actualRate,
+            "USD",
+            businessWallet.currency,
+          );
+          const getExchangeRateForBusinessCurrencty =
+            await currencyService.getExchangeRate(
+              "USD",
+              businessWallet.currency,
+            );
           await withWalletLock(tx, businessWallet.id, async () => {
             await addLedger(tx, {
               walletId: businessWallet.id,
-              amount: businessFeeCents + platformFeeCents,// storing 10% + 10% beacuse  10% of business fee and 10% of platform, because we already cut's platform feef from escrow cut
+              amount: businessFeeCents + platformFeeCents, // storing 10% + 10% beacuse  10% of business fee and 10% of platform, because we already cut's platform feef from escrow cut
               localAmount: Number(convertedAmount * 0.2), // storing 20% because 10% of business fee and 10% of platform, because we already cut's platform feef from escrow cut
               exchangeRate: getExchangeRateForBusinessCurrencty,
-              currency:businessWallet.currency,
+              currency: businessWallet.currency,
               type: "CREDIT",
               category: "DELIVERY_FEE + ESCROW_RELEASE",
               referenceId: fullShipment.id,
@@ -703,14 +712,14 @@ export const financialService = {
                 currency: true,
               },
             });
- 
+
             await tx.transaction.create({
               data: {
-                amount: businessFee,
-                amount_cents: businessFeeCents,
-                currency: businessWallet.currency,  
+                amount: businessFee + platformFee,
+                amount_cents: businessFeeCents + platformFeeCents, // storing 10% + 10% beacuse  10% of business fee and 10% of platform, because we already cut's platform feef from escrow cut
+                currency: businessWallet.currency,
                 description: "Delivery fee received & Escrow released",
-                displayAmount: Number(convertedAmount * 0.2),// displaying 20% because 10% of business fee and 10% of platform, because we already cut's platform feef from escrow cut
+                displayAmount: Number(convertedAmount * 0.2), // displaying 20% because 10% of business fee and 10% of platform, because we already cut's platform feef from escrow cut
                 exchangeRate: getExchangeRateForBusinessCurrencty,
                 type: "CREDIT",
                 completedAt: new Date(),
@@ -726,23 +735,32 @@ export const financialService = {
           if (!fullShipment?.assignment?.driver?.wallet?.id)
             throw new Error("Driver wallet not found");
 
-
           // ------------ driver transaction starts ----------------------
           await withWalletLock(
             tx,
             fullShipment?.assignment?.driver?.wallet.id,
             async () => {
-              let driverWallet = await tx.wallet.findUnique({where:{id:fullShipment?.assignment?.driver?.wallet.id}})
+              let driverWallet = await tx.wallet.findUnique({
+                where: { id: fullShipment?.assignment?.driver?.wallet.id },
+              });
 
-              const convertedAmountDriver = await currencyService.convert(shipment.actualRate, "USD", driverWallet.currency);
-              const getExchangeRateForDriverCurrencty = await currencyService.getExchangeRate("USD", driverWallet.currency);
+              const convertedAmountDriver = await currencyService.convert(
+                shipment.actualRate,
+                "USD",
+                driverWallet.currency,
+              );
+              const getExchangeRateForDriverCurrencty =
+                await currencyService.getExchangeRate(
+                  "USD",
+                  driverWallet.currency,
+                );
 
               await addLedger(tx, {
                 walletId: fullShipment?.assignment?.driver?.wallet.id,
                 amount: driverFeeCents,
                 localAmount: Number(convertedAmountDriver * 0.8), // storing 80% because driver gets 80% of the delivery fee
-                exchangeRate:getExchangeRateForDriverCurrencty,
-                currency:driverWallet.currency,
+                exchangeRate: getExchangeRateForDriverCurrencty,
+                currency: driverWallet.currency,
                 type: "CREDIT",
                 category: "DELIVERY_FEE",
                 referenceId: fullShipment.id,
@@ -758,7 +776,7 @@ export const financialService = {
                   currency: true,
                 },
               });
-               
+
               await tx.transaction.create({
                 data: {
                   amount: driverFee,
@@ -833,7 +851,7 @@ export const financialService = {
     // Convert incoming decimal amount to cents
     const amountCents = toCents(amount);
     validateCents(amountCents, "escrow cut amount");
-
+    
     let baseCents = amountCents;
     let exchangeRate = 1;
 
@@ -843,6 +861,8 @@ export const financialService = {
       baseCents = converted;
       exchangeRate = rate;
     }
+
+    
 
     return await runIdempotent(
       tx,
@@ -913,21 +933,35 @@ export const financialService = {
     const amountCents = toCents(amount);
     validateCents(amountCents, "transfer amount");
 
-    // Convert to base currency if needed
-    let baseCents = amountCents;
-    let exchangeRate = 1;
-
-    if (currency !== Currency.USD) {
-      const { baseCents: converted, rate } =
-        await currencyService.toBaseCurrency(amount, currency);
-      baseCents = converted;
-      exchangeRate = rate;
-    }
-
     // Better idempotency key with timestamp to avoid collisions
-    const uniqueKey = `transfer-${from}-${fromId}-${to}-${toId}-${baseCents}-${referenceId || "no-ref"}-${Date.now()}`;
+    const uniqueKey = `transfer-${from}-${fromId}-${to}-${toId}-${amountCents}-${referenceId || "no-ref"}-${Date.now()}`;
 
     return await runIdempotent(tx, uniqueKey, "transfer", async () => {
+      let baseCents = amountCents;
+      let exchangeRate = 1;
+
+      let sender = await tx[from].findUnique({
+        where: { id: fromId },
+        select: {
+          wallet: {
+            select: {
+              id: true,
+              currency: true,
+            },
+          },
+        },
+      });
+
+      
+
+      // Convert to base currency if needed
+      if (sender.wallet.currency !== Currency.USD) {
+        const { baseCents: converted, rate } = await currencyService.toBaseCurrency(amount, sender.wallet.currency );
+        baseCents = converted;
+        exchangeRate = rate;        
+        
+      }
+
       // 🔐 resolve wallets safely
       const senderWhere =
         from === "seller"
@@ -955,6 +989,7 @@ export const financialService = {
         throw new Error("Wallet not found");
       }
 
+
       if (senderWallet.balance_cents < baseCents) {
         throw new Error("Insufficient balance");
       }
@@ -964,7 +999,7 @@ export const financialService = {
         convertedAmount = await currencyService.convert(
           fromCents(baseCents),
           Currency.USD,
-          receiverWallet.currency,
+          sender?.wallet?.currency,
         );
       }
 
@@ -1005,16 +1040,17 @@ export const financialService = {
           },
         });
 
-      let convertedAmountForReceiver = fromCents(baseCents)
-      if(receiverWallet.currency !== Currency.USD){
+        let convertedAmountForReceiver = fromCents(baseCents);
+        if (receiverWallet.currency !== Currency.USD) {
           convertedAmountForReceiver = await currencyService.convert(
-          fromCents(baseCents),
-          Currency.USD,
-          senderWallet.currency,
-        );
-      }
+            fromCents(baseCents),
+            Currency.USD,
+            receiverWallet.currency,
+          );
+        }
 
-        const exchangeRateForRecieverConverts = await currencyService.getExchangeRate("USD",receiverWallet.currency)
+        const exchangeRateForRecieverConverts =
+          await currencyService.getExchangeRate("USD", receiverWallet.currency);
 
         // 🔒 LOCK RECEIVER WALLET
         await withWalletLock(tx, receiverWallet.id, async () => {
@@ -1023,9 +1059,9 @@ export const financialService = {
             walletId: receiverWallet.id,
             amount: baseCents,
             type: "CREDIT",
-            localAmount:convertedAmountForReceiver,
-            currency:receiverWallet.currency,
-            exchangeRate:exchangeRateForRecieverConverts,
+            localAmount: convertedAmountForReceiver,
+            currency: receiverWallet.currency,
+            exchangeRate: exchangeRateForRecieverConverts,
             category: "TRANSFER_IN",
             referenceId,
           });
