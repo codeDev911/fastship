@@ -67,7 +67,7 @@ export async function GET(request: NextRequest) {
       "USD",
       buss?.user.preferredCurrency,
     );
-    
+
     const rateCards = await prisma.$queryRaw`
         SELECT
           rc.*,
@@ -86,10 +86,7 @@ export async function GET(request: NextRequest) {
       `;
 
     return NextResponse.json({
-      data: {rateCards,
-          peferredCurrency:buss?.user.preferredCurrency,
-
-      },
+      data: { rateCards, peferredCurrency: buss?.user.preferredCurrency },
       pagination: {
         total,
         skip,
@@ -116,11 +113,25 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const validated = createRateCardSchema.parse(body);
+    let {
+      businessId,
+      name,
+      description,
+      baseRate,
+      perKmRate,
+      minimumDistance,
+      maximumDistance,
+      minWeight,
+      maxWeight,
+      weightSurcharge,
+      serviceStates,
+      inCityDelivery,
+      serviceCities,
+    } = body;
 
     // Check if business exists
     const business = await prisma.business.findUnique({
-      where: { id: validated.businessId },
+      where: { id: businessId },
       select: {
         id: true,
         companyName: true,
@@ -144,8 +155,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate distance range
-    if (validated.minimumDistance >= validated.maximumDistance) {
-      console.error("Validation error: Minimum distance must be less than maximum distance");
+    if (minimumDistance >= maximumDistance) {
+      console.error(
+        "Validation error: Minimum distance must be less than maximum distance",
+      );
       return NextResponse.json(
         { error: "Minimum distance must be less than maximum distance" },
         { status: 400 },
@@ -153,8 +166,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate weight range
-    if (validated.minWeight >= validated.maxWeight) {
-      console.error("Validation error: Minimum distance must be less than maximum distance");
+    if (minWeight >= maxWeight) {
+      console.error(
+        "Validation error: Minimum distance must be less than maximum distance",
+      );
       return NextResponse.json(
         { error: "Min weight must be less than max weight" },
         { status: 400 },
@@ -165,7 +180,6 @@ export async function POST(request: NextRequest) {
 
     let rateCard = await prisma.$transaction(
       async (tx) => {
-        let { baseRate, perKmRate, weightSurcharge, ...rest }: any = validated;
         const userCurrency = business.user.preferredCurrency;
 
         if (userCurrency !== Currency.USD) {
@@ -185,7 +199,16 @@ export async function POST(request: NextRequest) {
 
         return await tx.rateCard.create({
           data: {
-            ...rest,
+            name,
+            description,
+            serviceStates,
+            inCityDelivery,
+            businessId,
+            minimumDistance,
+            maximumDistance,
+            minWeight,
+            maxWeight,
+            serviceCities,
             baseRate_cents: toCents(baseRate),
             perKmRate_cents: toCents(perKmRate),
             weightSurcharge_cents: toCents(weightSurcharge),
@@ -210,7 +233,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(rateCard, { status: 201 });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      
       return NextResponse.json(
         { error: "Validation error", details: error.errors },
         { status: 400 },
