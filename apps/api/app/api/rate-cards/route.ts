@@ -12,8 +12,8 @@ const createRateCardSchema = z.object({
   businessId: z.string().min(1, "Business ID required"),
   name: z.string().min(2, "Name must be at least 2 characters"),
   description: z.string().optional(),
-  baseRate: z.number(),
-  perKmRate: z.number(),
+  baseRate: z.number().min(0.0001, "Base rate cannot be negative"),
+  perKmRate: z.number().min(0.0001, "Base rate cannot be negative"),
   minimumDistance: z
     .number()
     .nonnegative("Minimum distance cannot be negative")
@@ -138,7 +138,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    
+
 
     if (!business.isActive) {
       return NextResponse.json(
