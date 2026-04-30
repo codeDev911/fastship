@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { financialService } from '@/lib/services';
 
 export async function GET(request: NextRequest) {
   try {
@@ -7,7 +8,7 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status') || 'all';
 
     let where: any = {};
-
+ 
     if (status === 'active') {
       where.isActive = true;
     } else if (status === 'inactive') {

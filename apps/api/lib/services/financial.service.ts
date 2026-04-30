@@ -73,7 +73,6 @@ export const financialService = {
             walletId,
             "CREDIT",
             amount,
-            currency,
             "Wallet top-up with currency conversion",
             `topup-${walletId}-${amount}-${Date.now()}`,
             userCurrency,
@@ -138,6 +137,9 @@ export const financialService = {
           walletId,
           amount: balanceChangeCents,
           type,
+          localAmount: amount,
+          exchangeRate: 1,
+          currency,
           category: "TRANSACTION",
           referenceId,
         });
@@ -185,32 +187,19 @@ export const financialService = {
       idempotencyKey,
       "multi_currency_transaction",
       async () => {
-        const transaction = await tx.transaction.create({
-          data: {
-            walletId,
-            type,
-            amount_cents: baseCents, // Stored in base currency
-            amount: fromCents(baseCents),
-            currency: currency,
-            displayAmount: amount || undefined,
-            exchangeRate: rate, // Save rate for audit trail
-            description,
-            referenceId,
-            status: "COMPLETED",
-            completedAt: new Date(),
-          },
-        });
-
         const balanceChangeCents = ["CREDIT", "SETTLEMENT"].includes(type)
           ? baseCents
           : -baseCents;
 
-        await withWalletLock(tx, walletId, async () => {
+        let transaction = await withWalletLock(tx, walletId, async () => {
           await addLedger(tx, {
             walletId,
             amount: balanceChangeCents,
             type,
-            category: `MULTI_CURRENCY_${type}`,
+            localAmount: amount,
+            exchangeRate: rate,
+            currency,
+            category: `WALLET TOPUP`,
             referenceId,
           });
 
@@ -219,6 +208,22 @@ export const financialService = {
             data: {
               balance: { increment: fromCents(balanceChangeCents) },
               balance_cents: { increment: balanceChangeCents },
+            },
+          });
+
+          return await tx.transaction.create({
+            data: {
+              walletId,
+              type,
+              amount_cents: baseCents, // Stored in base currency
+              amount: fromCents(baseCents),
+              currency: currency,
+              displayAmount: amount || undefined,
+              exchangeRate: rate, // Save rate for audit trail
+              description,
+              referenceId,
+              status: "COMPLETED",
+              completedAt: new Date(),
             },
           });
         });
@@ -247,20 +252,20 @@ export const financialService = {
     // Convert incoming decimal amount to cents
     const amountCents = toCents(amount);
     validateCents(amountCents, "escrow lock amount");
-    console.log({amount});
-    console.log({currency});
-    
+    console.log({ amount });
+    console.log({ currency });
+
     // Convert to base currency if needed
     let baseCents = amountCents;
     let exchangeRate = 1;
-    
+
     if (currency !== Currency.USD) {
       const { baseCents: converted, rate } =
-      await currencyService.toBaseCurrency(amount, currency);
+        await currencyService.toBaseCurrency(amount, currency);
       baseCents = converted;
       exchangeRate = rate;
     }
-    
+
     return await runIdempotent(
       tx,
       `lock-${walletId}-${baseCents}-${referenceId}`,
@@ -603,8 +608,7 @@ export const financialService = {
     }
 
     //  NEW SECTION - Get currency from shipment or use provided currency
-    const transactionCurrency =
-      fullShipment?.currency || Currency.USD;
+    const transactionCurrency = fullShipment?.currency || Currency.USD;
 
     // Convert decimal amount to cents and validate
     const amountCents = toCents(
@@ -661,7 +665,7 @@ export const financialService = {
           await this.cutEscrow(
             tx,
             fullShipment.seller.wallet.id,
-            fullShipment.actualRateDisplay, // local currency amount 
+            fullShipment.actualRateDisplay, // local currency amount
             "Shipment fee deducted",
             fullShipment.id,
             transactionCurrency, //  PASS local shipment currency for accurate conversion and ledger recording
@@ -849,7 +853,7 @@ export const financialService = {
     // Convert incoming decimal amount to cents
     const amountCents = toCents(amount);
     validateCents(amountCents, "escrow cut amount");
-    
+
     let baseCents = amountCents;
     let exchangeRate = 1;
 
@@ -859,8 +863,6 @@ export const financialService = {
       baseCents = converted;
       exchangeRate = rate;
     }
-
-    
 
     return await runIdempotent(
       tx,
@@ -950,14 +952,12 @@ export const financialService = {
         },
       });
 
-      
-
       // Convert to base currency if needed
       if (sender.wallet.currency !== Currency.USD) {
-        const { baseCents: converted, rate } = await currencyService.toBaseCurrency(amount, sender.wallet.currency );
+        const { baseCents: converted, rate } =
+          await currencyService.toBaseCurrency(amount, sender.wallet.currency);
         baseCents = converted;
-        exchangeRate = rate;        
-        
+        exchangeRate = rate;
       }
 
       // 🔐 resolve wallets safely
@@ -986,7 +986,6 @@ export const financialService = {
       if (!senderWallet || !receiverWallet) {
         throw new Error("Wallet not found");
       }
-
 
       if (senderWallet.balance_cents < baseCents) {
         throw new Error("Insufficient balance");
