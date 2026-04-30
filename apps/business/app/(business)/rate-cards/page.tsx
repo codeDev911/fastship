@@ -172,6 +172,8 @@ export default function RateCardsPage() {
                   onCreateNew={handleCreateNew}
                   onEdit={handleEdit}
                   onDelete={handleDelete}
+                    currency={peferredCurrency}
+
                   isLoading={isFormLoading}
                 />
               </div>

@@ -3,10 +3,12 @@
 import React, { useState } from 'react';
 import { RateCard } from '../../lib/types';
 import { Plus, Edit2, Trash2, Check, MapPin, Loader } from 'lucide-react';
+import { CurrencyDisplay } from '../../lib/components';
 
 interface RateCardListProps {
   rateCards: RateCard[];
   selectedRateCardId?: string;
+  currency: any;
   onSelectRateCard: (rateCard: RateCard) => void;
   onCreateNew: () => void;
   onEdit: (rateCard: RateCard) => void;
@@ -19,6 +21,7 @@ export function RateCardListNew({
   selectedRateCardId,
   onSelectRateCard,
   onCreateNew,
+  currency,
   onEdit,
   onDelete,
   isLoading = false,
@@ -135,11 +138,11 @@ export function RateCardListNew({
               <div className="grid grid-cols-2 gap-3 py-2 border-t border-border">
                 <div>
                   <p className="text-xs text-muted-foreground">Base Rate</p>
-                  <p className="text-sm font-semibold text-foreground">PKR {card.displayBaseRate}</p>
+                  <p className="text-sm font-semibold text-foreground"><CurrencyDisplay inline={true} amount={card?.displayBaseRate!} amountBase={card.baseRate} currency={currency||"USD"}/></p>
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Per KM</p>
-                  <p className="text-sm font-semibold text-foreground">PKR {card.displayPerKmRate}</p>
+                  <p className="text-sm font-semibold text-foreground"><CurrencyDisplay inline={true} amount={card?.displayPerKmRate!} amountBase={card.perKmRate} currency={currency||"USD"}/></p>
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Base Weight</p>
@@ -159,8 +162,8 @@ export function RateCardListNew({
                 </div>
                 {card.weightSurcharge > 0 && (
                   <div>
-                    <p className="text-xs text-muted-foreground">Weight Surcharge</p>
-                    <p className="text-sm font-semibold text-foreground">PKR {card.displaySurChargeRate}/kg</p>
+                    <p className="text-xs text-muted-foreground">Weight Surcharge/kg</p>
+                    <p className="text-sm font-semibold text-foreground"><CurrencyDisplay inline={true} amount={card?.displaySurChargeRate!} amountBase={card.weightSurcharge} currency={currency||"USD"}/></p>
                   </div>
                 )}
               </div>

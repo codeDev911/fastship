@@ -123,6 +123,9 @@ export async function POST(request: NextRequest) {
       maximumDistance,
       minWeight,
       maxWeight,
+      displayBaseRate,
+      displayPerKmRate,
+      displaySurChargeRate,
       weightSurcharge,
       serviceStates,
       inCityDelivery,
@@ -182,19 +185,31 @@ export async function POST(request: NextRequest) {
       async (tx) => {
         const userCurrency = business.user.preferredCurrency;
 
+        const rates: any = {};
+
+        // convert rate to base currency if user currency is not USD and if there is changes in rates
         if (userCurrency !== Currency.USD) {
-          baseRate = await currencyService.toBaseCurrency(
-            baseRate,
+          baseRate = await currencyService.convert(
+            displayBaseRate,
             userCurrency,
+            "USD",
           );
-          perKmRate = await currencyService.toBaseCurrency(
-            perKmRate,
+          rates.baseRate_cents = toCents(baseRate);
+          rates.baseRate = baseRate;
+          perKmRate = await currencyService.convert(
+            displayPerKmRate,
             userCurrency,
+            "USD",
           );
-          weightSurcharge = await currencyService.toBaseCurrency(
-            weightSurcharge,
+          rates.perKmRate_cents = toCents(perKmRate);
+          rates.perKmRate = perKmRate;
+          weightSurcharge = await currencyService.convert(
+            displaySurChargeRate,
             userCurrency,
+            "USD",
           );
+          rates.weightSurcharge_cents = toCents(weightSurcharge);
+          rates.weightSurcharge = weightSurcharge;
         }
 
         return await tx.rateCard.create({
@@ -203,21 +218,15 @@ export async function POST(request: NextRequest) {
             description,
             serviceStates,
             inCityDelivery,
-            businessId,
             minimumDistance,
             maximumDistance,
-            business:{
+            business: {
               connect: { id: businessId },
             },
             minWeight,
             maxWeight,
-            serviceCities,
-            baseRate_cents: toCents(baseRate),
-            perKmRate_cents: toCents(perKmRate),
-            weightSurcharge_cents: toCents(weightSurcharge),
-            baseRate,
-            perKmRate,
-            weightSurcharge,
+            serviceCities, 
+            ...rates,
           },
           include: {
             business: {
@@ -232,6 +241,7 @@ export async function POST(request: NextRequest) {
       },
       { timeout: 10000 },
     );
+    console.log(rateCard);
 
     return NextResponse.json(rateCard, { status: 201 });
   } catch (error) {
