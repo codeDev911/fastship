@@ -12,8 +12,8 @@ const createRateCardSchema = z.object({
   businessId: z.string().min(1, "Business ID required"),
   name: z.string().min(2, "Name must be at least 2 characters"),
   description: z.string().optional(),
-  baseRate: z.number().min(0.0001, "Base rate cannot be negative"),
-  perKmRate: z.number().min(0.0001, "Base rate cannot be negative"),
+  baseRate: z.number().positive("Base rate must be positive"),
+  perKmRate: z.number().positive("Per km rate must be positive"),
   minimumDistance: z
     .number()
     .nonnegative("Minimum distance cannot be negative")
@@ -128,8 +128,6 @@ export async function POST(request: NextRequest) {
         user: { select: { preferredCurrency: true } },
       },
     });
-    
-
 
     if (!business) {
       return NextResponse.json(
@@ -137,8 +135,6 @@ export async function POST(request: NextRequest) {
         { status: 404 },
       );
     }
-
-
 
     if (!business.isActive) {
       return NextResponse.json(
@@ -214,7 +210,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(rateCard, { status: 201 });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      console.error("Validation error:", error.errors);
+      
       return NextResponse.json(
         { error: "Validation error", details: error.errors },
         { status: 400 },
