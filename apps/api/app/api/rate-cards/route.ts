@@ -206,6 +206,9 @@ export async function POST(request: NextRequest) {
             businessId,
             minimumDistance,
             maximumDistance,
+            business:{
+              connect: { id: businessId },
+            },
             minWeight,
             maxWeight,
             serviceCities,
