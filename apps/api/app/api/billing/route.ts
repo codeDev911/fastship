@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { financialService } from '@/lib/services/financial.service';
+import { prisma } from '@/lib/prisma'; 
+import { financialService } from '@/lib/services';
 
 export async function GET(request: NextRequest) {
   try {
@@ -18,6 +18,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
+     
     
 
     let where : any ={}

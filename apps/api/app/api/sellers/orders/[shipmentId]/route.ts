@@ -198,7 +198,7 @@ export async function PATCH(
     const updatedShipment = await prisma.shipment.update({
       where: { id: shipmentId },
       data: {
-        // ...body,
+        ...body,
         weight: parseFloat(weight),
         dimensions,
         paymentMethod,

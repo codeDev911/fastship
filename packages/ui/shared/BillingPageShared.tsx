@@ -29,7 +29,6 @@ export function BillingPageShared({apiUrl}: {apiUrl: string}) {
         if (walletRes.ok) {
           const data = await walletRes.json();
           setWallet(data?.data)
-          console.log(data?.data);
           setWalletBalance(data.data?.balance || 0);
         }
 
@@ -86,9 +85,9 @@ export function BillingPageShared({apiUrl}: {apiUrl: string}) {
                 </div>
                 <p className="text-sm font-medium text-muted-foreground">Available Balance</p>
               </div>
-              <p className="text-4xl font-bold text-green-600">
+              <div className="text-4xl font-bold text-green-600">
                 <CurrencyDisplay amountBase={wallet.balance - wallet.escrowBalance} amount={wallet.display?.available||walletBalance} currency={wallet.currency} />
-              </p>
+              </div>
               <p className="mt-2 text-xs text-muted-foreground">Funds ready to use</p>
             </CardContent>
           </Card>
@@ -103,9 +102,9 @@ export function BillingPageShared({apiUrl}: {apiUrl: string}) {
                 </div>
                 <p className="text-sm font-medium text-muted-foreground">Locked in Escrow</p>
               </div>
-              <p className="text-4xl font-bold text-orange-600">
+              <div className="text-4xl font-bold text-orange-600">
                 <CurrencyDisplay amountBase={wallet.escrowBalance} amount={wallet?.display?.escrowBalance || 0} currency={wallet.currency} />
-              </p>
+              </div>
               <p className="mt-2 text-xs text-muted-foreground">Reserved for active shipments</p>
             </CardContent>
           </Card>
@@ -120,9 +119,9 @@ export function BillingPageShared({apiUrl}: {apiUrl: string}) {
                 </div>
                 <p className="text-sm font-medium text-muted-foreground">Total Balance</p>
               </div>
-              <p className="text-4xl font-bold text-accent">
+              <div className="text-4xl font-bold text-accent">
                 <CurrencyDisplay amountBase={wallet.balance} amount={wallet.display?.balance||walletBalance} currency={wallet.currency} />
-              </p>
+              </div>
               <p className="mt-2 text-xs text-muted-foreground">{wallet?.currency}</p>
             </CardContent>
           </Card>

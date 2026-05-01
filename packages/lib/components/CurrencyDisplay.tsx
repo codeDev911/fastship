@@ -49,8 +49,9 @@ export function CurrencyDisplay({
     maximumFractionDigits: decimalPlaces,
   }).format(amount);
 
-  amount  = Number(amount.toFixed(2))
-  amountBase = Number(amountBase.toFixed(4))
+  amount  = Number(amount && amount || amount);
+  amountBase = Number(amountBase && amountBase || amountBase);
+
 
   return (
     <>

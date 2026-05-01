@@ -129,26 +129,27 @@ export async function PATCH(
             throw new Error("Seller not found");
           }
 
-          
           if (seller.wallet?.currency !== Currency.USD) {
             const { baseAmount, baseCents, rate } =
               await currencyService.toBaseCurrency(
                 amount,
                 seller?.wallet?.currency!,
               );
+              
             data.actualRate = baseAmount;
             data.actualRate_cents = baseCents;
             data.exchangeRate = rate;
             data.actualRateDisplay = amount; // show original amount in user's currency
+          } else {
+            // otherwise save in USD and convert later for display
+            data.actualRate = amount;
+            data.actualRate_cents = toCents(amount);
+            data.exchangeRate = 1;
+            data.actualRateDisplay = amount; // show original amount in user's currency
           }
-        else{ // otherwise save in USD and convert later for display
-          data.actualRate = amount;
-          data.actualRate_cents = toCents(amount);
-          data.exchangeRate = 1;
-          data.actualRateDisplay = amount; // show original amount in user's currency
-          
         }
-      }
+
+
         const shipment = await tx.shipment.update({
           where: { id: shipmentId },
           data: {
@@ -190,6 +191,8 @@ export async function PATCH(
           },
         });
 
+        
+
         let businessWallet = await tx.wallet.findUnique({
           where: {
             businessId: businessId || "",
@@ -212,10 +215,7 @@ export async function PATCH(
             throw new Error("Business wallet not found");
           }
 
-            console.log(shipment?.seller?.wallet?.currency!);
-            
-          
-          // Lock seller escrow for shipping fee
+          // // Lock seller escrow for shipping fee
           await financialService.lockEscrow(
             tx,
             shipment.seller.wallet.id,
@@ -246,33 +246,6 @@ export async function PATCH(
             businessWallet.currency,
           );
 
-          // ==========================================
-          // STEP 5: Update bid status
-          // ==========================================
-          if (businessId) {
-            await tx.bid.updateMany({
-              where: {
-                shipmentId,
-                businessId,
-              },
-              data: {
-                bidStatus: "ACCEPTED",
-                isAccepted: true,
-                acceptedAt: new Date(),
-              },
-            });
-
-            // Mark other bids as rejected
-            await tx.bid.updateMany({
-              where: {
-                shipmentId,
-                businessId: { not: businessId },
-              },
-              data: {
-                bidStatus: "REJECTED",
-              },
-            });
-          }
         }
 
         // Create activity log

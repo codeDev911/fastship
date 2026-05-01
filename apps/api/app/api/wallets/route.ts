@@ -11,6 +11,8 @@ export async function GET(request: NextRequest) {
       searchParams.get("driverId") ||
       searchParams.get("businessId");
 
+    
+
     if (!userId) {
       return NextResponse.json({ error: "User ID required" }, { status: 400 });
     }
@@ -46,14 +48,29 @@ export async function GET(request: NextRequest) {
     }
 
     const display = {
-      balance: await currencyService.convert(wallet.balance||0,"USD",wallet.currency) || wallet.balance,
-      escrowBalance: await currencyService.convert(wallet.escrowBalance||0,"USD",wallet.currency) || wallet.escrowBalance,
+      balance:
+        (await currencyService.convert(
+          wallet.balance || 0,
+          "USD",
+          wallet.currency,
+        )) || wallet.balance,
+      escrowBalance:
+        (await currencyService.convert(
+          wallet.escrowBalance || 0,
+          "USD",
+          wallet.currency,
+        )) || wallet.escrowBalance,
       currency: wallet.currency || "USD",
-      available: await currencyService.convert(wallet.balance-wallet.escrowBalance||0,"USD",wallet.currency) || wallet.balance-wallet.escrowBalance,
-    }
+      available:
+        (await currencyService.convert(
+          wallet.balance - wallet.escrowBalance || 0,
+          "USD",
+          wallet.currency,
+        )) || wallet.balance - wallet.escrowBalance,
+    };
 
     return NextResponse.json({
-      data: {...wallet,display},
+      data: { ...wallet, display },
     });
   } catch (error) {
     console.error("Get wallet error:", error);

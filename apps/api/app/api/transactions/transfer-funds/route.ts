@@ -18,7 +18,7 @@ export async function POST(req:NextRequest) {
         return await prisma.$transaction(async(tx)=>{
             await financialService.transferFunds(tx,from?.toLowerCase(),to?.toLowerCase(),fromId,toId,Number(amount),description ,uniqueId)
             return NextResponse.json({success:true},{status:201})
-        },{timeout:100000})
+        },{timeout:1000000})
         
     } catch (error) {
         console.log(error);

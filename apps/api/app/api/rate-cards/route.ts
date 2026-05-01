@@ -239,9 +239,8 @@ export async function POST(request: NextRequest) {
           },
         });
       },
-      { timeout: 10000 },
+      { timeout: 100000 },
     );
-    console.log(rateCard);
 
     return NextResponse.json(rateCard, { status: 201 });
   } catch (error) {

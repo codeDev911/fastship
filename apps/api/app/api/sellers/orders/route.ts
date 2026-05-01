@@ -85,7 +85,7 @@ export async function GET(request: NextRequest) {
 
     const userCurrency = shipments[0]?.seller?.wallet?.currency
     
-    if (shipments[0].seller.wallet?.currency !== "USD") {
+    if (userCurrency !== "USD") {
       const exchangeRate = await currencyService.getExchangeRate(
         "USD",
         userCurrency || "USD",

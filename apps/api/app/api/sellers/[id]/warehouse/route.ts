@@ -62,6 +62,8 @@ export async function PATCH(
       where: { id },
     });
 
+    
+
     if (!seller) {
       return NextResponse.json({ error: "Seller not found" }, { status: 404 });
     }

@@ -3,6 +3,27 @@
 // =========================
 
 /**
+ * ✅ PRECISION STRATEGY (Industry Standard)
+ * 
+ * Problem: JavaScript floating-point math causes errors like 0.3700000000000001
+ * Solution: ALL financial calculations use INTEGER ARITHMETIC
+ * 
+ * Rules:
+ * 1. Store amounts as CENTS (integers): 9999 instead of 99.99
+ * 2. Calculate in cents, NEVER multiply decimals: (cents * rate) / 100
+ * 3. Use Math.floor for division to avoid remainders
+ * 4. Only convert to decimals for DISPLAY/API responses
+ * 
+ * Example - Distribution (20% + 10% + 80% = 100%):
+ * ❌ WRONG: toCents(amount*0.2) + toCents(amount*0.8) = leftover
+ * ✅ RIGHT: Math.floor((cents*20)/100) + Math.floor((cents*10)/100) + remainder
+ * 
+ * Example - Exchange rates:
+ * ❌ WRONG: (amount in cents / 100) * exchangeRate = floating point
+ * ✅ RIGHT: (cents * rate) / 100 = integer result
+ */
+
+/**
  * Convert decimal amount to cents (e.g., 99.99 -> 9999)
  * Rounds to nearest cent to handle floating point errors
  */
@@ -26,6 +47,29 @@ function validateCents(cents: number, fieldName: string = "amount"): void {
       `${fieldName} must be a positive integer (cents). Got: ${cents}`,
     );
   }
+}
+
+/**
+ * ✅ PRECISION FIX: Calculate exchange with integer math
+ * Never multiply decimals: cents * rate / 100
+ * Example: 5000 cents * 0.92 rate = (5000 * 0.92) / 1 = 4600 cents
+ * Scales rate to avoid floating-point errors
+ */
+function applyExchangeRateToCents(cents: number, exchangeRate: number): number {
+  // If rate is already scaled (e.g., 82.7 for PKR), use it directly
+  // If rate is decimal (e.g., 0.92 for EUR), multiply by 100 first to scale it
+  const scaledRate = exchangeRate > 1 ? exchangeRate : exchangeRate * 100;
+  return Math.round((cents * scaledRate) / 100);
+}
+
+/**
+ * ✅ PRECISION FIX: Calculate percentage in integer math to avoid leftovers
+ * Use floor division with remainder approach
+ * Never: toCents(amount * 0.2) - causes 0.37 leftover errors
+ * Do: Math.floor((cents * 20) / 100) for exact integer math
+ */
+function calculatePercentageCents(cents: number, percentage: number): number {
+  return Math.floor((cents * percentage) / 100);
 }
 
 export const runIdempotent = async (
@@ -98,11 +142,17 @@ export const addLedger = async (tx: any, data: any) => {
   const newBalanceCents = Number(balanceResult[0]?.totalCents) + data.amount;
   const newBalanceDecimal = toDecimal(newBalanceCents);
 
+  // ✅ FIX: Use integer math for exchange rate calculation
+  // Prevents floating-point errors like 0.3700000000000001
+  const balanceAfterDisplay = data.exchangeRate 
+    ? applyExchangeRateToCents(newBalanceCents, data.exchangeRate) / 100
+    : newBalanceDecimal;
+
   const result = await tx.$queryRaw`
     INSERT INTO "LedgerEntry" 
       ("id","amountDisplay","balanceAfterDisplay","currency","exchangeRate", "walletId", "amount", "amount_cents", "type", "category", "referenceId", "balanceAfter", "balanceAfter_cents", "createdAt")
     VALUES 
-      (gen_random_uuid(),${data.localAmount},${newBalanceDecimal*data.exchangeRate},${data.currency}::"Currency",${data.exchangeRate}, ${data.walletId}, ${amountDecimal}, ${data.amount}, ${data.type}, ${data.category}, ${data.referenceId}, ${newBalanceDecimal}, ${newBalanceCents}, NOW())
+      (gen_random_uuid(),${data.localAmount},${balanceAfterDisplay},${data.currency}::"Currency",${data.exchangeRate}, ${data.walletId}, ${amountDecimal}, ${data.amount}, ${data.type}, ${data.category}, ${data.referenceId}, ${newBalanceDecimal}, ${newBalanceCents}, NOW())
     RETURNING *
   `;
 

@@ -218,5 +218,27 @@
     "method": "openroute",
     "savedAt": 1777312650029,
     "updatedAt": 1777312650029
+  },
+  "Lahore_Punjab__Karachi_Sindh": {
+    "pickupCity": "Lahore",
+    "pickupState": "Punjab",
+    "deliveryCity": "Karachi",
+    "deliveryState": "Sindh",
+    "distance": 1216.5,
+    "duration": 44179.13,
+    "method": "openroute",
+    "savedAt": 1777632122332,
+    "updatedAt": 1777632122332
+  },
+  "Lahore_Punjab__Islamabad_Islamabad": {
+    "pickupCity": "Lahore",
+    "pickupState": "Punjab",
+    "deliveryCity": "Islamabad",
+    "deliveryState": "Islamabad",
+    "distance": 291.67,
+    "duration": 12839.21,
+    "method": "openroute",
+    "savedAt": 1777634482610,
+    "updatedAt": 1777634482610
   }
 }
