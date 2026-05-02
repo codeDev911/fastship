@@ -136,7 +136,7 @@ export async function secureFetch(
   // Add CSRF token for state-changing requests (POST, PUT, DELETE, PATCH)
   const method = (fetchOptions.method || 'GET').toUpperCase();
   const isStateChanging = ['POST', 'PUT', 'DELETE', 'PATCH'].includes(method);
-  
+    
   if (isStateChanging && !skipCSRF) {
     
      let csrfToken = await refreshCSRFToken();

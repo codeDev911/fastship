@@ -13,7 +13,7 @@ import { Currency, PaymentStatus } from "@prisma/client";
 // ========================
 
 const BASE_CURRENCY = Currency.USD;
-const CACHE_TTL = 6 * 60 * 60 * 1000; // 6 hours - refresh exchange rates every 6 hours
+const CACHE_TTL = 30 * 24 * 60 * 60 * 1000; // 30 days - refresh exchange rates every 6 hours
 const PRECISION_DECIMALS = 2; // Always round to 2 decimals (cents)
 
 // Supported currencies for the platform

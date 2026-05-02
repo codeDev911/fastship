@@ -35,7 +35,7 @@ function toCents(amount: number): number {
 /**
  * Convert cents to decimal (e.g., 9999 -> 99.99)
  */
-function toDecimal(cents: number): number {
+export function toDecimal(cents: number): number {
   return cents / 100;
 }
 
@@ -351,7 +351,7 @@ export const financialService = {
           where: { id: walletId },
           select: { escrowBalance_cents: true },
         });
-        
+
         if (!wallet || wallet.escrowBalance_cents < baseCents) {
           throw new Error("Insufficient escrow balance");
         }
@@ -594,11 +594,58 @@ export const financialService = {
     // Fetch shipment details with all required relations
     const fullShipment = await tx.shipment.findUnique({
       where: { id: shipment.id },
+
       include: {
         seller: {
-          include: { wallet: { select: { id: true, currency: true } } },
+          include: {
+            wallet: {
+              select: {
+                id: true,
+                currency: true,
+                transactions: {
+                  where: {
+                    referenceId: shipment.id,
+                    type: "ESCROW_LOCK",
+                  },
+                  select: {
+                    currency: true,
+                    id: true,
+                    displayAmount: true,
+                    amount: true,
+                    amount_cents: true,
+                  },
+                },
+              },
+            },
+          },
         },
-        assignment: { include: { driver: { include: { wallet: true } } } },
+        assignment: {
+          include: {
+            driver: {
+              include: {
+                wallet: {
+                  select: {
+                    id: true,
+                    currency: true,
+                    transactions: {
+                      where: {
+                        referenceId: shipment.id,
+                        type: "ESCROW_LOCK",
+                      },
+                      select: {
+                        currency: true,
+                        id: true,
+                        displayAmount: true,
+                        amount: true,
+                        amount_cents: true,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
       },
     });
 
@@ -607,23 +654,13 @@ export const financialService = {
     }
 
     //  NEW SECTION - Get currency from shipment or use provided currency
-    const transactionCurrency = fullShipment?.currency || Currency.USD;
 
     // Convert decimal amount to cents and validate
-    const amountCents = toCents(
-      fullShipment.actualRate || fullShipment.expectedRate || 0,
-    );
-    validateCents(amountCents, "shipment rate");
+    const amountCents =
+      fullShipment.actualRate_cents || fullShipment.expectedRate_cents || 0;
 
     //  ADD THIS SECTION - Convert shipment amount to base currency
     let baseCents = amountCents;
-    let shipmentExchangeRate = 1;
-
-    //  Calculate distribution in integer math to avoid floating-point errors
-    // Always use integer math: (cents * percentage) / 100, then remainder for last party
-    const businessFeeCentsUsd = Math.floor((baseCents * 10) / 100); // 20%
-    const platformFeeCentsUsd = Math.floor((baseCents * 10) / 100); // 10%
-    const driverFeeCentsUsd = Math.floor((baseCents * 80) / 100);// 80%
 
     const results: any[] = [];
 
@@ -635,43 +672,82 @@ export const financialService = {
         try {
           // ========== STEP 1: DEDUCT FROM SELLER ==========
           // Seller loses the total amount (100% in USD cents)
+          const sellerTransactionsLength =
+            fullShipment.seller.wallet.transactions.length || 0;
+          const sellerAmount =
+            fullShipment.seller.wallet.transactions[
+              sellerTransactionsLength - 1 || 0
+            ]?.displayAmount || 0;
+          const sellerAmountBase_cents =
+            fullShipment.seller.wallet.transactions[
+              sellerTransactionsLength - 1 || 0
+            ]?.amount_cents || 0;
+          const sellerAmountCurrency =
+            fullShipment.seller.wallet.transactions[
+              sellerTransactionsLength - 1 || 0
+            ]?.currency || 0;
+
           await this.cutEscrow(
             tx,
             fullShipment.seller.wallet.id,
-            toDecimal(baseCents), // Convert to decimal for the function
+            sellerAmount,
             "Shipment fee deducted",
             fullShipment.id,
-            Currency.USD, // Always deduct in base currency
+            sellerAmountCurrency,
           );
 
           const businessWallet = await tx.wallet.findUnique({
             where: { businessId: fullShipment.businessId },
-            select: { id: true, currency: true },
+            select: {
+              id: true,
+              currency: true,
+              transactions: {
+                where: {
+                  referenceId: shipment.id,
+                  type: "ESCROW_LOCK",
+                },
+                select: {
+                  currency: true,
+                  id: true,
+                  amount: true,
+                  displayAmount: true,
+                  exchangeRate: true,
+                  amount_cents: true,
+                },
+              },
+            },
           });
 
           if (!businessWallet) throw new Error("Business wallet not found");
 
           // ========== STEP 2: CREDIT BUSINESS WALLET ==========
-          const getExchangeRateForBusinessCurrency =
-            await currencyService.getExchangeRate(
-              Currency.USD,
-              businessWallet.currency,
-            );
+          const walletTransactionsLength =
+            businessWallet.transactions.length || 0;
+          const businessAmount =
+            businessWallet.transactions[walletTransactionsLength - 1 || 0]
+              ?.displayAmount || 0;
+          const businessAmountBase =
+            businessWallet.transactions[walletTransactionsLength - 1 || 0]
+              ?.amount || 0;
+          const businessAmountBase_cents =
+            businessWallet.transactions[walletTransactionsLength - 1 || 0]
+              ?.amount_cents || 0;
+          const businessAmountCurrency =
+            businessWallet.transactions[walletTransactionsLength - 1 || 0]
+              ?.currency || 0;
+          const exchangeRate =
+            businessWallet.transactions[walletTransactionsLength - 1 || 0]
+              ?.exchangeRate || 1;
 
-          //  Convert USD to business's local currency
-          const businessFeeInLocalCurrency = await currencyService.convert(
-            toDecimal(businessFeeCentsUsd),
-            Currency.USD,
-            businessWallet.currency,
-          );
-
+          const platformFeeCents = toCents(businessAmountBase)
+          
           await withWalletLock(tx, businessWallet.id, async () => {
             await addLedger(tx, {
               walletId: businessWallet.id,
-              amount: businessFeeCentsUsd, // Store in USD cents
-              localAmount: businessFeeInLocalCurrency, //  Converted to local currency
-              exchangeRate: getExchangeRateForBusinessCurrency,
-              currency: businessWallet.currency,
+              amount: businessAmountBase_cents, // Store in USD cents
+              localAmount: businessAmount, //  Converted to local currency
+              exchangeRate: exchangeRate,
+              currency: businessAmountCurrency,
               type: "CREDIT",
               category: "DELIVERY_FEE + ESCROW_RELEASE",
               referenceId: fullShipment.id,
@@ -680,10 +756,10 @@ export const financialService = {
             await tx.wallet.update({
               where: { id: businessWallet.id },
               data: {
-                balance: { increment: toDecimal(businessFeeCentsUsd) }, //  Local currency decimal
-                balance_cents: { increment: businessFeeCentsUsd }, //  USD cents for calculations
-                escrowBalance: { decrement: toDecimal(platformFeeCentsUsd) }, //  release platform form fee
-                escrowBalance_cents: { decrement: platformFeeCentsUsd }, //  release platform form fee
+                balance: { increment: businessAmountBase }, //  Local currency decimal
+                balance_cents: { increment: businessAmountBase_cents }, //  USD cents for calculations
+                escrowBalance: { decrement: toDecimal(platformFeeCents) }, //  release platform form fee
+                escrowBalance_cents: { decrement: platformFeeCents }, //  release platform form fee
               },
               select: {
                 currency: true,
@@ -691,15 +767,15 @@ export const financialService = {
             });
 
             // displayAmount shows what business sees in their currency (for UI only)
-           
+
             await tx.transaction.create({
               data: {
-                amount: toDecimal(businessFeeCentsUsd),
-                amount_cents: businessFeeCentsUsd, //  USD cents
-                currency: businessWallet.currency, 
+                amount: businessAmountBase,
+                amount_cents: businessAmountBase_cents, //  USD cents
+                currency: businessWallet.currency,
                 description: "Delivery fee received & Escrow released",
-                displayAmount: businessFeeInLocalCurrency, // For display in their currency
-                exchangeRate: getExchangeRateForBusinessCurrency,
+                displayAmount: businessAmount, // For display in their currency
+                exchangeRate: exchangeRate,
                 type: "CREDIT",
                 completedAt: new Date(),
                 referenceId: fullShipment.id,
@@ -721,29 +797,55 @@ export const financialService = {
             async () => {
               let driverWallet = await tx.wallet.findUnique({
                 where: { id: fullShipment?.assignment?.driver?.wallet.id },
+                select: {
+                  currency: true,
+                  id: true,
+                },
               });
 
               if (!driverWallet) throw new Error("Driver wallet not found");
 
-              const getExchangeRateForDriverCurrency =
-                await currencyService.getExchangeRate(
-                  Currency.USD,
+              let driverAmount =
+                Number((shipment.actualRateDisplay * 0.8).toFixed(2)) || 0; // in local-currency 
+
+              let driverAmount_cents =
+                Math.floor(
+                  ((shipment.actualRate_cents || shipment.expectedRate_cents) *
+                    80) /
+                    100,
+                ) || 0; // 80%
+
+              let driverAmountCurrency = driverWallet.currency || Currency.USD;
+              let exchangeRate = 0;
+
+              if (shipment.currency !== driverWallet.currency) {
+                const converted = await currencyService.convert(
+                  driverAmount, // 80% of total as driver earning
+                  shipment.currency,
                   driverWallet.currency,
                 );
+                exchangeRate = await currencyService.getExchangeRate(
+                  shipment.currency,
+                  driverWallet.currency,
+                );
+                driverAmount = converted;
+                driverAmountCurrency = driverWallet.currency;
+                driverAmount_cents = toCents(converted/exchangeRate); // Store in base currency cents for consistency
+              }
 
-              //  Convert USD to driver's local currency
-              const driverFeeInLocalCurrency = await currencyService.convert(
-                toDecimal(driverFeeCentsUsd),
-                Currency.USD,
-                driverWallet.currency,
-              );
+              console.log({
+                driverAmount,
+                driverAmount_cents:toDecimal(driverAmount_cents),
+                driverAmountCurrency,
+                exchangeRate,
+              });
 
               await addLedger(tx, {
                 walletId: fullShipment?.assignment?.driver?.wallet.id,
-                amount: driverFeeCentsUsd, // Store in USD cents
-                localAmount: driverFeeInLocalCurrency, //  Converted to local currency
-                exchangeRate: getExchangeRateForDriverCurrency,
-                currency: driverWallet.currency,
+                amount: driverAmount_cents, // Store in USD cents
+                localAmount: driverAmount, //  Converted to local currency
+                exchangeRate: exchangeRate,
+                currency: driverAmountCurrency,
                 type: "CREDIT",
                 category: "DELIVERY_FEE",
                 referenceId: fullShipment.id,
@@ -752,24 +854,22 @@ export const financialService = {
               await tx.wallet.update({
                 where: { id: fullShipment?.assignment?.driver?.wallet.id },
                 data: {
-                  balance: { increment: toDecimal(driverFeeCentsUsd) }, //  Local currency decimal
-                  balance_cents: { increment: driverFeeCentsUsd }, //  USD cents for calculations
+                  balance: { increment: toDecimal(driverAmount_cents) }, //  Local currency decimal
+                  balance_cents: { increment: driverAmount_cents }, //  USD cents for calculations
                 },
                 select: {
                   currency: true,
                 },
               });
 
-               
-
               await tx.transaction.create({
                 data: {
-                  amount: toDecimal(driverFeeCentsUsd),
-                  amount_cents: driverFeeCentsUsd, //  USD cents
-                  currency: driverWallet.currency, 
+                  amount: toDecimal(driverAmount_cents),
+                  amount_cents: driverAmount_cents, //  USD cents
+                  currency: driverAmountCurrency,
                   description: "Delivery fee earned",
-                  displayAmount: driverFeeInLocalCurrency, // For display in their currency
-                  exchangeRate: getExchangeRateForDriverCurrency,
+                  displayAmount: driverAmount, // For display in their currency
+                  exchangeRate: exchangeRate,
                   type: "CREDIT",
                   completedAt: new Date(),
                   referenceId: fullShipment.id,
@@ -777,13 +877,13 @@ export const financialService = {
                   walletId: fullShipment?.assignment?.driver?.wallet.id,
                 },
               });
-              
+
               await this.settleDriverPayment(
                 tx,
                 fullShipment.assignment?.driverId,
-                toDecimal(driverFeeCentsUsd),
+                driverAmount,
                 fullShipment.id,
-                Currency.USD, //  Settlement in base currency
+                driverAmountCurrency, //  Settlement in base currency
               );
               results.push({ type: "driver_settlement", success: true });
             },
@@ -798,10 +898,8 @@ export const financialService = {
             amountProcessedUsd: toDecimal(baseCents),
             distribution: {
               sellerDeductedUsd: toDecimal(baseCents),
-              businessCreditedUsd: toDecimal(businessFeeCentsUsd),
-              driverCreditedUsd: toDecimal(driverFeeCentsUsd),
-           
-            },  
+              businessCreditedUsd: businessAmountBase,
+            },
             transactions: results,
             summary: {
               totalTransactions: results.length,
@@ -812,7 +910,7 @@ export const financialService = {
         } catch (error) {
           //  Enhanced error handling with currency context
           console.error(
-            `Error processing shipment ${fullShipment.id} transactions in ${transactionCurrency}:`,
+            `Error processing shipment ${fullShipment.id} transactions in :`,
             error,
           );
 

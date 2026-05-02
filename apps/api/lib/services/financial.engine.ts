@@ -126,6 +126,9 @@ export const withWalletLock = async (
 
 export const addLedger = async (tx: any, data: any) => {
   if (typeof data.amount !== "number" || !Number.isInteger(data.amount)) {
+    console.log("amount "+data.amount);
+    console.log("category "+data.category);
+    
     throw new Error(
       `Ledger amount must be an integer (cents/paise). Got: ${data.amount}. ` +
         `If passing decimal, use toCents() first.`,

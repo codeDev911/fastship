@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { csrfErrorResponse, validateCSRFMiddleware } from "@/lib/csrf-middleware";
+import {
+  csrfErrorResponse,
+  validateCSRFMiddleware,
+} from "@/lib/csrf-middleware";
 import { jwtVerify } from "jose";
 
 export const runtime = "nodejs";
@@ -68,7 +71,7 @@ const publicRoutes = [
   "/api/register/business/complete",
   "/api/register/driver/apply",
   "/api/register/driver/complete",
-  "/api/register/check-approva",
+  "/api/register/check-approval",
   "/api/auth/driver",
   "/api/auth/seller",
   "/api/locations",
@@ -83,7 +86,7 @@ const publicRoutes = [
   "/api/locations/in-city-distance",
   "/api/locations/states",
   "/api/auth/csrf-token", // Allow CSRF token refresh without token
-  "/api/admin" // alow all /api/admin routes to be public to aviod auth and CSRF requirement
+  "/api/admin", // alow all /api/admin routes to be public to aviod auth and CSRF requirement
 ];
 /**
  * Check if route is public
@@ -108,7 +111,7 @@ export async function middleware(request: NextRequest) {
       status: 204,
       headers: corsHeaders,
     });
-  }   
+  }
 
   // For public routes, just add CORS headers
   if (isPublicRoute(pathname) || pathname.includes("/api/admin")) {
@@ -124,7 +127,7 @@ export async function middleware(request: NextRequest) {
 
   // =============== AUTHENTICATE ALL PROTECTED ROUTES ===============
   // Check authentication for ALL methods (GET, POST, PUT, DELETE, PATCH)
-  
+
   let userId: any = "";
 
   // Get authentication token from cookies
@@ -188,16 +191,16 @@ export async function middleware(request: NextRequest) {
     if (!(await validateCSRFMiddleware(request))) {
       const corsHeaders = getCORSHeaders(origin);
       const errorResponse = csrfErrorResponse();
-      
+
       Object.entries(corsHeaders).forEach(([key, value]) => {
         errorResponse.headers.set(key, value);
       });
-      
+
       return errorResponse;
     }
     console.log("CSRF checked: TRUE");
   }
-  
+
   // =============== CONTINUE WITH AUTHENTICATED REQUEST ===============
   const response = NextResponse.next();
   response.headers.set("X-User-Id", userId);

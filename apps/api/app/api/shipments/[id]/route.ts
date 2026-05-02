@@ -236,6 +236,7 @@ export async function PATCH(
             amountInBusinessCurrency = converted;
           }
 
+
           // Lock business escrow for 10% platform fee
           await financialService.lockEscrow(
             tx,

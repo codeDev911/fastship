@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { jwtVerify } from 'jose';
 import { generateCSRFToken } from '@/lib/csrf';
 
 export async function GET(request: NextRequest) {
@@ -21,10 +20,11 @@ export async function GET(request: NextRequest) {
       sameSite: 'strict',
       maxAge: 900, // 15 minutes
     });
-
+    
     return response;
   } catch (error) {
     console.error('[CSRF] Token generation failed:', error);
+    
     return NextResponse.json(
       { message: 'Failed to generate CSRF token' },
       { status: 500 }

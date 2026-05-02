@@ -1,6 +1,6 @@
 import { prisma } from "@fastship/lib";
-import { ShipmentStatus, PaymentMethod } from "@prisma/client";
-import { financialService } from "./financial.service";
+import { ShipmentStatus, PaymentMethod, Currency } from "@prisma/client";
+import { toDecimal, financialService } from "./financial.service";
 import currencyService from "./currency.service";
 
 const safeNumber = (v: any) => Number(v || 0);
@@ -129,9 +129,55 @@ export const shipmentService = {
           where: { id: shipmentId },
           include: {
             seller: {
-              select: { wallet: { select: { id: true, currency: true } } },
+              select: {
+                wallet: {
+                  select: {
+                    id: true,
+                    currency: true,
+                    transactions: {
+                      where: {
+                        referenceId: shipmentId,
+                        type: "ESCROW_LOCK",
+                      },
+                      select: {
+                        currency: true,
+                        id: true,
+                        amount: true,
+                        displayAmount: true,
+                        exchangeRate: true,
+                      },
+                    },
+                  },
+                },
+              },
             },
-            assignment: { include: { driver: { include: { wallet: true } } } },
+            assignment: {
+              include: {
+                driver: {
+                  include: {
+                    wallet: {
+                      select: {
+                        id: true,
+                        currency: true,
+                        transactions: {
+                          where: {
+                            referenceId: shipmentId,
+                            type: "ESCROW_LOCK",
+                          },
+                          select: {
+                            currency: true,
+                            id: true,
+                            amount: true,
+                            displayAmount: true,
+                            exchangeRate: true,
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
             payment: true,
           },
         });
@@ -164,7 +210,7 @@ export const shipmentService = {
 
         // ================= COD FLOW =================
         if (shipment.paymentMethod === "COD") {
-          const businessCommission = amount * 0.2;
+          const businessCommission = amount * 0.2; // 10% platform fee + 10% business fee. giving 10% platform fee beacuse we cut that from escrow
           const debtAmount: number =
             safeNumber(shipment.codAmount) + businessCommission;
 
@@ -178,34 +224,58 @@ export const shipmentService = {
 
           const businessWallet = await tx.wallet.findUnique({
             where: { businessId: shipment.businessId || "" },
-            select: { id: true, currency: true },
+            select: {
+              id: true,
+              currency: true,
+              transactions: {
+                where: {
+                  referenceId: shipment.id,
+                  type: "ESCROW_LOCK",
+                },
+                select: {
+                  currency: true,
+                  id: true,
+                  amount: true,
+                  displayAmount: true,
+                  exchangeRate: true,
+                },
+              },
+            },
           });
 
-          let convertedAmountBuss = updated?.actualRate!; // USD base amount
-          if (updated?.currency !== businessWallet?.currency) {
-            convertedAmountBuss = await currencyService.convert(
-              updated?.actualRate!,
-              "USD",
-              businessWallet?.currency!,
-            );
-          }
+          const bsTransactionsLength = businessWallet?.transactions.length || 0;
+          const businessAmount =
+            businessWallet?.transactions[bsTransactionsLength - 1 || 0]
+              .displayAmount || 0;
+          const businessCurrency =
+            businessWallet?.transactions[bsTransactionsLength - 1 || 0]
+              .currency || "USD";
+
+          const seTransactionsLength =
+            shipment.seller.wallet?.transactions.length || 0;
+          const sellerAmount =
+            shipment.seller.wallet?.transactions[seTransactionsLength - 1 || 0]
+              .displayAmount || 0;
+          const sellerCurrency =
+            shipment.seller.wallet?.transactions[seTransactionsLength - 1 || 0]
+              .currency || "USD";
 
           await financialService.cutEscrow(
             tx,
             businessWallet?.id!,
-            convertedAmountBuss * 0.1, // platform fee 10%
+            businessAmount, // platform fee 10%
             "Platform fee 10%",
             updated.id,
-            businessWallet?.currency,
+            businessCurrency,
           );
 
           await financialService.releaseEscrow(
             tx,
             shipment.seller.wallet?.id!,
-            amount,
+            sellerAmount,
             "Escrow released",
             updated.id,
-            shipment?.currency!,
+            sellerCurrency!,
           );
         }
 
@@ -230,11 +300,36 @@ export const shipmentService = {
           where: { id: shipmentId },
           data: { status: "FAILED" },
           select: {
+            actualRate_cents: true,
             currency: true,
             payment: { select: { id: true, paymentMethod: true } },
             actualRate: true,
             businessId: true,
-            seller: { select: { wallet: { select: { id: true } } } },
+            seller: {
+              select: {
+                wallet: {
+                  select: {
+                    id: true,
+                    currency: true,
+                    transactions: {
+                      where: {
+                        referenceId: shipmentId,
+                        type: "ESCROW_LOCK",
+                      },
+                      select: {
+                        id: true,
+                        amount: true,
+                        amount_cents: true,
+                        currency: true,
+                        displayAmount: true,
+                        exchangeRate: true,
+                        referenceId: true,
+                      },
+                    },
+                  },
+                },
+              },
+            },
           },
         });
 
@@ -248,36 +343,66 @@ export const shipmentService = {
           });
         }
 
+        const sellerTransactionsLength =
+          updated.seller.wallet?.transactions.length || 0;
+
+        let amountToBeReleased =
+          updated.seller.wallet?.transactions[sellerTransactionsLength - 1 || 0]
+            .displayAmount;
+        let amountReleasedCurrency =
+          updated.seller.wallet?.transactions[sellerTransactionsLength - 1 || 0]
+            .currency;
+
         await financialService.releaseEscrow(
           tx,
           updated.seller.wallet?.id!,
-          safeNumber(updated.actualRate),
+          amountToBeReleased!,
           "Failed delivery release",
           shipmentId,
-          updated?.currency!,
+          amountReleasedCurrency,
         );
 
         const businessWallet = await tx.wallet.findUnique({
           where: { businessId: updated.businessId || "" },
-          select: { id: true, currency: true },
+          select: {
+            id: true,
+            currency: true,
+            transactions: {
+              where: {
+                referenceId: shipmentId,
+                type: "ESCROW_LOCK",
+              },
+              select: {
+                id: true,
+                amount: true,
+                amount_cents: true,
+                currency: true,
+                displayAmount: true,
+                exchangeRate: true,
+                referenceId: true,
+              },
+            },
+          },
         });
 
-        let convertedAmountBuss = updated?.actualRate!; // USD base amount
-        if (updated?.currency !== businessWallet?.currency) {
-          convertedAmountBuss = await currencyService.convert(
-            updated?.actualRate!,
-            "USD",
-            businessWallet?.currency!,
-          );
-        }
+        const businessTransactionsLength =
+          businessWallet?.transactions.length || 0;
+
+        let amountToBeDeducted =
+          businessWallet?.transactions[businessTransactionsLength || 0]
+            .displayAmount;
+
+        let amountDeductedCurrency =
+          businessWallet?.transactions[businessTransactionsLength || 0]
+            .currency;
 
         await financialService.cutEscrow(
           tx,
           businessWallet?.id!,
-          convertedAmountBuss * 0.1,
+          amountToBeDeducted!,
           "Platform cut",
           shipmentId,
-          businessWallet?.currency!,
+          amountDeductedCurrency,
         );
 
         await tx.shipmentActivity.create({
@@ -311,12 +436,38 @@ export const shipmentService = {
             assignment: {
               include: {
                 driver: {
-                  select: { wallet: { select: { id: true, currency: true } } },
+                  select: {
+                    wallet: {
+                      select: {
+                        id: true,
+                        currency: true,
+                        transactions: {
+                          where: {
+                            referenceId: shipmentId,
+                            type: "ESCROW_LOCK",
+                          },
+                        },
+                      },
+                    },
+                  },
                 },
               },
             },
             seller: {
-              select: { wallet: { select: { id: true, currency: true } } },
+              select: {
+                wallet: {
+                  select: {
+                    id: true,
+                    currency: true,
+                    transactions: {
+                      where: {
+                        referenceId: shipmentId,
+                        type: "ESCROW_LOCK",
+                      },
+                    },
+                  },
+                },
+              },
             },
           },
         });
@@ -341,11 +492,44 @@ export const shipmentService = {
 
         const businessWallet = await tx.wallet.findUnique({
           where: { businessId: shipment.businessId || "" },
-          select: { id: true, currency: true },
+          select: {
+            id: true,
+            currency: true,
+            transactions: {
+              where: {
+                referenceId: shipmentId,
+                type: "ESCROW_LOCK",
+              },
+              select: {
+                displayAmount: true,
+                currency: true,
+                id: true,
+              },
+            },
+          },
         });
 
-        const amount = safeNumber(shipment.actualRateDisplay); // use local amount for accurate refund and fee calculation
-        
+        const sellerTransactionsLength =
+          shipment.seller.wallet?.transactions.length || 0;
+
+        const sellerAmountReleased =
+          shipment.seller.wallet?.transactions[
+            sellerTransactionsLength - 1 || 0
+          ].displayAmount || 0;
+        const sellerAmountCurrency =
+          shipment.seller.wallet?.transactions[
+            sellerTransactionsLength - 1 || 0
+          ].currency || "USD";
+
+        let businessAmountReleased =
+          businessWallet?.transactions[
+            businessWallet?.transactions?.length - 1 || 0
+          ].displayAmount;
+
+        let businessAmountCurrency =
+          businessWallet?.transactions[
+            businessWallet?.transactions?.length - 1 || 0
+          ].currency;
         if (
           canceledBy === "seller" &&
           ["PENDING", "ASSIGNED"].includes(shipment.status)
@@ -353,27 +537,19 @@ export const shipmentService = {
           await financialService.releaseEscrow(
             tx,
             shipment.seller.wallet?.id!,
-            amount,  
-            "Seller cancel",
+            sellerAmountReleased,
+            "Seller cancelled before pickup",
             shipment.id,
-            shipment?.currency!,  
+            sellerAmountCurrency,
           );
-          let convertedAmountBuss = amount; // USD base amount
-          if (shipment?.currency !== businessWallet?.currency) {
-            // converting from usd beacuse amount is stored in usd (base amount)
-            convertedAmountBuss = await currencyService.convert(
-              convertedAmountBuss,
-              shipment?.currency!,
-              businessWallet?.currency!,
-            );
-          }
+
           await financialService.releaseEscrow(
             tx,
             businessWallet?.id!,
-            convertedAmountBuss * 0.1,
+            businessAmountReleased!,
             "Platform refund",
             shipment.id,
-            businessWallet?.currency,
+            businessAmountCurrency,
           );
         } else if (canceledBy === "seller") {
           await financialService.processShipmentTransactions(tx, shipment);
@@ -381,31 +557,19 @@ export const shipmentService = {
           await financialService.releaseEscrow(
             tx,
             shipment.seller.wallet?.id!,
-            amount,
-            "Business cancel",
+            sellerAmountReleased,
+            "Business cancelled",
             shipment.id,
-            shipment?.currency!,
+            sellerAmountCurrency,
           );
-
-          // convert to business currency if needed
-
-          let convertedAmountBuss = amount; // USD base amount
-          if (shipment?.currency !== businessWallet?.currency) {
-            // converting from usd beacuse amount is stored in usd (base amount)
-            convertedAmountBuss = await currencyService.convert(
-              convertedAmountBuss,
-              shipment?.currency!,
-              businessWallet?.currency!,
-            );
-          }
 
           await financialService.cutEscrow(
             tx,
             businessWallet?.id!,
-            convertedAmountBuss * 0.1,
+            businessAmountReleased!,
             "Platform fee",
             shipment.id,
-            businessWallet?.currency,
+            businessAmountCurrency!,
           );
         }
 
@@ -421,7 +585,7 @@ export const shipmentService = {
 
         return updated;
       },
-      { timeout: 100000 },
+      { timeout: 10000000 },
     );
   },
 
